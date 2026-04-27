@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { ArrowLeft, Save, Plus, ArrowRight, DollarSign, Package, Copy, ExternalLink } from 'lucide-react'
 import { revalidatePath } from 'next/cache'
 
+import { EditablePlanCard } from './EditablePlanCard'
+
 export default async function PlansPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const productId = params.id
@@ -155,48 +157,9 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
               </div>
             ) : (
               <div className="space-y-3">
-                {plans.map((plan) => {
-                  const checkoutUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL ? 'http://localhost:3000' : ''}/checkout/${plan.id}`
-
-                  return (
-                    <div key={plan.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-200">
-                          <Package className="w-5 h-5 text-slate-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-slate-900">{plan.name}</h3>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <p className="text-xs text-slate-400 font-mono">ID: {plan.id.slice(0,12)}...</p>
-                            {plan.plan_identifier && (
-                              <span className="bg-slate-100 text-slate-500 text-[10px] uppercase font-bold px-2 py-0.5 rounded-md border border-slate-200">
-                                {plan.plan_identifier}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <span className="text-xl font-extrabold text-slate-900">
-                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(plan.price)}
-                          </span>
-                          <span className="text-xs text-slate-400 font-medium ml-1">/mês</span>
-                        </div>
-                        
-                        <a 
-                          href={`/checkout/${plan.id}`} 
-                          target="_blank" 
-                          className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors"
-                          title="Ver checkout"
-                        >
-                          <ExternalLink className="w-4 h-4 text-slate-500" />
-                        </a>
-                      </div>
-                    </div>
-                  )
-                })}
+                {plans.map((plan) => (
+                  <EditablePlanCard key={plan.id} plan={plan} productId={productId} />
+                ))}
               </div>
             )}
           </div>
