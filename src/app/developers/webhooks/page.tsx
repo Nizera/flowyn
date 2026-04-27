@@ -121,19 +121,20 @@ export default function WebhookDocsPage() {
           </p>
 
           <div className="space-y-8 mt-8">
-            {/* Supabase */}
+            {/* Supabase via HTTP */}
             <div className="border border-slate-200 rounded-2xl p-6">
               <div className="flex items-center gap-3 mb-4">
                 <Database className="w-6 h-6 text-emerald-600" />
                 <h4 className="font-bold text-xl text-slate-900">Integração com Supabase</h4>
               </div>
-              <p className="text-sm text-slate-600 mb-4">Para quem constrói SaaS usando a stack do Supabase + Next.js.</p>
+              <p className="text-sm text-slate-600 mb-4">A forma mais versátil de integrar o Supabase é utilizando requisições diretas à API.</p>
               <ol className="list-decimal list-inside space-y-3 text-sm text-slate-700">
-                <li>Adicione uma nova bolinha no Make conectada ao Webhook e busque pelo módulo <strong>Supabase</strong>.</li>
-                <li>Selecione a ação <strong>Create a Row</strong> (ou <strong>Update a Row</strong> dependendo do seu modelo).</li>
-                <li>Conecte sua conta do Supabase colando a sua <code className="bg-slate-100 px-1 rounded text-slate-900">Project URL</code> e <code className="bg-slate-100 px-1 rounded text-slate-900">Service Role Key</code> (pegue isso nas Configurações de API do seu Supabase).</li>
-                <li>Selecione a tabela (ex: <code>subscriptions</code> ou <code>profiles</code>).</li>
-                <li>Mapeie as variáveis: No campo de email do Supabase, clique e arraste a variável <strong>email</strong> que veio do Webhook. Faça o mesmo para <strong>id_do_plano</strong>.</li>
+                <li>Adicione uma nova bolinha no Make conectada ao Webhook e busque pelo módulo <strong>HTTP</strong>.</li>
+                <li>Selecione a ação <strong>Make a request</strong>.</li>
+                <li>Em URL, cole o endpoint REST da sua tabela do Supabase (ex: <code className="bg-slate-100 px-1 rounded text-slate-900">https://[SEU-PROJETO].supabase.co/rest/v1/profiles</code>). Use o método <strong>POST</strong> ou <strong>PATCH</strong>.</li>
+                <li>Nos Headers, adicione <code className="bg-slate-100 px-1 rounded text-slate-900">apikey</code> e <code className="bg-slate-100 px-1 rounded text-slate-900">Authorization</code> com sua <strong>Service Role Key</strong>.</li>
+                <li>Defina o Body Type como <strong>Raw</strong> e Content Type como <strong>JSON (application/json)</strong>.</li>
+                <li>No campo Request content, monte seu JSON arrastando as variáveis do Webhook (ex: <strong>email</strong>, <strong>id_do_plano</strong>).</li>
               </ol>
             </div>
 

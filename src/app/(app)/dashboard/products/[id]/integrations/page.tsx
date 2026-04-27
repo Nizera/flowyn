@@ -90,12 +90,6 @@ export default async function IntegrationsPage(props: { params: Promise<{ id: st
         {/* Integration Checklist */}
         <IntegrationChecklist productId={productId} />
 
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-3xl p-8 text-white mb-10 shadow-lg">
-          <h2 className="text-xl font-bold mb-2">Nível Básico (Obrigatório)</h2>
-          <p className="text-slate-300 text-sm">
-            Para começar a vender, você só precisa configurar a URL do seu servidor para receber os webhooks de pagamento.
-          </p>
-        </div>
 
         {/* Webhook Section */}
         <div className="mb-10">
@@ -113,28 +107,6 @@ export default async function IntegrationsPage(props: { params: Promise<{ id: st
             Quando uma assinatura for processada com sucesso, nosso sistema fará automaticamente um <code className="bg-slate-100 px-2 py-0.5 rounded text-primary text-xs font-bold border border-slate-200">POST</code> para a URL abaixo com os dados do cliente.
           </p>
 
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-            <h4 className="text-sm font-bold text-amber-900 mb-1 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-amber-600" />
-              Segurança: Verificação de Assinatura
-            </h4>
-            <p className="text-xs text-amber-800 leading-relaxed">
-              Cada requisição inclui o header <strong>X-Flowyn-Signature</strong>. Você deve validar esse hash usando o Secret abaixo para garantir que a requisição veio da Flowyn.
-            </p>
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Webhook Secret (Chave de Assinatura)
-            </label>
-            <div className="bg-slate-100 border border-slate-200 rounded-xl p-3 font-mono text-sm text-slate-700 flex justify-between items-center shadow-inner">
-              <span>{product.webhook_secret || 'wh_sec_...'}</span>
-              <span className="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded uppercase font-bold text-slate-500">Privado</span>
-            </div>
-            <p className="mt-2 text-xs text-slate-500">
-              Mantenha este secret em seu arquivo <code className="bg-slate-50 px-1 rounded">.env</code>. Ele é usado para gerar o HMAC-SHA256 da assinatura.
-            </p>
-          </div>
 
           <form action={updateWebhook} className="space-y-5">
             <div>
