@@ -147,7 +147,8 @@ export async function simulatePurchaseAction(productId: string, planId: string) 
     .single()
 
   if (orderError || !order) {
-    return { success: false, error: 'Failed to create simulated order' }
+    console.error('Failed to create simulated order:', orderError)
+    return { success: false, error: `Failed to create simulated order: ${orderError?.message || 'Unknown error'}` }
   }
 
   // Dispatch webhook
