@@ -13,7 +13,7 @@ export default function Hero() {
         background: "radial-gradient(ellipse, rgba(0,232,138,0.09) 0%, transparent 70%)",
         pointerEvents: "none",
       }} />
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "0 clamp(20px, 5vw, 40px)", position: "relative" }}>
+      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "0 clamp(20px, 5vw, 40px)", position: "relative" }}>
         <div style={{
           display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 16px",
           borderRadius: 999, background: "#f0fdf7", border: `1px solid rgba(0,232,138,0.3)`,
@@ -24,7 +24,7 @@ export default function Hero() {
         </div>
         <h1 style={{
           fontWeight: 800,
-          fontSize: "clamp(40px, 7vw, 80px)", letterSpacing: "-0.04em",
+          fontSize: "clamp(40px, 6.5vw, 76px)", letterSpacing: "-0.04em",
           lineHeight: 1.02, marginBottom: 28, color: "#0a0a0a",
         }}>
           Seu SaaS vendendo<br />sozinho, <span style={{ color: G }}>24 horas</span><br />por dia.
