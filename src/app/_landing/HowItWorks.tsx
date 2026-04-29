@@ -1,3 +1,4 @@
+"use client";
 const G = "#00e88a";
 const steps = [
   { icon: "01", title: "Crie seu produto", desc: "Configure planos, preços e comissões em minutos. Sem jurídico, sem burocracia." },

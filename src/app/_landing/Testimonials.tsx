@@ -1,3 +1,4 @@
+"use client";
 const testimonials = [
   {
     text: "Levei 15 minutos para conectar o Flowyn ao meu Supabase via Make. Na primeira semana, 3 vendas — todas com acesso criado automaticamente. Nunca precisei abrir o banco.",

@@ -1,3 +1,4 @@
+"use client";
 const G = "#00e88a";
 const flow = [
   { icon: "M", label: "Make.com", sub: "Cole a URL do webhook", bg: "#6366f1", dark: false },
