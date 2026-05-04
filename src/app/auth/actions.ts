@@ -36,15 +36,13 @@ export async function signup(formData: FormData) {
     }
   }
 
-  const { error } = await supabase.auth.signUp(data)
+  const { data: signUpData, error } = await supabase.auth.signUp(data)
 
-  if (error) {
-    console.error('Signup error:', error)
+  if (error || !signUpData.user) {
     redirect('/register?error=Could not authenticate user')
   }
 
-  revalidatePath('/', 'layout')
-  redirect('/dashboard')
+  redirect('/login?success=registered')
 }
 
 export async function signout() {

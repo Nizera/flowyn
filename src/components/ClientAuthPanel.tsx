@@ -3,15 +3,16 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { AlertCircle, Rocket, Code2, ArrowRight } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Rocket, Code2, ArrowRight } from 'lucide-react'
 import { login, signup } from '@/app/auth/actions'
 
 interface ClientAuthPanelProps {
   initialError?: string;
   initialType?: string;
+  initialSuccess?: string;
 }
 
-export function ClientAuthPanel({ initialError, initialType }: ClientAuthPanelProps) {
+export function ClientAuthPanel({ initialError, initialType, initialSuccess }: ClientAuthPanelProps) {
   const [isLogin, setIsLogin] = useState(initialType !== 'register')
   const [role, setRole] = useState<'affiliate' | 'producer'>(initialType === 'producer' ? 'producer' : 'affiliate')
 
@@ -55,6 +56,15 @@ export function ClientAuthPanel({ initialError, initialType }: ClientAuthPanelPr
             <p className="text-sm text-white/50 mb-8">Bem-vindo de volta! Sinta o fluxo do seu negócio.</p>
             
             <form action={login} className="space-y-6">
+              {isLogin && initialSuccess === 'registered' && (
+                <div className="bg-[#00e88a]/10 text-[#00e88a] p-4 rounded-xl text-sm flex items-start gap-3 border border-[#00e88a]/30">
+                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-sm">Conta criada com sucesso! 🎉</p>
+                    <p className="text-[#00e88a]/70 text-xs mt-0.5">Faça login para acessar sua plataforma.</p>
+                  </div>
+                </div>
+              )}
               {isLogin && initialError && (
                 <div className="bg-red-500/10 text-red-400 p-3 rounded-xl text-sm flex items-center gap-2 border border-red-500/20">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
