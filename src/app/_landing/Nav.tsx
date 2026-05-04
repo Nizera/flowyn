@@ -21,7 +21,7 @@ export default function Nav() {
       boxShadow: scrolled ? "0 1px 24px rgba(0,0,0,0.07)" : "none",
     }}>
       <div style={{ display: "flex", alignItems: "center" }}>
-        <img src="/logo.png" alt="Flowyn" style={{ height: 28, width: 'auto' }} />
+        <img src="/logo.png" alt="Flowyn" style={{ height: 80, width: 'auto' }} />
       </div>
       <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
         <Link href="/login" style={{ fontSize: 14, fontWeight: 500, color: "#666", textDecoration: "none" }}>Entrar</Link>

@@ -49,7 +49,7 @@ export function ClientAuthPanel({ initialError, initialType }: ClientAuthPanelPr
         `}>
           <div className="w-full max-w-sm mx-auto">
             <Link href="/" className="flex items-center mb-8">
-              <img src="/logo2.png" alt="Flowyn" className="h-8 w-auto" />
+              <img src="/logo2.png" alt="Flowyn" className="h-20 w-auto" />
             </Link>
             <h2 className="text-3xl font-extrabold text-white mb-2">Acesse sua conta</h2>
             <p className="text-sm text-white/50 mb-8">Bem-vindo de volta! Sinta o fluxo do seu negócio.</p>
@@ -107,7 +107,7 @@ export function ClientAuthPanel({ initialError, initialType }: ClientAuthPanelPr
         `}>
           <div className="w-full max-w-sm mx-auto">
             <Link href="/" className="flex items-center mb-6">
-              <img src="/logo2.png" alt="Flowyn" className="h-8 w-auto" />
+              <img src="/logo2.png" alt="Flowyn" className="h-20 w-auto" />
             </Link>
             <h2 className="text-3xl font-extrabold text-white mb-2">Crie sua conta</h2>
             <p className="text-sm text-white/50 mb-6">Comece sua jornada de escala infinita.</p>
