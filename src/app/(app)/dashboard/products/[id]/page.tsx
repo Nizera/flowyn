@@ -30,6 +30,8 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
     const name = formData.get('name') as string
     const site_url = formData.get('site_url') as string
     const logo_url = formData.get('logo_url') as string
+    const cover_url = formData.get('cover_url') as string
+    const category = formData.get('category') as string
     const commission_rate = formData.get('commission_rate') as string
     const description = formData.get('description') as string
 
@@ -46,6 +48,8 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
         name,
         site_url,
         logo_url,
+        cover_url,
+        category: category || 'outros',
         commission_rate: parseFloat(commission_rate) || 50
       })
       .eq('id', id)
@@ -152,6 +156,51 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
                   defaultValue={product.logo_url || ''}
                   className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl py-3.5 px-4 text-white placeholder:text-white/30 focus:ring-2 focus:ring-[#00e88a]/30 focus:border-[#00e88a] transition-all outline-none shadow-sm" 
                 />
+              </div>
+            </div>
+
+            {/* Cover Image + Category */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+              <div className="md:col-span-2">
+                <label htmlFor="cover_url" className="block text-sm font-semibold text-white/70 mb-2">
+                  Imagem de Capa da Vitrine
+                  <span className="text-white/30 font-normal ml-1">(URL — recomendado 1200×630px)</span>
+                </label>
+                <input 
+                  type="url" 
+                  id="cover_url" 
+                  name="cover_url" 
+                  defaultValue={(product as any).cover_url || ''}
+                  placeholder="https://exemplo.com/capa.jpg"
+                  className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl py-3.5 px-4 text-white placeholder:text-white/30 focus:ring-2 focus:ring-[#00e88a]/30 focus:border-[#00e88a] transition-all outline-none shadow-sm" 
+                />
+                {(product as any).cover_url && (
+                  <div className="mt-3 rounded-xl overflow-hidden border border-white/10 h-40">
+                    <img src={(product as any).cover_url} alt="Preview da capa" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <label htmlFor="category" className="block text-sm font-semibold text-white/70 mb-2">
+                  Categoria / Nicho
+                </label>
+                <select
+                  id="category"
+                  name="category"
+                  defaultValue={(product as any).category || 'outros'}
+                  className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl py-3.5 px-4 text-white focus:ring-2 focus:ring-[#00e88a]/30 focus:border-[#00e88a] transition-all outline-none shadow-sm"
+                >
+                  <option value="saas">SaaS / Software</option>
+                  <option value="cursos">Cursos Online</option>
+                  <option value="saude">Saúde &amp; Bem-estar</option>
+                  <option value="financas">Finanças &amp; Investimentos</option>
+                  <option value="marketing">Marketing &amp; Negócios</option>
+                  <option value="educacao">Educação</option>
+                  <option value="beleza">Beleza &amp; Moda</option>
+                  <option value="tecnologia">Tecnologia</option>
+                  <option value="entretenimento">Entretenimento</option>
+                  <option value="outros">Outros</option>
+                </select>
               </div>
             </div>
           </div>
