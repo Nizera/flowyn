@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { signOutAction } from '@/app/(app)/actions'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Store, Box, Link2, Bell, User, Settings, LogOut, DollarSign, Webhook, CreditCard, BookOpen } from 'lucide-react'
+import { LayoutDashboard, Store, Box, Link2, Bell, User, Settings, LogOut, DollarSign, Webhook, CreditCard, BookOpen, ScanLine } from 'lucide-react'
 
 // Receives props from the server layout
 export function Sidebar({ isAffiliate, isProducer }: { isAffiliate: boolean, isProducer: boolean }) {
@@ -70,6 +70,10 @@ export function Sidebar({ isAffiliate, isProducer }: { isAffiliate: boolean, isP
         <div className="pt-4 pb-2">
           <span className="px-3 text-xs font-semibold text-white/30 uppercase tracking-wider">Configurações</span>
         </div>
+        <Link href="/dashboard/pixels" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/dashboard/pixels') ? 'bg-[#00e88a]/10 text-[#00e88a]' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
+          <ScanLine className="w-5 h-5" />
+          <span className="font-medium text-sm">Pixels</span>
+        </Link>
         <Link href="/dashboard/settings/payments" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/dashboard/settings') ? 'bg-[#00e88a]/10 text-[#00e88a]' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
           <CreditCard className="w-5 h-5" />
           <span className="font-medium text-sm">Pagamentos</span>

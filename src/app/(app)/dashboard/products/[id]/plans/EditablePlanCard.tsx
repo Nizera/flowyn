@@ -48,7 +48,7 @@ export function EditablePlanCard({ plan, productId }: { plan: Plan, productId: s
 
   if (isEditing) {
     return (
-      <div className="bg-[#111111] border-2 border-[#00e88a] rounded-2xl p-5 shadow-xl transition-all animate-in fade-in zoom-in duration-200">
+      <div className="bg-[#111111] border-0 rounded-none p-5 border-b border-[#00e88a]/30 transition-all animate-in fade-in zoom-in duration-200">
         <form onSubmit={handleUpdate} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-1">
@@ -107,7 +107,7 @@ export function EditablePlanCard({ plan, productId }: { plan: Plan, productId: s
   }
 
   return (
-    <div className="bg-[#111111] border border-white/10 rounded-2xl p-5 shadow-xl hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] hover:border-white/20 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 group">
+    <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:bg-white/[0.02] transition-colors">
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:bg-[#00e88a]/10 group-hover:border-[#00e88a]/20 transition-colors">
           <Package className="w-5 h-5 text-white/60 group-hover:text-[#00e88a] transition-colors" />

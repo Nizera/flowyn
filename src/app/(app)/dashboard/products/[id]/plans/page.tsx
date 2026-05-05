@@ -5,6 +5,7 @@ import { ArrowLeft, Save, Plus, ArrowRight, DollarSign, Package, Copy, ExternalL
 import { revalidatePath } from 'next/cache'
 
 import { EditablePlanCard } from './EditablePlanCard'
+import { PlanPixelSection } from './PlanPixelSection'
 
 export default async function PlansPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -30,6 +31,23 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
     .select('*')
     .eq('product_id', productId)
     .order('created_at', { ascending: true })
+
+  // Fetch the producer's global pixels
+  const { data: userPixels } = await supabase
+    .from('pixels')
+    .select('id, name, platform, pixel_id')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .order('name')
+
+  // Fetch plan_pixels for all plans of this product
+  const planIds = (plans ?? []).map(p => p.id)
+  const { data: allPlanPixels } = planIds.length > 0
+    ? await supabase
+        .from('plan_pixels')
+        .select('id, plan_id, pixel:pixels(id, name, platform, pixel_id)')
+        .in('plan_id', planIds)
+    : { data: [] }
 
   async function createPlan(formData: FormData) {
     'use server'
@@ -157,9 +175,21 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
               </div>
             ) : (
               <div className="space-y-3">
-                {plans.map((plan) => (
-                  <EditablePlanCard key={plan.id} plan={plan} productId={productId} />
-                ))}
+                {plans.map((plan) => {
+                  const planPixels = (allPlanPixels ?? [])
+                    .filter(pp => pp.plan_id === plan.id)
+                    .map(pp => ({ id: pp.id, pixel: pp.pixel as any }))
+                  return (
+                    <div key={plan.id} className="bg-[#111111] border border-white/10 rounded-2xl shadow-xl overflow-hidden">
+                      <EditablePlanCard plan={plan} productId={productId} />
+                      <PlanPixelSection
+                        planId={plan.id}
+                        planPixels={planPixels}
+                        availablePixels={(userPixels ?? []) as any}
+                      />
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>

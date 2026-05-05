@@ -10,9 +10,10 @@ interface CheckoutFormProps {
   commissionRate: number
   affiliateId: string | null
   trackingId: string | null
+  pixels: { platform: string; pixel_id: string }[]
 }
 
-export function CheckoutForm({ planId, productId, amount, commissionRate, affiliateId, trackingId }: CheckoutFormProps) {
+export function CheckoutForm({ planId, productId, amount, commissionRate, affiliateId, trackingId, pixels }: CheckoutFormProps) {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -55,6 +56,8 @@ export function CheckoutForm({ planId, productId, amount, commissionRate, affili
 
       // Redirect to Stripe Checkout
       if (data.checkout_url) {
+        // Fire pixel Purchase event before navigating away
+        window.firePixelPurchase?.(Number(amount))
         window.location.href = data.checkout_url
         return // Don't setLoading(false) — we're navigating away
       }

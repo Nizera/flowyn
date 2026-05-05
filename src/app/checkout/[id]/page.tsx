@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { CheckoutForm } from './checkout-form'
+import { PixelScripts } from '@/components/PixelScripts'
 
 interface CheckoutPageProps {
   params: Promise<{ id: string }>
@@ -36,10 +37,11 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   // If there's a ref param, look up the affiliate
   let affiliateId: string | null = null
   let affiliateName: string | null = null
+  let affiliationId: string | null = null
   if (ref) {
     const { data: affiliation } = await supabase
       .from('affiliations')
-      .select('affiliate_id, affiliate:profiles(full_name)')
+      .select('id, affiliate_id, affiliate:profiles(full_name)')
       .eq('tracking_id', ref)
       .eq('product_id', plan.product_id)
       .single()
@@ -47,13 +49,51 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     if (affiliation) {
       affiliateId = affiliation.affiliate_id
       affiliateName = (affiliation.affiliate as any)?.full_name || null
+      affiliationId = affiliation.id as string
     }
   }
 
   const product = plan.product as any
 
+  // ── Fetch pixels ──────────────────────────────────────────────────────────
+  // Producer pixels linked to this plan
+  const { data: planPixelRows } = await supabase
+    .from('plan_pixels')
+    .select('pixel:pixels(platform, pixel_id, is_active)')
+    .eq('plan_id', plan.id)
+
+  const producerPixels = (planPixelRows ?? [])
+    .map((r: any) => r.pixel)
+    .filter((p: any) => p?.is_active)
+    .map((p: any) => ({ platform: p.platform, pixel_id: p.pixel_id }))
+
+  // Affiliate pixels linked to their affiliation (only if ref present)
+  let affiliatePixels: { platform: string; pixel_id: string }[] = []
+  if (affiliationId) {
+    const { data: affPixelRows } = await supabase
+      .from('affiliation_pixels')
+      .select('pixel:pixels(platform, pixel_id, is_active)')
+      .eq('affiliation_id', affiliationId)
+
+    affiliatePixels = (affPixelRows ?? [])
+      .map((r: any) => r.pixel)
+      .filter((p: any) => p?.is_active)
+      .map((p: any) => ({ platform: p.platform, pixel_id: p.pixel_id }))
+  }
+
+  // Merge both — deduplicate by pixel_id
+  const seenPixelIds = new Set<string>()
+  const allPixels = [...producerPixels, ...affiliatePixels].filter(p => {
+    if (seenPixelIds.has(p.pixel_id)) return false
+    seenPixelIds.add(p.pixel_id)
+    return true
+  }) as { platform: 'meta' | 'google' | 'tiktok'; pixel_id: string }[]
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      {/* Pixel Scripts — injected in <head> via next/script */}
+      <PixelScripts pixels={allPixels} />
+
       {/* Top Bar */}
       <header className="bg-white border-b border-slate-200 px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center gap-3">
@@ -87,6 +127,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
                 commissionRate={product.commission_rate}
                 affiliateId={affiliateId}
                 trackingId={ref || null}
+                pixels={allPixels}
               />
             </div>
           </div>

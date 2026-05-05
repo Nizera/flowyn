@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Link2, TrendingUp, DollarSign, Store, ExternalLink, Copy } from 'lucide-react'
+import { AffiliationPixelSection } from './AffiliationPixelSection'
 
 export default async function AffiliationsPage() {
   const supabase = await createClient()
@@ -51,6 +52,23 @@ export default async function AffiliationsPage() {
       ordersByProduct[o.product_id].commission += Number(o.commission_amount)
     }
   })
+
+  // Fetch this affiliate's global pixels
+  const { data: userPixels } = await supabase
+    .from('pixels')
+    .select('id, name, platform, pixel_id')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .order('name')
+
+  // Fetch all affiliation_pixels for this user's affiliations
+  const affIds = (affiliations ?? []).map(a => a.id)
+  const { data: allAffPixels } = affIds.length > 0
+    ? await supabase
+        .from('affiliation_pixels')
+        .select('id, affiliation_id, pixel:pixels(id, name, platform, pixel_id)')
+        .in('affiliation_id', affIds)
+    : { data: [] }
 
   return (
     <div className="w-full pb-12">
@@ -162,6 +180,20 @@ export default async function AffiliationsPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Affiliate Pixel Section */}
+                  {(() => {
+                    const affPixels = (allAffPixels ?? [])
+                      .filter(ap => ap.affiliation_id === aff.id)
+                      .map(ap => ({ id: ap.id, pixel: ap.pixel as any }))
+                    return (
+                      <AffiliationPixelSection
+                        affiliationId={aff.id}
+                        affPixels={affPixels}
+                        availablePixels={(userPixels ?? []) as any}
+                      />
+                    )
+                  })()}
                 </div>
               )
             })}
