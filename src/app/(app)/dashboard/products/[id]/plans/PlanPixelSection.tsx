@@ -5,9 +5,9 @@ import { ScanLine, Plus, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react
 import { addPlanPixel, removePlanPixel } from '../../../pixels/actions'
 
 const PLATFORM_BADGES: Record<string, { label: string; icon: string; color: string }> = {
-  meta: { label: 'Meta Ads', icon: '🔵', color: 'bg-blue-500/10 border-blue-500/20 text-blue-400' },
-  google: { label: 'Google Ads', icon: '🔴', color: 'bg-red-500/10 border-red-500/20 text-red-400' },
-  tiktok: { label: 'TikTok', icon: '⚫', color: 'bg-white/5 border-white/10 text-white/60' },
+  meta:   { label: 'Meta Ads',   icon: '/meta.png',   color: 'bg-blue-500/10 border-blue-500/20 text-blue-400' },
+  google: { label: 'Google Ads', icon: '/google.png', color: 'bg-red-500/10 border-red-500/20 text-red-400' },
+  tiktok: { label: 'TikTok',     icon: '/tiktok.png', color: 'bg-white/5 border-white/10 text-white/60' },
 }
 
 interface Pixel { id: string; name: string; platform: string; pixel_id: string }
@@ -69,8 +69,9 @@ export function PlanPixelSection({ planId, planPixels, availablePixels }: Props)
                 return (
                   <div key={pp.id} className="flex items-center justify-between bg-white/[0.03] border border-white/5 rounded-xl px-4 py-2.5">
                     <div className="flex items-center gap-3">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[10px] font-bold ${badge.color}`}>
-                        {badge.icon} {badge.label}
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border text-[10px] font-bold ${badge.color}`}>
+                        <img src={badge.icon} alt={badge.label} className="w-3.5 h-3.5 object-contain" />
+                        {badge.label}
                       </span>
                       <span className="text-sm text-white font-medium">{pp.pixel.name}</span>
                       <span className="text-xs text-white/30 font-mono">{pp.pixel.pixel_id}</span>
@@ -107,10 +108,9 @@ export function PlanPixelSection({ planId, planPixels, availablePixels }: Props)
               >
                 <option value="" disabled>Selecionar pixel...</option>
                 {unlinked.map(p => {
-                  const badge = PLATFORM_BADGES[p.platform]
                   return (
                     <option key={p.id} value={p.id}>
-                      {badge?.icon} {p.name} ({p.platform.toUpperCase()})
+                      {p.name} ({p.platform.toUpperCase()})
                     </option>
                   )
                 })}

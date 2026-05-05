@@ -9,7 +9,7 @@ const PLATFORMS = [
     id: 'meta',
     label: 'Meta Ads',
     sublabel: 'Facebook & Instagram',
-    icon: '🔵',
+    icon: '/meta.png',
     color: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
     hint: 'Ex: 1234567890123456',
   },
@@ -17,7 +17,7 @@ const PLATFORMS = [
     id: 'google',
     label: 'Google Ads',
     sublabel: 'Search & Display',
-    icon: '🔴',
+    icon: '/google.png',
     color: 'bg-red-500/10 border-red-500/20 text-red-400',
     hint: 'Ex: AW-123456789',
   },
@@ -25,7 +25,7 @@ const PLATFORMS = [
     id: 'tiktok',
     label: 'TikTok Ads',
     sublabel: 'TikTok & Reels',
-    icon: '⚫',
+    icon: '/tiktok.png',
     color: 'bg-white/5 border-white/10 text-white/70',
     hint: 'Ex: C1AB2DEF3GH',
   },
@@ -95,7 +95,7 @@ export function PixelManager({ initialPixels }: { initialPixels: Pixel[] }) {
       <div className="grid grid-cols-3 gap-4 mb-8">
         {PLATFORMS.map(p => (
           <div key={p.id} className={`border rounded-2xl p-4 flex items-center gap-3 ${p.color}`}>
-            <span className="text-2xl">{p.icon}</span>
+            <img src={p.icon} alt={p.label} className="w-8 h-8 object-contain flex-shrink-0" />
             <div>
               <p className="font-bold text-sm">{p.label}</p>
               <p className="text-xs opacity-60">{p.sublabel}</p>
@@ -133,7 +133,7 @@ export function PixelManager({ initialPixels }: { initialPixels: Pixel[] }) {
                     <td className="px-6 py-4 font-semibold text-white">{pixel.name}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium ${plat.color}`}>
-                        {plat.icon} {plat.label}
+                        <img src={plat.icon} alt={plat.label} className="w-4 h-4 object-contain" /> {plat.label}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-mono text-white/50 text-xs">{pixel.pixel_id}</td>
@@ -201,7 +201,7 @@ export function PixelManager({ initialPixels }: { initialPixels: Pixel[] }) {
                           : 'border-white/10 hover:border-white/20 bg-white/5'
                       }`}
                     >
-                      <span className="text-xl">{p.icon}</span>
+                      <img src={p.icon} alt={p.label} className="w-8 h-8 object-contain" />
                       <span className="text-xs font-semibold text-white leading-tight">{p.label}</span>
                     </button>
                   ))}
