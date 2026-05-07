@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Por que seu SaaS não precisa de anúncios - Flowyn</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background-color: #e5e5e5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 0;
+        }
+        .serif { font-family: 'Syne', sans-serif; }
+        .sans { font-family: 'DM Sans', sans-serif; }
+        
+        /* Flowyn Colors */
+        :root {
+            --brand-primary: #00e88a;
+            --brand-light: #00f594;
+            --brand-dark: #00b86e;
+            --light-bg: #fafaf8;
+            --light-border: #f2f0eb;
+            --dark-bg: #0a0a0a;
+            --brand-gradient: linear-gradient(165deg, #00b86e 0%, #00e88a 50%, #00f594 100%);
+        }
+
+        /* IG Frame */
+        .ig-frame {
+            width: 420px;
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ig-header {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+            gap: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .ig-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--brand-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ig-avatar::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            border-radius: 50%;
+        }
+
+        .ig-user-info {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+        .ig-username { font-weight: 600; font-size: 14px; color: #262626; }
+        .ig-location { font-size: 12px; color: #8e8e8e; }
+
+        .carousel-viewport {
+            width: 420px;
+            height: 525px; /* 4:5 aspect ratio */
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+            position: relative;
+        }
+        .carousel-viewport::-webkit-scrollbar { display: none; }
+
+        .carousel-track {
+            display: flex;
+            height: 100%;
+            width: max-content;
+        }
+
+        .carousel-slide {
+            width: 420px;
+            height: 525px;
+            scroll-snap-align: start;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 0 36px 52px;
+        }
+
+        /* Layout Types */
+        .slide-center { justify-content: center; }
+        .slide-bottom { justify-content: flex-end; }
+
+        /* Color Themes */
+        .theme-light { background: var(--light-bg); color: var(--dark-bg); }
+        .theme-dark { background: var(--dark-bg); color: var(--light-bg); }
+        .theme-gradient { background: var(--brand-gradient); color: var(--light-bg); }
+
+        /* UI Actions */
+        .ig-actions {
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .ig-action-left { display: flex; gap: 16px; }
+        .ig-caption {
+            padding: 0 16px 16px;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #262626;
+        }
+        .ig-dots {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            padding: 0 0 12px;
+        }
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #dbdbdb;
+        }
+        .dot.active { background: #0095f6; }
+        
+        /* Typography Scale */
+        .h1 { font-size: 34px; font-weight: 800; letter-spacing: -1.2px; line-height: 1.05; margin-bottom: 24px; }
+        .h2 { font-size: 28px; font-weight: 800; letter-spacing: -1px; line-height: 1.1; margin-bottom: 20px; }
+        .body-text { font-size: 15px; font-weight: 400; line-height: 1.55; }
+        
+        /* Components */
+        .tag-light {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: var(--brand-primary);
+            margin-bottom: 16px;
+        }
+        .tag-dark { color: var(--brand-light); }
+        .tag-gradient { color: rgba(255,255,255,0.7); }
+
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--light-border);
+        }
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--light-border);
+        }
+
+        .cta-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 32px;
+            background: var(--light-bg);
+            color: var(--brand-dark);
+            font-weight: 600;
+            font-size: 15px;
+            border-radius: 30px;
+            margin-top: 24px;
+        }
+        
+        .logo-lockup {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="ig-frame">
+    <!-- Instagram Header -->
+    <div class="ig-header">
+        <div class="ig-avatar"></div>
+        <div class="ig-user-info">
+            <span class="ig-username sans">flowyn</span>
+            <span class="ig-location sans">flowyn.com.br</span>
+        </div>
+    </div>
+
+    <!-- Carousel Viewport -->
+    <div class="carousel-viewport" id="viewport">
+        <div class="carousel-track" id="track">
+
+            <!-- SLIDE 1: Hero (Light) -->
+            <div class="carousel-slide theme-light slide-center">
+                <div class="logo-lockup" style="margin-bottom: 30px;">
+                    <div style="width:10px;height:10px;border-radius:50%;background:var(--brand-primary);"></div>
+                    <span class="serif" style="font-size:16px;font-weight:800;letter-spacing:-0.5px;color:#0a0a0a;">Flowyn</span>
+                </div>
+                
+                <span class="sans tag-light">SAAS · ESTRATÉGIA</span>
+                <h1 class="serif h1" style="color: #0a0a0a;">Por que seu SaaS <span style="color:var(--brand-primary);">não precisa</span> de anúncios para faturar R$10k/mês.</h1>
+                
+                <!-- Progress Bar & Swipe Arrow added via JS -->
+            </div>
+
+            <!-- SLIDE 2: Problem (Dark) -->
+            <div class="carousel-slide theme-dark slide-center">
+                <span class="sans tag-light tag-dark">O PROBLEMA</span>
+                <h2 class="serif h2">O Custo de Aquisição (CAC) está engolindo sua margem.</h2>
+                <p class="sans body-text" style="color: rgba(255,255,255,0.7);">
+                    A maioria dos Micro SaaS gasta mais no tráfego pago do que o cliente gera de lucro no primeiro mês (LTV).<br><br>
+                    <strong>O pior?</strong> Quando o anúncio é pausado, as vendas simplesmente param de acontecer.
+                </p>
+            </div>
+
+            <!-- SLIDE 3: Solution (Gradient) -->
+            <div class="carousel-slide theme-gradient slide-center">
+                <span class="sans tag-light tag-gradient">A SOLUÇÃO</span>
+                <h2 class="serif h2">Tenha um exército de vendedores trabalhando por comissão.</h2>
+                
+                <div style="padding:18px;background:rgba(0,0,0,0.15);border-radius:14px;border:1px solid rgba(255,255,255,0.08);margin-top:20px;">
+                    <p class="serif" style="font-size:16px;color:#fff;font-style:italic;line-height:1.4;">
+                        "O programa de afiliados transforma seu SaaS em uma máquina orgânica de MRR (Receita Recorrente)."
+                    </p>
+                </div>
+            </div>
+
+            <!-- SLIDE 4: Features (Light) -->
+            <div class="carousel-slide theme-light slide-center">
+                <span class="sans tag-light">VANTAGENS</span>
+                <h2 class="serif h2">O que você ganha<br>com afiliados:</h2>
+                
+                <div style="margin-top: 10px;">
+                    <div class="feature-item">
+                        <span style="color:var(--brand-primary);font-size:18px;">✓</span>
+                        <div>
+                            <span class="sans" style="font-size:15px;font-weight:700;color:var(--dark-bg);display:block;margin-bottom:2px;">Venda Sem Risco</span>
+                            <span class="sans" style="font-size:13px;color:#6b6b6b;">Você só paga a comissão se a venda for concluída e aprovada.</span>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <span style="color:var(--brand-primary);font-size:18px;">✓</span>
+                        <div>
+                            <span class="sans" style="font-size:15px;font-weight:700;color:var(--dark-bg);display:block;margin-bottom:2px;">Escala Infinita</span>
+                            <span class="sans" style="font-size:13px;color:#6b6b6b;">Eles criam vídeos no YouTube, blogs e TikTok para promover o seu software 24/7.</span>
+                        </div>
+                    </div>
+
+                    <div class="feature-item" style="border-bottom:none;">
+                        <span style="color:var(--brand-primary);font-size:18px;">✓</span>
+                        <div>
+                            <span class="sans" style="font-size:15px;font-weight:700;color:var(--dark-bg);display:block;margin-bottom:2px;">MRR Compartilhado</span>
+                            <span class="sans" style="font-size:13px;color:#6b6b6b;">Eles ganham de forma recorrente e você fideliza muito mais os seus clientes.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLIDE 5: Details (Dark) -->
+            <div class="carousel-slide theme-dark slide-center">
+                <span class="sans tag-light tag-dark">O SEGREDO</span>
+                <h2 class="serif h2">O padrão dos<br>grandes SaaS...</h2>
+                <p class="sans body-text" style="color: rgba(255,255,255,0.7);">
+                    Você foca em melhorar o produto e o suporte.<br><br>
+                    Os afiliados focam em distribuir para audiências orgânicas que você nunca alcançaria sozinho.
+                </p>
+            </div>
+
+            <!-- SLIDE 6: How-to (Light) -->
+            <div class="carousel-slide theme-light slide-center">
+                <span class="sans tag-light">PASSO A PASSO</span>
+                <h2 class="serif h2">Como plugar afiliados no seu produto:</h2>
+                
+                <div style="margin-top: 10px;">
+                    <div class="step-item">
+                        <span class="serif" style="font-size:28px;font-weight:800;color:var(--brand-primary);min-width:38px;line-height:0.9;">01</span>
+                        <div>
+                            <span class="sans" style="font-size:15px;font-weight:700;color:var(--dark-bg);display:block;">Cadastre seu SaaS</span>
+                            <span class="sans" style="font-size:13px;color:#6b6b6b;">Crie sua conta na Flowyn e configure seu produto em 5 minutos.</span>
+                        </div>
+                    </div>
+                    
+                    <div class="step-item">
+                        <span class="serif" style="font-size:28px;font-weight:800;color:var(--brand-primary);min-width:38px;line-height:0.9;">02</span>
+                        <div>
+                            <span class="sans" style="font-size:15px;font-weight:700;color:var(--dark-bg);display:block;">Defina a Comissão</span>
+                            <span class="sans" style="font-size:13px;color:#6b6b6b;">Ex: Ofereça 30% de comissão recorrente enquanto o usuário for assinante.</span>
+                        </div>
+                    </div>
+
+                    <div class="step-item" style="border-bottom:none;">
+                        <span class="serif" style="font-size:28px;font-weight:800;color:var(--brand-primary);min-width:38px;line-height:0.9;">03</span>
+                        <div>
+                            <span class="sans" style="font-size:15px;font-weight:700;color:var(--dark-bg);display:block;">Split Automático</span>
+                            <span class="sans" style="font-size:13px;color:#6b6b6b;">Nós dividimos o pagamento na hora e lidamos com toda a burocracia financeira.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLIDE 7: CTA (Gradient) -->
+            <div class="carousel-slide theme-gradient slide-center">
+                <span class="sans tag-light tag-gradient">O FLUXO DE VENDAS PERFEITO</span>
+                <h2 class="serif h2" style="font-size:32px;">Pronto para criar<br>seu programa de afiliados?</h2>
+                
+                <div>
+                    <div class="cta-btn sans">
+                        Crie sua conta grátis 
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </div>
+                </div>
+
+                <div class="logo-lockup" style="position: absolute; bottom: 65px;">
+                    <div style="width:10px;height:10px;border-radius:50%;background:#fafaf8;"></div>
+                    <span class="serif" style="font-size:18px;font-weight:800;letter-spacing:-0.5px;color:#fafaf8;">Flowyn</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Instagram Actions -->
+    <div class="ig-actions">
+        <div class="ig-action-left">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </div>
+        <div>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+        </div>
+    </div>
+    
+    <div class="ig-dots">
+        <div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+
+    <div class="ig-caption">
+        <strong>flowyn</strong> O melhor vendedor para o seu SaaS é aquele que ganha por resultado. 📈💸<br><br>#saas #microsaas #afiliados #mrr #flowyn
+    </div>
+</div>
+
+<script>
+    const BRAND_PRIMARY = '#00e88a';
+    const slides = document.querySelectorAll('.carousel-slide');
+    const total = slides.length;
+    const dots = document.querySelectorAll('.dot');
+    const viewport = document.getElementById('viewport');
+
+    function progressBar(index, total, isLightSlide) {
+        const pct = ((index + 1) / total) * 100;
+        const trackColor = isLightSlide ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)';
+        const fillColor = isLightSlide ? BRAND_PRIMARY : '#fff';
+        const labelColor = isLightSlide ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.4)';
+        return `<div style="position:absolute;bottom:0;left:0;right:0;padding:16px 28px 20px;z-index:10;display:flex;align-items:center;gap:10px;">
+            <div style="flex:1;height:3px;background:${trackColor};border-radius:2px;overflow:hidden;">
+                <div style="height:100%;width:${pct}%;background:${fillColor};border-radius:2px;"></div>
+            </div>
+            <span class="sans" style="font-size:11px;color:${labelColor};font-weight:600;">${index + 1}/${total}</span>
+        </div>`;
+    }
+
+    function swipeArrow(isLightSlide) {
+        const bg = isLightSlide ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)';
+        const stroke = isLightSlide ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.4)';
+        return `<div style="position:absolute;right:0;top:0;bottom:0;width:44px;z-index:9;display:flex;align-items:center;justify-content:center;background:linear-gradient(to right,transparent,${bg});">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M9 6l6 6-6 6" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>`;
+    }
+
+    slides.forEach((slide, index) => {
+        const isLight = slide.classList.contains('theme-light');
+        
+        slide.innerHTML += progressBar(index, total, isLight);
+        
+        if (index < total - 1) {
+            slide.innerHTML += swipeArrow(isLight);
+        }
+    });
+
+    // Update dots on scroll
+    viewport.addEventListener('scroll', () => {
+        const scrollPos = viewport.scrollLeft;
+        const slideWidth = viewport.offsetWidth;
+        const currentIndex = Math.round(scrollPos / slideWidth);
+        
+        dots.forEach((dot, idx) => {
+            if (idx === currentIndex) dot.classList.add('active');
+            else dot.classList.remove('active');
+        });
+    });
+</script>
+
+</body>
+</html>

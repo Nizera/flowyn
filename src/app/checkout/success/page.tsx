@@ -21,7 +21,7 @@ function SuccessContent() {
         </h1>
 
         <p className="text-slate-500 mb-6 leading-relaxed">
-          Seu pagamento foi processado com sucesso pelo Stripe. Você receberá os dados de acesso no seu e-mail em instantes.
+          Seu pagamento foi processado com sucesso pelo Asaas. Você receberá os dados de acesso no seu e-mail em instantes.
         </p>
 
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6">

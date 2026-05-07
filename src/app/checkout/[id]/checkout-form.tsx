@@ -54,7 +54,7 @@ export function CheckoutForm({ planId, productId, amount, commissionRate, affili
         return
       }
 
-      // Redirect to Stripe Checkout
+      // Redirect to Asaas Checkout
       if (data.checkout_url) {
         // Fire pixel Purchase event before navigating away
         window.firePixelPurchase?.(Number(amount))

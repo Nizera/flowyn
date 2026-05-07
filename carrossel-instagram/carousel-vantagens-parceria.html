@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #ccc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'DM Sans', sans-serif;
+      padding: 40px;
+    }
+    .serif { font-family: 'Syne', sans-serif; }
+    .sans  { font-family: 'DM Sans', sans-serif; }
+    
+    .ig-frame {
+      width: 420px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .ig-header {
+      display: flex;
+      align-items: center;
+      padding: 14px;
+      border-bottom: 1px solid #efefef;
+    }
+    .ig-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #00e88a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 12px;
+    }
+    .ig-avatar::after {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: #fff;
+      border-radius: 50%;
+    }
+    .ig-header-info {
+      flex: 1;
+    }
+    .ig-handle {
+      font-size: 14px;
+      font-weight: 600;
+      color: #262626;
+      line-height: 1.2;
+    }
+    .ig-subtitle {
+      font-size: 12px;
+      color: #8e8e8e;
+      line-height: 1.2;
+    }
+    
+    .carousel-container {
+      width: 420px;
+      height: 525px;
+      position: relative;
+      overflow: hidden;
+      cursor: grab;
+    }
+    .carousel-container:active { cursor: grabbing; }
+    
+    .carousel-track {
+      display: flex;
+      height: 100%;
+      width: 700%; /* 7 slides */
+      transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    
+    .slide {
+      width: 420px;
+      height: 525px;
+      position: relative;
+      flex-shrink: 0;
+      padding: 40px 36px 52px;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .slide-light { background: #fafaf8; }
+    .slide-dark { background: #0a0a0a; }
+    .slide-gradient { background: linear-gradient(165deg, #00b86e 0%, #00e88a 50%, #00f594 100%); }
+    
+    .slide-light .text-primary { color: #0a0a0a; }
+    .slide-light .text-secondary { color: #555; }
+    
+    .slide-dark .text-primary { color: #fafaf8; }
+    .slide-dark .text-secondary { color: #aaa; }
+    
+    .slide-gradient .text-primary { color: #fafaf8; }
+    .slide-gradient .text-secondary { color: rgba(255,255,255,0.8); }
+
+    .h1 {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -1.2px;
+      line-height: 1.1;
+      margin-bottom: 20px;
+    }
+    .h2 {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.1;
+      margin-bottom: 20px;
+    }
+    .body-text {
+      font-size: 15px;
+      font-weight: 400;
+      line-height: 1.55;
+    }
+    
+    .logo-lockup-light {
+      display: flex; align-items: center; gap: 8px; margin-bottom: auto;
+    }
+    .logo-lockup-light .dot { width: 8px; height: 8px; border-radius: 50%; background: #00e88a; }
+    .logo-lockup-light .name { font-size: 14px; font-weight: 800; letter-spacing: -0.5px; color: #0a0a0a; }
+    
+    .logo-lockup-dark {
+      display: flex; align-items: center; gap: 8px; margin-bottom: auto;
+    }
+    .logo-lockup-dark .dot { width: 8px; height: 8px; border-radius: 50%; background: #00e88a; }
+    .logo-lockup-dark .name { font-size: 14px; font-weight: 800; letter-spacing: -0.5px; color: #fafaf8; }
+    
+    .tag-light {
+      display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 2px; color: #00e88a; margin-bottom: 16px; text-transform: uppercase;
+    }
+    .tag-dark {
+      display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 2px; color: #00f594; margin-bottom: 16px; text-transform: uppercase;
+    }
+    .tag-gradient {
+      display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 2px; color: rgba(255,255,255,0.8); margin-bottom: 16px; text-transform: uppercase;
+    }
+    
+    /* Progress Bar */
+    .progress-wrapper {
+      position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 28px 20px; z-index: 10; display: flex; align-items: center; gap: 10px;
+    }
+    .progress-track { flex: 1; height: 3px; border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 2px; }
+    .progress-label { font-size: 11px; font-weight: 600; }
+    
+    .progress-light .progress-track { background: rgba(0,0,0,0.08); }
+    .progress-light .progress-fill { background: #00e88a; }
+    .progress-light .progress-label { color: rgba(0,0,0,0.3); }
+    
+    .progress-dark .progress-track { background: rgba(255,255,255,0.15); }
+    .progress-dark .progress-fill { background: #fff; }
+    .progress-dark .progress-label { color: rgba(255,255,255,0.5); }
+    
+    /* Swipe Arrow */
+    .swipe-arrow {
+      position: absolute; right: 0; top: 0; bottom: 0; width: 48px; z-index: 9; display: flex; align-items: center; justify-content: center;
+    }
+    .swipe-arrow-light { background: linear-gradient(to right, transparent, rgba(0,0,0,0.04)); }
+    .swipe-arrow-light svg path { stroke: rgba(0,0,0,0.25); }
+    .swipe-arrow-dark { background: linear-gradient(to right, transparent, rgba(255,255,255,0.06)); }
+    .swipe-arrow-dark svg path { stroke: rgba(255,255,255,0.35); }
+    
+    /* IG Frame Chrome */
+    .ig-actions { padding: 14px 14px 8px; display: flex; justify-content: space-between; }
+    .ig-actions-left { display: flex; gap: 16px; }
+    .ig-caption { padding: 0 14px 14px; font-size: 14px; color: #262626; }
+    .ig-caption .handle { font-weight: 600; }
+    .ig-caption .time { font-size: 10px; color: #8e8e8e; margin-top: 6px; letter-spacing: 0.5px; }
+    .ig-dots { display: flex; justify-content: center; gap: 4px; padding: 0 14px 14px; }
+    .ig-dot { width: 6px; height: 6px; border-radius: 50%; background: #dbdbdb; transition: background 0.2s; }
+    .ig-dot.active { background: #0095f6; }
+  </style>
+</head>
+<body>
+
+<div class="ig-frame">
+  <div class="ig-header">
+    <div class="ig-avatar"></div>
+    <div class="ig-header-info">
+      <div class="ig-handle">flowyn</div>
+      <div class="ig-subtitle">flowyn.com.br</div>
+    </div>
+  </div>
+  
+  <div class="carousel-container" id="carousel">
+    <div class="carousel-track" id="track">
+      
+      <!-- Slide 1 -->
+      <div class="slide slide-light" style="justify-content: center;">
+        <div class="logo-lockup-light" style="position: absolute; top: 40px;">
+          <div class="dot"></div><span class="serif name">Flowyn</span>
+        </div>
+        <div style="margin-top: 40px;">
+          <span class="sans tag-light">SAAS</span>
+          <h1 class="serif h1 text-primary">Você não precisa de anúncios para vender seu SaaS.</h1>
+          <p class="sans body-text text-secondary">Descubra as vantagens de uma parceria focada em performance e sem mensalidades.</p>
+        </div>
+        
+        <div class="swipe-arrow swipe-arrow-light">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M9 6l6 6-6 6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="progress-wrapper progress-light">
+          <div class="progress-track"><div class="progress-fill" style="width: 14.28%;"></div></div>
+          <span class="progress-label">1/7</span>
+        </div>
+      </div>
+      
+      <!-- Slide 2 -->
+      <div class="slide slide-dark" style="justify-content: center;">
+        <span class="sans tag-dark">O PROBLEMA</span>
+        <h2 class="serif h2 text-primary">O modelo tradicional é caro e arriscado.</h2>
+        <p class="sans body-text text-secondary">Custo de Aquisição de Clientes (CAC) cada vez mais alto, integrações complexas e perda de conversão no checkout.</p>
+        <p class="sans body-text text-secondary" style="margin-top: 16px;">Você gasta energia com tudo, menos com a evolução do seu próprio produto.</p>
+        
+        <div class="swipe-arrow swipe-arrow-dark">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M9 6l6 6-6 6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="progress-wrapper progress-dark">
+          <div class="progress-track"><div class="progress-fill" style="width: 28.57%;"></div></div>
+          <span class="progress-label">2/7</span>
+        </div>
+      </div>
+
+      <!-- Slide 3 -->
+      <div class="slide slide-gradient" style="justify-content: center;">
+        <span class="sans tag-gradient">A SOLUÇÃO</span>
+        <h2 class="serif h2 text-primary">Deixe seus afiliados venderem por você.</h2>
+        <p class="sans body-text text-secondary">Com a Flowyn, você conecta seu SaaS e sua rede de afiliados trabalha trazendo clientes 24 horas por dia.</p>
+        
+        <div style="padding:16px;background:rgba(0,0,0,0.15);border-radius:12px;border:1px solid rgba(255,255,255,0.08);margin-top:24px;">
+          <p class="serif" style="font-size:16px;color:#fff;font-style:italic;line-height:1.4;">"Você paga comissão apenas quando a venda acontece. Performance pura, risco zero."</p>
+        </div>
+
+        <div class="swipe-arrow swipe-arrow-dark">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M9 6l6 6-6 6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="progress-wrapper progress-dark">
+          <div class="progress-track"><div class="progress-fill" style="width: 42.85%;"></div></div>
+          <span class="progress-label">3/7</span>
+        </div>
+      </div>
+
+      <!-- Slide 4 -->
+      <div class="slide slide-light" style="justify-content: center;">
+        <span class="sans tag-light">VANTAGENS</span>
+        <h2 class="serif h2 text-primary">Operação 100% automática.</h2>
+        
+        <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid #f2f0eb;margin-top:16px;">
+          <span style="color:#00e88a;font-size:18px;width:24px;text-align:center;font-weight:bold;">⚡</span>
+          <div>
+            <span class="sans" style="font-size:15px;font-weight:700;color:#0a0a0a;display:block;">No-Code em 3 Minutos</span>
+            <span class="sans" style="font-size:13px;color:#666;">Integração nativa via Make.com ou Zapier. Configure em minutos, sem código.</span>
+          </div>
+        </div>
+        
+        <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid #f2f0eb;">
+          <span style="color:#00e88a;font-size:18px;width:24px;text-align:center;font-weight:bold;">🛒</span>
+          <div>
+            <span class="sans" style="font-size:15px;font-weight:700;color:#0a0a0a;display:block;">Checkout Otimizado</span>
+            <span class="sans" style="font-size:13px;color:#666;">Página de pagamento de altíssima conversão, desenhada especialmente para SaaS.</span>
+          </div>
+        </div>
+
+        <div class="swipe-arrow swipe-arrow-light">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M9 6l6 6-6 6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="progress-wrapper progress-light">
+          <div class="progress-track"><div class="progress-fill" style="width: 57.14%;"></div></div>
+          <span class="progress-label">4/7</span>
+        </div>
+      </div>
+
+      <!-- Slide 5 -->
+      <div class="slide slide-dark" style="justify-content: center;">
+        <span class="sans tag-dark">RECORRÊNCIA</span>
+        <h2 class="serif h2 text-primary">Split Financeiro Nativo</h2>
+        <p class="sans body-text text-secondary">Esqueça a reconciliação manual e planilhas confusas.</p>
+        <p class="sans body-text text-secondary" style="margin-top:16px;">O dinheiro do produtor e do afiliado é separado <strong>automaticamente na raiz</strong> do pagamento pela própria Stripe.</p>
+        <p class="sans body-text text-primary" style="margin-top:16px; font-weight: 500;">✓ Renda passiva garantida a cada renovação de assinatura.</p>
+
+        <div class="swipe-arrow swipe-arrow-dark">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M9 6l6 6-6 6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="progress-wrapper progress-dark">
+          <div class="progress-track"><div class="progress-fill" style="width: 71.42%;"></div></div>
+          <span class="progress-label">5/7</span>
+        </div>
+      </div>
+
+      <!-- Slide 6 -->
+      <div class="slide slide-light" style="justify-content: center;">
+        <span class="sans tag-light">PASSO A PASSO</span>
+        <h2 class="serif h2 text-primary">Como começar hoje?</h2>
+        
+        <div style="display:flex;align-items:flex-start;gap:16px;padding:12px 0;border-bottom:1px solid #f2f0eb;margin-top:10px;">
+          <span class="serif" style="font-size:26px;font-weight:800;color:#00e88a;min-width:34px;line-height:1;">1</span>
+          <div>
+            <span class="sans" style="font-size:15px;font-weight:700;color:#0a0a0a;display:block;">Cadastre seu SaaS</span>
+            <span class="sans" style="font-size:13px;color:#666;">Crie seu produto e defina a comissão em segundos.</span>
+          </div>
+        </div>
+        
+        <div style="display:flex;align-items:flex-start;gap:16px;padding:12px 0;border-bottom:1px solid #f2f0eb;">
+          <span class="serif" style="font-size:26px;font-weight:800;color:#00e88a;min-width:34px;line-height:1;">2</span>
+          <div>
+            <span class="sans" style="font-size:15px;font-weight:700;color:#0a0a0a;display:block;">Configure o Webhook</span>
+            <span class="sans" style="font-size:13px;color:#666;">Cole a URL do Make.com para provisionar clientes automaticamente.</span>
+          </div>
+        </div>
+        
+        <div style="display:flex;align-items:flex-start;gap:16px;padding:12px 0;">
+          <span class="serif" style="font-size:26px;font-weight:800;color:#00e88a;min-width:34px;line-height:1;">3</span>
+          <div>
+            <span class="sans" style="font-size:15px;font-weight:700;color:#0a0a0a;display:block;">Venda e Escale</span>
+            <span class="sans" style="font-size:13px;color:#666;">Convide afiliados e acompanhe seu MRR subindo.</span>
+          </div>
+        </div>
+
+        <div class="swipe-arrow swipe-arrow-light">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M9 6l6 6-6 6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="progress-wrapper progress-light">
+          <div class="progress-track"><div class="progress-fill" style="width: 85.71%;"></div></div>
+          <span class="progress-label">6/7</span>
+        </div>
+      </div>
+
+      <!-- Slide 7 -->
+      <div class="slide slide-gradient" style="justify-content: center; align-items: center; text-align: center;">
+        <div class="logo-lockup-dark" style="position: absolute; top: 40px; margin: 0 auto; left: 50%; transform: translateX(-50%);">
+          <div class="dot"></div><span class="serif name">Flowyn</span>
+        </div>
+        
+        <h2 class="serif h2 text-primary" style="margin-top: 40px; text-align: center;">Comece a escalar sem anúncios.</h2>
+        <p class="sans body-text text-secondary" style="margin-bottom: 32px; text-align: center;">O Fluxo de Vendas Perfeito para o seu SaaS.</p>
+        
+        <div style="display:inline-flex;align-items:center;gap:8px;padding:14px 32px;background:#fafaf8;color:#00b86e;font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;border-radius:28px;">
+          Crie sua conta grátis →
+        </div>
+
+        <div class="progress-wrapper progress-dark">
+          <div class="progress-track"><div class="progress-fill" style="width: 100%;"></div></div>
+          <span class="progress-label">7/7</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  
+  <div class="ig-actions">
+    <div class="ig-actions-left">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+    </div>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+  </div>
+  
+  <div class="ig-dots" id="dots">
+    <div class="ig-dot active"></div>
+    <div class="ig-dot"></div>
+    <div class="ig-dot"></div>
+    <div class="ig-dot"></div>
+    <div class="ig-dot"></div>
+    <div class="ig-dot"></div>
+    <div class="ig-dot"></div>
+  </div>
+  
+  <div class="ig-caption">
+    <span class="handle">flowyn</span> Descubra como estruturar parcerias que vendem por você 24h por dia.
+    <div class="time">AGORA</div>
+  </div>
+</div>
+
+<script>
+  const track = document.getElementById('track');
+  const dots = document.querySelectorAll('.ig-dot');
+  let currentSlide = 0;
+  let startX = 0;
+  let isDragging = false;
+  let currentTranslate = 0;
+  let prevTranslate = 0;
+
+  function updateDots() {
+    dots.forEach((dot, index) => {
+      dot.classList.toggle('active', index === currentSlide);
+    });
+  }
+
+  function setPositionByIndex() {
+    currentTranslate = currentSlide * -420;
+    prevTranslate = currentTranslate;
+    track.style.transform = `translateX(${currentTranslate}px)`;
+    updateDots();
+  }
+
+  track.addEventListener('pointerdown', (e) => {
+    isDragging = true;
+    startX = e.clientX;
+    track.style.transition = 'none';
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    const currentPosition = e.clientX;
+    const diff = currentPosition - startX;
+    currentTranslate = prevTranslate + diff;
+    track.style.transform = `translateX(${currentTranslate}px)`;
+  });
+
+  window.addEventListener('pointerup', (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    const movedBy = currentTranslate - prevTranslate;
+    
+    track.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    
+    if (movedBy < -100 && currentSlide < 6) currentSlide += 1;
+    if (movedBy > 100 && currentSlide > 0) currentSlide -= 1;
+    
+    setPositionByIndex();
+  });
+</script>
+</body>
+</html>
