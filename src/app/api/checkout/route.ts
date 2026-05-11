@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { asaasRequest, calculateAsaasSplit } from '@/lib/asaas'
+import { asaasRequest, calculateAsaasSplit, getOrCreateAsaasCustomer } from '@/lib/asaas'
 
 function getAdminClient() {
   return createClient(
@@ -14,11 +14,11 @@ export async function POST(request: NextRequest) {
   console.log('[Checkout] Início da requisição POST')
   try {
     const body = await request.json()
-    const { plan_id, customer_name, customer_email, affiliate_id, tracking_id } = body
+    const { plan_id, customer_name, customer_email, customer_cpfCnpj, affiliate_id, tracking_id } = body
 
-    if (!plan_id || !customer_name || !customer_email) {
+    if (!plan_id || !customer_name || !customer_email || !customer_cpfCnpj) {
       return NextResponse.json(
-        { error: 'Campos obrigatórios: plan_id, customer_name, customer_email' },
+        { error: 'Campos obrigatórios: plan_id, customer_name, customer_email, customer_cpfCnpj' },
         { status: 400 }
       )
     }
@@ -85,47 +85,49 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Ensure Customer exists in Asaas
-    let asaasCustomerId: string
-    const customers = await asaasRequest(`/customers?email=${customer_email}`)
-    
-    if (customers.data && customers.data.length > 0) {
-      asaasCustomerId = customers.data[0].id
-    } else {
-      const newCustomer = await asaasRequest('/customers', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: customer_name,
-          email: customer_email,
-          externalReference: customer_email,
-        })
-      })
-      asaasCustomerId = newCustomer.id
-    }
+    const asaasCustomer = await getOrCreateAsaasCustomer(customer_name, customer_email, customer_cpfCnpj)
+    const asaasCustomerId = asaasCustomer.id
+
 
     // 2. Calculate Split
-    const { platformFee, affiliateCommission } = calculateAsaasSplit(amount, commissionRate)
+    const { platformFee, affiliateCommission, producerAmount } = calculateAsaasSplit(amount, commissionRate)
     
-    const splitRules = []
+    // Get platform's own wallet ID to avoid self-split error
+    let platformWalletId: string | null = null
+    try {
+      const walletsResponse = await asaasRequest('/wallets')
+      platformWalletId = walletsResponse.data?.[0]?.id || null
+      console.log('[Checkout] Platform wallet ID:', platformWalletId)
+    } catch (err: any) {
+      console.warn('[Checkout] Could not fetch platform wallet ID, skipping self-split check:', err.message)
+    }
+
+    const splitRules: Array<{ walletId: string; fixedValue: number }> = []
     
-    // Platform Split (Flowyn)
-    // In a real scenario, the main account is Flowyn, 
-    // and the split goes to Producer and Affiliate.
-    // However, if the main account is the "Platform Account", 
-    // the split is defined for the subaccounts.
+    // 1. Affiliate Split
+    const canSplitToAffiliate = !!(affiliate_id && affiliateWalletId && affiliateWalletId !== platformWalletId && affiliateCommission > 0)
     
-    if (producer?.asaas_wallet_id) {
+    if (canSplitToAffiliate) {
       splitRules.push({
-        walletId: producer.asaas_wallet_id,
-        fixedValue: amount - platformFee - (affiliateWalletId ? affiliateCommission : 0),
+        walletId: affiliateWalletId!,
+        fixedValue: Number(affiliateCommission.toFixed(2)),
       })
     }
 
-    if (affiliate_id && affiliateWalletId && affiliateCommission > 0) {
+    // 2. Producer Split
+    // If we can't split to affiliate, the producer gets that commission amount as well
+    const finalProducerAmount = canSplitToAffiliate ? producerAmount : (producerAmount + affiliateCommission)
+    
+    if (producer?.asaas_wallet_id && producer.asaas_wallet_id !== platformWalletId) {
       splitRules.push({
-        walletId: affiliateWalletId,
-        fixedValue: affiliateCommission,
+        walletId: producer.asaas_wallet_id,
+        fixedValue: Number(finalProducerAmount.toFixed(2)),
       })
     }
+
+    console.log('[Checkout] Split rules:', JSON.stringify(splitRules))
+
+
 
     // 3. Create Payment (One-time or Subscription)
     const isSubscription = plan.billing_cycle && plan.billing_cycle !== 'NONE'
@@ -134,7 +136,7 @@ export async function POST(request: NextRequest) {
     const paymentRequest: any = {
       customer: asaasCustomerId,
       billingType: 'UNDEFINED',
-      value: amount,
+      value: Number(amount.toFixed(2)),
       description: `${product.name} - ${plan.name}`,
       externalReference: orderId,
       split: splitRules.length > 0 ? splitRules : undefined,
@@ -161,9 +163,10 @@ export async function POST(request: NextRequest) {
         asaas_subscription_id: isSubscription ? asaasResponse.id : undefined,
         asaas_invoice_url: asaasResponse.invoiceUrl,
         platform_fee: platformFee,
-        producer_amount: amount - platformFee - (affiliateWalletId ? affiliateCommission : 0),
+        producer_amount: Number(finalProducerAmount.toFixed(2)),
       })
       .eq('id', orderId)
+
 
     console.log('[Checkout] Sucesso! Redirecionando para:', asaasResponse.invoiceUrl)
     return NextResponse.json({

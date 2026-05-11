@@ -11,13 +11,16 @@ export async function GET() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('asaas_wallet_id')
+    .select('*')
     .eq('id', user.id)
     .single()
 
   return NextResponse.json({
     connected: !!profile?.asaas_wallet_id,
     wallet_id: profile?.asaas_wallet_id || null,
-    onboarding_status: profile?.asaas_wallet_id ? 'active' : 'pending'
+    onboarding_status: profile?.asaas_wallet_id ? 'active' : 'pending',
+    profile: profile,
+    email: user.email
   })
+
 }
