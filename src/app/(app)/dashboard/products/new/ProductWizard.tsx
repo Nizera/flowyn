@@ -64,7 +64,7 @@ export function ProductWizard({
   createProductAction,
   userId,
 }: {
-  createProductAction: (data: WizardData) => Promise<void>
+  createProductAction: (data: WizardData) => Promise<void | { error: string }>
   userId: string
 }) {
   const [step, setStep] = useState(1)
@@ -91,10 +91,15 @@ export function ProductWizard({
     setLoading(true)
     setError(null)
     try {
-      await createProductAction(data)
+      const result = await createProductAction(data)
+      if (result != null && 'error' in (result as object)) {
+        setError((result as { error: string }).error)
+        setLoading(false)
+      }
+      // on success, createProductAction calls redirect() so we never reach here
     } catch (err: any) {
-      console.error('[Wizard] Erro ao publicar produto:', err)
-      setError(err?.message || 'Erro desconhecido ao publicar o produto. Tente novamente.')
+      console.error('[Wizard] Erro inesperado:', err)
+      setError(err?.message || 'Erro inesperado. Verifique o console.')
       setLoading(false)
     }
   }

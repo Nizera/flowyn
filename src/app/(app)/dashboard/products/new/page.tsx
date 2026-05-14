@@ -5,7 +5,7 @@ import { ProductWizard } from './ProductWizard'
 const ADMIN_EMAIL = 'dnlmarianoneto@gmail.com'
 
 // ─── Server Action: Create Product ───────────────────────────────────────────
-async function createProductAction(data: any) {
+async function createProductAction(data: any): Promise<{ error: string } | void> {
   'use server'
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -14,7 +14,7 @@ async function createProductAction(data: any) {
   // Block SaaS/MicroSaaS creation for non-admin users
   const isAdmin = user.email === ADMIN_EMAIL
   if (!isAdmin && (data.product_type === 'saas' || data.product_type === 'microsaas' || data.is_flowyn_saas)) {
-    throw new Error('Apenas administradores da Flowyn podem criar produtos SaaS.')
+    return { error: 'Apenas administradores da Flowyn podem criar produtos SaaS.' }
   }
 
   // 1. Create product
@@ -24,6 +24,7 @@ async function createProductAction(data: any) {
       owner_id: user.id,
       name: data.name,
       description: data.description,
+      short_description: data.short_description || null,
       logo_url: data.logo_url || null,
       cover_url: data.cover_url || null,
       site_url: data.site_url || null,
@@ -46,7 +47,8 @@ async function createProductAction(data: any) {
     .single()
 
   if (error || !product) {
-    throw new Error('Erro ao criar produto: ' + error?.message)
+    console.error('[createProductAction] DB Error:', error)
+    return { error: `Erro ao criar produto: ${error?.message || 'resposta vazia do banco'}` }
   }
 
   // 2. Create plans
@@ -57,7 +59,11 @@ async function createProductAction(data: any) {
       price: parseFloat(p.price) || 0,
       billing_type: p.billing_type || 'one_time',
     }))
-    await supabase.from('plans').insert(plans)
+    const { error: plansError } = await supabase.from('plans').insert(plans)
+    if (plansError) {
+      console.error('[createProductAction] Plans Error:', plansError)
+      return { error: `Produto criado, mas erro ao salvar planos: ${plansError.message}` }
+    }
   }
 
   redirect(`/dashboard/products/${product.id}`)
