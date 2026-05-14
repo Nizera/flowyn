@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { stripe, calculateSplit } from '@/lib/stripe'
-import { resend } from '@/lib/resend'
+import { getResendClient } from '@/lib/resend'
 import { deliveryEmail } from '@/lib/email-templates'
 
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET!
@@ -135,8 +135,9 @@ export async function POST(req: NextRequest) {
         }
 
         // Enviar e-mail transacional
-        if (process.env.RESEND_API_KEY) {
-          const emailResult = await resend.emails.send({
+        const resendClient = getResendClient()
+        if (resendClient) {
+          const emailResult = await resendClient.emails.send({
             from: 'Flowyn <noreply@flowyn.com.br>',
             to: orderData.customer_email,
             subject: `✅ Seu acesso a "${product.name}" está pronto!`,
