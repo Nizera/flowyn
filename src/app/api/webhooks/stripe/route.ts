@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { stripe, calculateSplit } from '@/lib/stripe'
+import { resend } from '@/lib/resend'
+import { deliveryEmail } from '@/lib/email-templates'
 
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET!
 
@@ -27,7 +29,6 @@ export async function POST(req: NextRequest) {
 
   const supabase = getAdminClient()
 
-  // Handle the event
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object
     const metadata = session.metadata
@@ -62,7 +63,6 @@ export async function POST(req: NextRequest) {
       }
 
       // 3. Executar Transferências (Split)
-      // Transferência para o Produtor
       if (producerProfile?.stripe_account_id) {
         await stripe.transfers.create({
           amount: producerShare,
@@ -73,7 +73,6 @@ export async function POST(req: NextRequest) {
         })
       }
 
-      // Transferência para o Afiliado (se houver)
       if (affiliateAccountId && affiliateShare > 0) {
         await stripe.transfers.create({
           amount: affiliateShare,
@@ -96,24 +95,71 @@ export async function POST(req: NextRequest) {
         })
         .eq('id', orderId)
 
-      // 5. Disparar Webhook Externo do Produtor
-      // (Buscamos o produto para pegar a URL do webhook)
+      // 5. Buscar dados do pedido + produto para entrega
       const { data: orderData } = await supabase
         .from('orders')
-        .select('*, product:products(webhook_url)')
+        .select(`
+          *,
+          product:products(
+            id, name, delivery_type, delivery_url, deliverable_file_path, webhook_url
+          )
+        `)
         .eq('id', orderId)
         .single()
 
-      if (orderData?.product?.webhook_url) {
-        console.log('[Webhook] Disparando webhook externo para:', orderData.product.webhook_url)
-        // Lógica simplificada de disparo (idealmente seria uma fila)
-        fetch(orderData.product.webhook_url, {
+      if (!orderData) {
+        console.error('[Webhook] Order not found after update:', orderId)
+        return NextResponse.json({ received: true })
+      }
+
+      const product = orderData.product as any
+
+      // 6. Entrega Digital: enviar e-mail com arquivo ou link
+      if (product?.delivery_type === 'external') {
+        let accessLink: string | null = product.delivery_url || null
+        let isFile = false
+
+        // Se tem arquivo no Storage → gerar signed URL válido por 48h
+        if (product.deliverable_file_path) {
+          console.log('[Webhook] Gerando signed URL para:', product.deliverable_file_path)
+          const { data: signed, error: signedError } = await supabase.storage
+            .from('product-files')
+            .createSignedUrl(product.deliverable_file_path, 60 * 60 * 48) // 48h
+
+          if (signedError) {
+            console.error('[Webhook] Erro ao gerar signed URL:', signedError)
+          } else {
+            accessLink = signed?.signedUrl || accessLink
+            isFile = true
+          }
+        }
+
+        // Enviar e-mail transacional
+        if (process.env.RESEND_API_KEY) {
+          const emailResult = await resend.emails.send({
+            from: 'Flowyn <noreply@flowyn.com.br>',
+            to: orderData.customer_email,
+            subject: `✅ Seu acesso a "${product.name}" está pronto!`,
+            html: deliveryEmail({
+              customerName: orderData.customer_name,
+              productName: product.name,
+              accessLink,
+              isFile,
+            }),
+          })
+          console.log('[Webhook] E-mail enviado:', emailResult)
+        } else {
+          console.warn('[Webhook] RESEND_API_KEY não configurada — e-mail não enviado para:', orderData.customer_email)
+        }
+      }
+
+      // 7. Webhook Externo do Produtor (se configurado)
+      if (product?.webhook_url) {
+        console.log('[Webhook] Disparando webhook externo para:', product.webhook_url)
+        fetch(product.webhook_url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            event: 'purchase.completed',
-            data: orderData
-          })
+          body: JSON.stringify({ event: 'purchase.completed', data: orderData })
         }).catch(err => console.error('[External Webhook Error]:', err))
       }
 

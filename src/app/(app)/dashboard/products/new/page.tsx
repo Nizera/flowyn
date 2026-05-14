@@ -36,6 +36,7 @@ async function createProductAction(data: any) {
       checkout_video_url: data.checkout_video_url || null,
       delivery_type: data.delivery_type,
       delivery_url: data.delivery_url || null,
+      deliverable_file_path: data.deliverable_file_path || null,
       order_bump_title: data.order_bump_enabled ? data.order_bump_title : null,
       order_bump_description: data.order_bump_enabled ? data.order_bump_description : null,
       order_bump_price: data.order_bump_enabled && data.order_bump_price ? parseFloat(data.order_bump_price) : null,
@@ -79,7 +80,7 @@ export default async function NewProductPage() {
       </div>
 
       <div className="bg-[#111111] border border-white/10 rounded-3xl p-8 md:p-12">
-        <ProductWizard createProductAction={createProductAction} />
+        <ProductWizard createProductAction={createProductAction} userId={user.id} />
       </div>
     </div>
   )

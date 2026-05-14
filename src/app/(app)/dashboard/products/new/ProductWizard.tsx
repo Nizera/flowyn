@@ -6,10 +6,11 @@ import {
   BookOpen, FileText, Users, Layers, ChevronRight, ChevronLeft,
   Check, Plus, Trash2, ToggleLeft, ToggleRight
 } from 'lucide-react'
+import { FileUpload } from '@/components/FileUpload'
 
 const PRODUCT_TYPES = [
   { value: 'course', label: 'Curso Online', icon: BookOpen, desc: 'Videoaulas hospedadas na Flowyn com área de membros' },
-  { value: 'ebook', label: 'E-book / PDF', icon: FileText, desc: 'Material digital entregue por link ou download' },
+  { value: 'ebook', label: 'E-book / PDF', icon: FileText, desc: 'Material digital entregue por download após a compra' },
   { value: 'mentoria', label: 'Mentoria / Coaching', icon: Users, desc: 'Atendimento ao vivo, grupo ou 1-a-1' },
   { value: 'outros', label: 'Outros Infoprodutos', icon: Layers, desc: 'Templates, planilhas, podcasts e mais' },
 ]
@@ -41,6 +42,7 @@ interface WizardData {
   commission_rate: string
   delivery_type: string
   delivery_url: string
+  deliverable_file_path: string
   is_public: boolean
 }
 
@@ -51,13 +53,20 @@ const INITIAL: WizardData = {
   plans: [{ name: 'Acesso Completo', price: '', billing_type: 'one_time' }],
   order_bump_enabled: false, order_bump_title: '', order_bump_description: '',
   order_bump_price: '', order_bump_discount_percent: '',
-  commission_rate: '40', delivery_type: 'external', delivery_url: '', is_public: true,
+  commission_rate: '40', delivery_type: 'external', delivery_url: '',
+  deliverable_file_path: '', is_public: true,
 }
 
 const inputClass = 'w-full bg-[#0a0a0a] border border-white/10 rounded-xl py-3 px-4 text-white placeholder:text-white/30 focus:ring-2 focus:ring-[#00e88a]/30 focus:border-[#00e88a] transition-all outline-none'
 const labelClass = 'block text-sm font-semibold text-white/70 mb-2'
 
-export function ProductWizard({ createProductAction }: { createProductAction: (data: WizardData) => Promise<void> }) {
+export function ProductWizard({
+  createProductAction,
+  userId,
+}: {
+  createProductAction: (data: WizardData) => Promise<void>
+  userId: string
+}) {
   const [step, setStep] = useState(1)
   const [data, setData] = useState<WizardData>(INITIAL)
   const [loading, setLoading] = useState(false)
@@ -83,6 +92,7 @@ export function ProductWizard({ createProductAction }: { createProductAction: (d
   }
 
   const steps = ['Tipo', 'Detalhes', 'Checkout', 'Preços', 'Publicar']
+  const isDigitalFile = ['ebook', 'outros'].includes(data.product_type)
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -145,21 +155,29 @@ export function ProductWizard({ createProductAction }: { createProductAction: (d
               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
+          {/* Upload de imagens */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>URL da Imagem de Capa</label>
-              <input className={inputClass} placeholder="https://..." value={data.cover_url} onChange={e => set('cover_url', e.target.value)} />
-            </div>
-            <div>
-              <label className={labelClass}>URL do Logo/Thumbnail</label>
-              <input className={inputClass} placeholder="https://..." value={data.logo_url} onChange={e => set('logo_url', e.target.value)} />
-            </div>
+            <FileUpload
+              mode="image"
+              label="Imagem de Capa *"
+              hint="JPG, PNG ou WebP — 1200×675px recomendado"
+              userId={userId}
+              folder="covers"
+              currentUrl={data.cover_url}
+              onUpload={(url) => set('cover_url', url)}
+              onRemove={() => set('cover_url', '')}
+            />
+            <FileUpload
+              mode="image"
+              label="Logo / Thumbnail"
+              hint="Quadrado — 400×400px recomendado"
+              userId={userId}
+              folder="logos"
+              currentUrl={data.logo_url}
+              onUpload={(url) => set('logo_url', url)}
+              onRemove={() => set('logo_url', '')}
+            />
           </div>
-          {data.cover_url && (
-            <div className="rounded-xl overflow-hidden border border-white/10 h-40">
-              <img src={data.cover_url} alt="Preview" className="w-full h-full object-cover" />
-            </div>
-          )}
         </div>
       )}
 
@@ -173,21 +191,21 @@ export function ProductWizard({ createProductAction }: { createProductAction: (d
             <input className={inputClass} type="url" placeholder="https://suapagina.com" value={data.site_url} onChange={e => set('site_url', e.target.value)} />
             <p className="text-xs text-white/40 mt-1">Link para sua landing page ou página de vendas</p>
           </div>
-          <div>
-            <label className={labelClass}>Banner do Checkout (URL)</label>
-            <input className={inputClass} type="url" placeholder="https://..." value={data.checkout_banner_url} onChange={e => set('checkout_banner_url', e.target.value)} />
-            <p className="text-xs text-white/40 mt-1">Imagem de destaque exibida no topo do checkout (recomendado 1200×400px)</p>
-          </div>
+          <FileUpload
+            mode="image"
+            label="Banner do Checkout"
+            hint="1200×400px recomendado — exibido no topo do checkout"
+            userId={userId}
+            folder="banners"
+            currentUrl={data.checkout_banner_url}
+            onUpload={(url) => set('checkout_banner_url', url)}
+            onRemove={() => set('checkout_banner_url', '')}
+          />
           <div>
             <label className={labelClass}>Vídeo de Vendas (YouTube / Vimeo)</label>
             <input className={inputClass} type="url" placeholder="https://youtube.com/watch?v=..." value={data.checkout_video_url} onChange={e => set('checkout_video_url', e.target.value)} />
             <p className="text-xs text-white/40 mt-1">Exibido no checkout para aumentar conversão</p>
           </div>
-          {data.checkout_banner_url && (
-            <div className="rounded-xl overflow-hidden border border-white/10 h-32">
-              <img src={data.checkout_banner_url} alt="Banner Preview" className="w-full h-full object-cover" />
-            </div>
-          )}
         </div>
       )}
 
@@ -280,8 +298,8 @@ export function ProductWizard({ createProductAction }: { createProductAction: (d
       {/* Step 5: Publicar */}
       {step === 5 && (
         <div className="space-y-5">
-          <h2 className="text-2xl font-extrabold text-white mb-2">Afiliação & Publicação</h2>
-          <p className="text-white/50 text-sm mb-6">Configure como outros usuários podem promover seu produto.</p>
+          <h2 className="text-2xl font-extrabold text-white mb-2">Afiliação & Entrega</h2>
+          <p className="text-white/50 text-sm mb-6">Configure como o produto será entregue e como outros podem promovê-lo.</p>
 
           <div>
             <label className={labelClass}>Comissão para Afiliados (%)</label>
@@ -292,6 +310,7 @@ export function ProductWizard({ createProductAction }: { createProductAction: (d
             <p className="text-xs text-white/40 mt-2">Plataformas como Hotmart recomendam 30–50%. Comissões altas atraem mais afiliados.</p>
           </div>
 
+          {/* Delivery type */}
           <div>
             <label className={labelClass}>Tipo de Entrega</label>
             <div className="flex gap-3">
@@ -301,24 +320,74 @@ export function ProductWizard({ createProductAction }: { createProductAction: (d
               </button>
               <button type="button" onClick={() => set('delivery_type', 'external')}
                 className={`flex-1 py-3 rounded-xl border text-sm font-semibold transition-all ${data.delivery_type === 'external' ? 'border-[#00e88a] bg-[#00e88a]/10 text-[#00e88a]' : 'border-white/10 text-white/50 hover:border-white/20'}`}>
-                🔗 Link Externo
+                📦 Entrega Digital
               </button>
             </div>
           </div>
 
+          {/* Entrega digital: upload OU link */}
           {data.delivery_type === 'external' && (
-            <div>
-              <label className={labelClass}>Link de Entrega (pós-compra)</label>
-              <input className={inputClass} type="url" placeholder="https://..." value={data.delivery_url} onChange={e => set('delivery_url', e.target.value)} />
-              <p className="text-xs text-white/40 mt-1">URL enviada ao comprador após a confirmação do pagamento</p>
+            <div className="bg-[#111111] border border-white/10 rounded-2xl p-5 space-y-4">
+              <h3 className="font-bold text-white text-sm mb-1">📦 Arquivo Entregável</h3>
+              <p className="text-xs text-white/40 mb-3">
+                Faça upload do arquivo que será enviado ao comprador por e-mail após o pagamento.
+                Ou, se preferir, informe um link externo.
+              </p>
+
+              {/* Upload do entregável */}
+              {!data.delivery_url && (
+                <FileUpload
+                  mode="file"
+                  label={isDigitalFile ? 'Fazer upload do arquivo (PDF, ZIP, EPUB)' : 'Arquivo entregável (opcional)'}
+                  hint="PDF, ZIP ou EPUB — máx. 100MB. Link assinado de 48h enviado por e-mail."
+                  userId={userId}
+                  folder="deliverables"
+                  onUpload={(path) => set('deliverable_file_path', path)}
+                  onRemove={() => set('deliverable_file_path', '')}
+                />
+              )}
+
+              {/* Separador OU */}
+              {!data.deliverable_file_path && (
+                <>
+                  {!data.delivery_url && (
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-px bg-white/10" />
+                      <span className="text-xs text-white/30 font-medium">ou</span>
+                      <div className="flex-1 h-px bg-white/10" />
+                    </div>
+                  )}
+                  <div>
+                    <label className={labelClass}>Link externo de acesso</label>
+                    <input
+                      className={inputClass}
+                      type="url"
+                      placeholder="https://drive.google.com/..."
+                      value={data.delivery_url}
+                      onChange={e => set('delivery_url', e.target.value)}
+                    />
+                    <p className="text-xs text-white/40 mt-1">URL enviada ao comprador por e-mail após confirmação do pagamento</p>
+                  </div>
+                </>
+              )}
+
+              {data.deliverable_file_path && (
+                <div className="bg-[#00e88a]/5 border border-[#00e88a]/20 rounded-xl p-3">
+                  <p className="text-sm text-[#00e88a] font-medium">
+                    ✅ Arquivo salvo! Será enviado por e-mail com link de download de 48h após a compra.
+                  </p>
+                </div>
+              )}
             </div>
           )}
+
           {data.delivery_type === 'platform' && (
             <div className="bg-[#00e88a]/5 border border-[#00e88a]/20 rounded-xl p-4">
               <p className="text-sm text-[#00e88a] font-medium">✅ Após criar o produto, você poderá adicionar módulos e aulas na área de membros.</p>
             </div>
           )}
 
+          {/* Visibilidade */}
           <div className="flex items-center justify-between bg-[#111111] border border-white/10 rounded-2xl p-5">
             <div>
               <h3 className="font-bold text-white text-sm">Visível na Vitrine</h3>
@@ -329,13 +398,14 @@ export function ProductWizard({ createProductAction }: { createProductAction: (d
             </button>
           </div>
 
-          {/* Summary */}
+          {/* Resumo */}
           <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-5 space-y-2">
             <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">Resumo do Produto</h3>
             <div className="flex justify-between text-sm"><span className="text-white/50">Nome</span><span className="text-white font-semibold truncate ml-4">{data.name}</span></div>
             <div className="flex justify-between text-sm"><span className="text-white/50">Tipo</span><span className="text-white font-semibold">{PRODUCT_TYPES.find(t => t.value === data.product_type)?.label}</span></div>
             <div className="flex justify-between text-sm"><span className="text-white/50">Planos</span><span className="text-white font-semibold">{data.plans.length} plano(s)</span></div>
             <div className="flex justify-between text-sm"><span className="text-white/50">Comissão</span><span className="text-[#00e88a] font-bold">{data.commission_rate}%</span></div>
+            <div className="flex justify-between text-sm"><span className="text-white/50">Entrega</span><span className="text-white font-semibold">{data.deliverable_file_path ? '📁 Arquivo enviado' : data.delivery_url ? '🔗 Link externo' : data.delivery_type === 'platform' ? '🎓 Área de membros' : '—'}</span></div>
             <div className="flex justify-between text-sm"><span className="text-white/50">Visibilidade</span><span className="text-white font-semibold">{data.is_public ? 'Público' : 'Privado'}</span></div>
           </div>
         </div>
