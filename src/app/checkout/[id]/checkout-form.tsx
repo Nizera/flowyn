@@ -11,12 +11,20 @@ interface CheckoutFormProps {
   affiliateId: string | null
   trackingId: string | null
   pixels: { platform: string; pixel_id: string }[]
+  orderBump: {
+    active: boolean
+    title: string | null
+    description: string | null
+    price: number | null
+    discountPercent: number | null
+  }
 }
 
-export function CheckoutForm({ planId, productId, amount, commissionRate, affiliateId, trackingId, pixels }: CheckoutFormProps) {
+export function CheckoutForm({ planId, productId, amount, commissionRate, affiliateId, trackingId, pixels, orderBump }: CheckoutFormProps) {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [addOrderBump, setAddOrderBump] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -43,6 +51,7 @@ export function CheckoutForm({ planId, productId, amount, commissionRate, affili
           customer_email: customerEmail,
           affiliate_id: affiliateId,
           tracking_id: trackingId,
+          add_order_bump: addOrderBump,
         }),
       })
 
@@ -132,6 +141,34 @@ export function CheckoutForm({ planId, productId, amount, commissionRate, affili
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-medium">
           {error}
+        </div>
+      )}
+
+      {orderBump.active && orderBump.price && (
+        <div className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${addOrderBump ? 'bg-primary/5 border-primary' : 'bg-slate-50 border-slate-200 border-dashed hover:border-primary/50'}`} onClick={() => setAddOrderBump(!addOrderBump)}>
+          <div className="flex gap-3">
+            <div className="pt-1">
+              <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${addOrderBump ? 'bg-primary border-primary' : 'bg-white border-slate-300'}`}>
+                {addOrderBump && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-bold px-2 py-0.5 bg-red-100 text-red-700 rounded uppercase tracking-wider">Oferta Especial</span>
+              </div>
+              <h4 className="font-bold text-slate-900 leading-tight mb-1">{orderBump.title || 'Adicionar ao pedido'}</h4>
+              <p className="text-sm text-slate-600 mb-2">{orderBump.description}</p>
+              
+              {orderBump.discountPercent && orderBump.discountPercent > 0 ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-400 line-through">R$ {Number(orderBump.price).toFixed(2).replace('.', ',')}</span>
+                  <span className="font-bold text-emerald-600">R$ {(Number(orderBump.price) * (1 - orderBump.discountPercent / 100)).toFixed(2).replace('.', ',')}</span>
+                </div>
+              ) : (
+                <span className="font-bold text-emerald-600">R$ {Number(orderBump.price).toFixed(2).replace('.', ',')}</span>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

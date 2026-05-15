@@ -129,6 +129,13 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
                 affiliateId={affiliateId}
                 trackingId={ref || null}
                 pixels={allPixels}
+                orderBump={{
+                  active: !!product.order_bump_price,
+                  title: product.order_bump_title,
+                  description: product.order_bump_description,
+                  price: product.order_bump_price,
+                  discountPercent: product.order_bump_discount_percent
+                }}
               />
             </div>
           </div>
