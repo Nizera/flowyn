@@ -39,6 +39,7 @@ interface WizardData {
   order_bump_description: string
   order_bump_price: string
   order_bump_discount_percent: string
+  order_bump_image_url: string
   commission_rate: string
   delivery_type: string
   delivery_url: string
@@ -53,7 +54,7 @@ const INITIAL: WizardData = {
   site_url: '', checkout_banner_url: '', checkout_video_url: '',
   plans: [{ name: 'Acesso Completo', price: '', billing_type: 'one_time' }],
   order_bump_enabled: false, order_bump_title: '', order_bump_description: '',
-  order_bump_price: '', order_bump_discount_percent: '',
+  order_bump_price: '', order_bump_discount_percent: '', order_bump_image_url: '',
   commission_rate: '40', delivery_type: 'external', delivery_url: '',
   deliverable_file_paths: [], order_bump_file_paths: [], is_public: true,
 }
@@ -302,6 +303,18 @@ export function ProductWizard({
                     <label className={labelClass}>Desconto (%)</label>
                     <input className={inputClass} type="number" min="0" max="100" placeholder="50" value={data.order_bump_discount_percent} onChange={e => set('order_bump_discount_percent', e.target.value)} />
                   </div>
+                </div>
+                <div>
+                  <FileUpload
+                    mode="image"
+                    label="Imagem do Order Bump (Opcional)"
+                    hint="Imagem que aparecerá na oferta (ex: capa do e-book ou mockups)"
+                    userId={userId}
+                    folder="order_bumps"
+                    currentUrl={data.order_bump_image_url}
+                    onUpload={(url) => set('order_bump_image_url', url)}
+                    onRemove={() => set('order_bump_image_url', '')}
+                  />
                 </div>
                 {data.delivery_type === 'external' && !data.delivery_url && (
                   <div className="pt-3">

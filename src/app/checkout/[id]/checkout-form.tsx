@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Loader2, ShieldCheck, Mail, User as UserIcon } from 'lucide-react'
 
 interface CheckoutFormProps {
@@ -17,6 +17,7 @@ interface CheckoutFormProps {
     description: string | null
     price: number | null
     discountPercent: number | null
+    imageUrl: string | null
   }
 }
 
@@ -25,6 +26,21 @@ export function CheckoutForm({ planId, productId, amount, commissionRate, affili
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [addOrderBump, setAddOrderBump] = useState(false)
+
+  useEffect(() => {
+    const el = document.getElementById('checkout-total-amount')
+    if (el) {
+      const basePrice = Number(el.getAttribute('data-base-price') || amount)
+      let bumpPrice = 0
+      if (addOrderBump && orderBump.price) {
+        bumpPrice = orderBump.discountPercent && orderBump.discountPercent > 0
+          ? Number(orderBump.price) * (1 - orderBump.discountPercent / 100)
+          : Number(orderBump.price)
+      }
+      const total = basePrice + bumpPrice
+      el.innerText = `R$ ${total.toFixed(2).replace('.', ',')}`
+    }
+  }, [addOrderBump, amount, orderBump.price, orderBump.discountPercent])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -152,7 +168,12 @@ export function CheckoutForm({ planId, productId, amount, commissionRate, affili
                 {addOrderBump && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
               </div>
             </div>
-            <div>
+            {orderBump.imageUrl && (
+              <div className="shrink-0 pt-1">
+                <img src={orderBump.imageUrl} alt="Order Bump" className="w-16 h-16 object-cover rounded-lg border border-slate-200" />
+              </div>
+            )}
+            <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-bold px-2 py-0.5 bg-red-100 text-red-700 rounded uppercase tracking-wider">Oferta Especial</span>
               </div>

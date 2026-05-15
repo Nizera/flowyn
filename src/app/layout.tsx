@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Flowyn — Seu SaaS vendendo sozinho, 24 horas por dia.",
+  title: "Flowyn — Afiliados com até 75% de comissão por recorrência!.",
   description: "Checkout, split financeiro e acesso automático para o seu cliente. Plataforma de vendas para SaaS com afiliados integrados.",
 };
 

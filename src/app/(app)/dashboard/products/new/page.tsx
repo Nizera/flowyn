@@ -43,6 +43,7 @@ async function createProductAction(data: any): Promise<{ error: string } | void>
       order_bump_price: data.order_bump_enabled && data.order_bump_price ? parseFloat(data.order_bump_price) : null,
       order_bump_discount_percent: data.order_bump_enabled && data.order_bump_discount_percent ? parseFloat(data.order_bump_discount_percent) : null,
       order_bump_file_paths: data.order_bump_enabled && data.order_bump_file_paths?.length > 0 ? data.order_bump_file_paths : null,
+      order_bump_image_url: data.order_bump_enabled ? data.order_bump_image_url || null : null,
     })
     .select('id')
     .single()

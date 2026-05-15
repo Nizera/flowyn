@@ -134,7 +134,8 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
                   title: product.order_bump_title,
                   description: product.order_bump_description,
                   price: product.order_bump_price,
-                  discountPercent: product.order_bump_discount_percent
+                  discountPercent: product.order_bump_discount_percent,
+                  imageUrl: product.order_bump_image_url
                 }}
               />
             </div>
@@ -178,7 +179,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
 
               <div className="flex justify-between items-center">
                 <span className="text-lg font-bold text-slate-900">Total</span>
-                <span className="text-3xl font-extrabold text-slate-900">
+                <span id="checkout-total-amount" data-base-price={plan.price} data-bump-price={product.order_bump_price || 0} className="text-3xl font-extrabold text-slate-900">
                   R$ {Number(plan.price).toFixed(2).replace('.', ',')}
                 </span>
               </div>
