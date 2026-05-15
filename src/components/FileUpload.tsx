@@ -11,10 +11,11 @@ interface FileUploadProps {
   label: string
   hint?: string
   accept?: string
-  currentUrls?: string[] // Changed to array
-  multiple?: boolean // Added multiple support
-  onUpload: (urlsOrPaths: string[]) => void // Changed to array
-  onRemove?: (index: number) => void // Changed to remove by index
+  currentUrl?: string // Added back for single-file compatibility
+  currentUrls?: string[] // For multiple files
+  multiple?: boolean
+  onUpload: (urlsOrPaths: any) => void 
+  onRemove?: (index?: number) => void 
   userId: string
   folder?: string
 }
@@ -24,7 +25,8 @@ export function FileUpload({
   label,
   hint,
   accept,
-  currentUrls = [],
+  currentUrl,
+  currentUrls,
   multiple = false,
   onUpload,
   onRemove,
@@ -35,9 +37,10 @@ export function FileUpload({
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
   
+  const initialUrls = currentUrls || (currentUrl ? [currentUrl] : [])
   // States to keep track of uploaded files
-  const [previews, setPreviews] = useState<string[]>(currentUrls)
-  const [fileNames, setFileNames] = useState<string[]>(currentUrls.map(url => url.split('/').pop() || 'Arquivo anexado'))
+  const [previews, setPreviews] = useState<string[]>(initialUrls)
+  const [fileNames, setFileNames] = useState<string[]>(initialUrls.map(url => url.split('/').pop() || 'Arquivo anexado'))
   
   const [isDragging, setIsDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -108,7 +111,12 @@ export function FileUpload({
 
       setPreviews(newPreviews)
       setFileNames(newFileNames)
-      onUpload(newPaths)
+      
+      if (multiple) {
+        onUpload(newPaths)
+      } else {
+        onUpload(newPaths[0])
+      }
 
       setProgress(100)
     } catch (err: any) {
@@ -149,9 +157,13 @@ export function FileUpload({
     
     if (inputRef.current) inputRef.current.value = ''
     
-    onRemove?.(index)
-    // Also trigger onUpload with the new array so the parent state updates
-    onUpload(p)
+    if (multiple) {
+      onRemove?.(index)
+      onUpload(p)
+    } else {
+      onRemove?.()
+      onUpload('')
+    }
   }
 
   // If not multiple and already has 1 file, hide the drop zone

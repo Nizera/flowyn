@@ -315,9 +315,11 @@ export function ProductWizard({
                       currentUrls={data.order_bump_file_paths}
                       onUpload={(paths) => set('order_bump_file_paths', paths)}
                       onRemove={(index) => {
-                        const newPaths = [...data.order_bump_file_paths]
-                        newPaths.splice(index, 1)
-                        set('order_bump_file_paths', newPaths)
+                        if (index !== undefined) {
+                          const newPaths = [...data.order_bump_file_paths]
+                          newPaths.splice(index, 1)
+                          set('order_bump_file_paths', newPaths)
+                        }
                       }}
                     />
                   </div>
@@ -379,9 +381,11 @@ export function ProductWizard({
                   currentUrls={data.deliverable_file_paths}
                   onUpload={(paths) => set('deliverable_file_paths', paths)}
                   onRemove={(index) => {
-                    const newPaths = [...data.deliverable_file_paths]
-                    newPaths.splice(index, 1)
-                    set('deliverable_file_paths', newPaths)
+                    if (index !== undefined) {
+                      const newPaths = [...data.deliverable_file_paths]
+                      newPaths.splice(index, 1)
+                      set('deliverable_file_paths', newPaths)
+                    }
                   }}
                 />
               )}
@@ -444,7 +448,7 @@ export function ProductWizard({
             <div className="flex justify-between text-sm"><span className="text-white/50">Tipo</span><span className="text-white font-semibold">{PRODUCT_TYPES.find(t => t.value === data.product_type)?.label}</span></div>
             <div className="flex justify-between text-sm"><span className="text-white/50">Planos</span><span className="text-white font-semibold">{data.plans.length} plano(s)</span></div>
             <div className="flex justify-between text-sm"><span className="text-white/50">Comissão</span><span className="text-[#00e88a] font-bold">{data.commission_rate}%</span></div>
-            <div className="flex justify-between text-sm"><span className="text-white/50">Entrega</span><span className="text-white font-semibold">{data.deliverable_file_path ? '📁 Arquivo enviado' : data.delivery_url ? '🔗 Link externo' : data.delivery_type === 'platform' ? '🎓 Área de membros' : '—'}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-white/50">Entrega</span><span className="text-white font-semibold">{data.deliverable_file_paths.length > 0 ? `📁 ${data.deliverable_file_paths.length} Arquivo(s) enviado(s)` : data.delivery_url ? '🔗 Link externo' : data.delivery_type === 'platform' ? '🎓 Área de membros' : '—'}</span></div>
             <div className="flex justify-between text-sm"><span className="text-white/50">Visibilidade</span><span className="text-white font-semibold">{data.is_public ? 'Público' : 'Privado'}</span></div>
           </div>
         </div>
