@@ -13,7 +13,7 @@ import Footer from "./_landing/Footer";
 
 export const metadata = {
   title: "Flowyn — Marketplace de Afiliados para Infoprodutos e MicroSaaS",
-  description: "Publique cursos, e-books e mentorias ou afilie-se aos MicroSaaS da Flowyn. Checkout nativo, order bumps, split automático via Stripe e área de membros integrada.",
+  description: "Publique cursos, e-books e mentorias ou afilie-se aos MicroSaaS da Flowyn. Checkout nativo, order bumps, split automático via Asaas e área de membros integrada.",
 };
 
 export default function Home() {

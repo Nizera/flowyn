@@ -182,7 +182,7 @@ export default function Rates() {
         >
           {[
             { icon: "💳", label: "Pagamento único ou recorrente" },
-            { icon: "🔄", label: "Split automático via Stripe" },
+            { icon: "🔄", label: "Split automático via Asaas" },
             { icon: "📦", label: "Sem mensalidade fixa" },
           ].map((item) => (
             <div

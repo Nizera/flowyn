@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { stripe } from '@/lib/stripe'
+import { createAdminClient } from '@/utils/supabase/admin'
 
 const ADMIN_EMAIL = 'dnlmarianoneto@gmail.com'
 const FLOWYN_COMMISSION = 75 // 75% for affiliates, 25% for Flowyn
 
 function getAdminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
+  return createAdminClient()
 }
 
 // GET: list all Flowyn SaaS products
@@ -69,24 +64,7 @@ export async function POST(request: NextRequest) {
 
     if (!profile) return NextResponse.json({ error: 'Admin profile not found' }, { status: 404 })
 
-    // 2. Create Stripe Product
-    const stripeProduct = await stripe.products.create({
-      name,
-      description: description || undefined,
-      images: logo_url ? [logo_url] : [],
-      metadata: { flowyn_saas: 'true', category: category || '' },
-    })
-
-    // 3. Create Stripe Recurring Price
-    const stripePrice = await stripe.prices.create({
-      product: stripeProduct.id,
-      currency: 'brl',
-      unit_amount: Math.round(Number(price_brl) * 100),
-      recurring: { interval: 'month' },
-      metadata: { flowyn_saas: 'true' },
-    })
-
-    // 4. Create product in DB
+    // 2. Create product in DB. Recurring platform billing will be added later via Asaas.
     const { data: product, error: productError } = await supabase
       .from('products')
       .insert({
@@ -111,7 +89,7 @@ export async function POST(request: NextRequest) {
       throw new Error('Failed to create product: ' + productError?.message)
     }
 
-    // 5. Create plan in DB
+    // 3. Create plan in DB
     const { data: plan } = await supabase
       .from('plans')
       .insert({
@@ -119,16 +97,13 @@ export async function POST(request: NextRequest) {
         name: 'Mensal',
         price: Number(price_brl),
         billing_type: 'recurring',
-        stripe_price_id: stripePrice.id,
       })
       .select('id')
       .single()
 
-    // 6. Create flowyn_saas_products record
+    // 4. Create flowyn_saas_products record
     await supabase.from('flowyn_saas_products').insert({
       product_id: product.id,
-      stripe_product_id: stripeProduct.id,
-      stripe_price_id: stripePrice.id,
       commission_rate: FLOWYN_COMMISSION,
     })
 
@@ -136,8 +111,6 @@ export async function POST(request: NextRequest) {
       success: true,
       product_id: product.id,
       plan_id: plan?.id,
-      stripe_product_id: stripeProduct.id,
-      stripe_price_id: stripePrice.id,
       message: `SaaS "${name}" criado com preço R$ ${price_brl}/mês e comissão de ${FLOWYN_COMMISSION}% para afiliados.`,
     })
 

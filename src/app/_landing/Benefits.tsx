@@ -6,7 +6,7 @@ const criadorBenefits = [
   "Wizard de criação passo a passo — produto no ar em minutos",
   "Checkout customizado com banner, vídeo e order bump nativo",
   "Afiliados promovem seu produto por comissão — você paga só na venda",
-  "Split Stripe automático: criador e afiliado recebem na mesma hora",
+  "Split Asaas automático: criador e afiliado recebem na mesma hora",
   "Área de membros integrada para hospedar vídeos e PDFs",
 ];
 
@@ -14,7 +14,7 @@ const afilBenefits = [
   "Comissão recorrente: nos MicroSaaS da Flowyn, 75% todo mês",
   "Afilie-se a qualquer infoproduto da plataforma com 1 clique",
   "Link rastreável e dashboard de conversões em tempo real",
-  "Saque automático via Stripe — sem burocracia",
+  "Saque automático via Asaas — sem burocracia",
   "Combine promoção de SaaS + cursos para maximizar a renda",
 ];
 

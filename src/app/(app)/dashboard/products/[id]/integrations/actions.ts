@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { dispatchWebhook } from '@/lib/webhook'
 import crypto from 'crypto'
@@ -11,16 +12,23 @@ export async function testWebhookAction(productId: string, webhookUrl: string) {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return { success: false, error: 'Unauthorized' }
+  const supabaseAdmin = createAdminClient()
 
   // Verify ownership
   const { data: product } = await supabase
     .from('products')
-    .select('id, webhook_secret')
+    .select('id')
     .eq('id', productId)
     .eq('owner_id', user.id)
     .single()
 
   if (!product) return { success: false, error: 'Product not found' }
+
+  const { data: privateSettings } = await supabaseAdmin
+    .from('product_private_settings')
+    .select('webhook_secret')
+    .eq('product_id', productId)
+    .single()
 
   const payload = {
     event: 'purchase.created',
@@ -47,7 +55,7 @@ export async function testWebhookAction(productId: string, webhookUrl: string) {
 
   const body = JSON.stringify(payload)
   const signature = crypto
-    .createHmac('sha256', product.webhook_secret || '')
+    .createHmac('sha256', privateSettings?.webhook_secret || '')
     .update(body)
     .digest('hex')
 
@@ -90,7 +98,7 @@ export async function testWebhookAction(productId: string, webhookUrl: string) {
   const timeMs = Math.round(endTime - startTime)
 
   // Save the log
-  await supabase.from('webhook_logs').insert({
+  await supabaseAdmin.from('webhook_logs').insert({
     order_id: null, // Test webhook
     product_id: productId,
     webhook_url: webhookUrl,
@@ -118,6 +126,7 @@ export async function simulatePurchaseAction(productId: string, planId: string) 
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return { success: false, error: 'Unauthorized' }
+  const supabaseAdmin = createAdminClient()
 
   // Verify ownership
   const { data: product } = await supabase
@@ -130,7 +139,7 @@ export async function simulatePurchaseAction(productId: string, planId: string) 
   if (!product) return { success: false, error: 'Product not found' }
 
   // Create fake order
-  const { data: order, error: orderError } = await supabase
+  const { data: order, error: orderError } = await supabaseAdmin
     .from('orders')
     .insert({
       product_id: productId,

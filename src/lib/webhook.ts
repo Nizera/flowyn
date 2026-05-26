@@ -1,10 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
+import { createAdminClient } from '@/utils/supabase/admin'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+const supabaseAdmin = createAdminClient()
 
 interface WebhookPayload {
   event: string
@@ -45,7 +42,7 @@ export async function dispatchWebhook(orderId: string): Promise<{ success: boole
   // Fetch the order with product and webhook URL
   const { data: order, error: orderError } = await supabaseAdmin
     .from('orders')
-    .select('*, product:products(id, name, webhook_url, owner_id, webhook_secret), plan:plans(name, plan_identifier)')
+    .select('*, product:products(id, name, webhook_url, owner_id), plan:plans(name, plan_identifier)')
     .eq('id', orderId)
     .single()
 
@@ -97,8 +94,14 @@ export async function dispatchWebhook(orderId: string): Promise<{ success: boole
     id_do_plano: order.plan_id,
   }
 
+  const { data: privateSettings } = await supabaseAdmin
+    .from('product_private_settings')
+    .select('webhook_secret')
+    .eq('product_id', product.id)
+    .single()
+
   const body = JSON.stringify(payload)
-  const secret = product.webhook_secret || 'wh_sec_missing'
+  const secret = privateSettings?.webhook_secret || 'wh_sec_missing'
   
   const signature = crypto
     .createHmac('sha256', secret)

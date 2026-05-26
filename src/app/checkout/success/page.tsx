@@ -8,8 +8,6 @@ import { Suspense } from 'react'
 function SuccessContent() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get('order_id')
-  // Stripe sends payment_intent param on redirect from confirmPayment
-  const paymentIntent = searchParams.get('payment_intent')
   const redirectStatus = searchParams.get('redirect_status')
 
   // If payment failed (e.g. 3D Secure cancelled)
@@ -44,7 +42,7 @@ function SuccessContent() {
         </h1>
 
         <p className="text-slate-500 mb-6 leading-relaxed">
-          Seu pagamento foi processado com sucesso pelo Stripe. Você receberá os dados de acesso no seu e-mail em instantes.
+          Seu pagamento foi processado com sucesso pela Asaas. Você receberá os dados de acesso no seu e-mail em instantes.
         </p>
 
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6">

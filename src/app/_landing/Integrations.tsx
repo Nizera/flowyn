@@ -18,7 +18,7 @@ const flow = [
   },
   {
     icon: "💳",
-    label: "Stripe",
+    label: "Asaas",
     sub: "Pagamento & repasse",
     bg: "#635bff",
     dark: false,
@@ -70,7 +70,7 @@ export default function Integrations() {
             margin: "0 auto 56px",
           }}
         >
-          Do checkout ao repasse para criadores e afiliados — via Stripe Connect,
+          Do checkout ao repasse para criadores e afiliados — via Asaas,
           com split automático e sem uma linha de código.
         </p>
         <div

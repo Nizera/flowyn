@@ -95,7 +95,7 @@ export default function Hero() {
         >
           Publique cursos, e-books e mentorias — ou ganhe comissões promovendo
           os MicroSaaS da Flowyn. Checkout nativo, order bumps e split
-          automático via Stripe.
+          automático via Asaas.
         </p>
 
         {/* CTAs */}
@@ -148,7 +148,7 @@ export default function Hero() {
         </div>
 
         <p style={{ marginTop: 22, fontSize: 13, color: "#aaa", fontWeight: 400 }}>
-          Sem mensalidade · Comissões automáticas via Stripe · Comece em minutos
+          Sem mensalidade · Comissões automáticas via Asaas · Comece em minutos
         </p>
       </div>
     </section>

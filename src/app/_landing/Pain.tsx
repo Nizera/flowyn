@@ -21,7 +21,7 @@ const features = [
   {
     icon: "🛡",
     title: "Split Financeiro Automático",
-    sub: "O Stripe separa a comissão do afiliado e o repasse ao criador em tempo real — zero intervenção manual.",
+    sub: "O Asaas separa a comissão do afiliado e o repasse ao criador em tempo real — zero intervenção manual.",
   },
   {
     icon: "🔄",

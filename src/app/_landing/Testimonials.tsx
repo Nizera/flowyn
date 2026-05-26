@@ -15,7 +15,7 @@ const testimonials = [
     color: "#e91e8c",
   },
   {
-    text: "Meu e-book de copywriting saiu de zero para R$8k/mês em 3 meses usando só a rede de afiliados da Flowyn. O split automático via Stripe me poupa horas de conciliação financeira.",
+    text: "Meu e-book de copywriting saiu de zero para R$8k/mês em 3 meses usando só a rede de afiliados da Flowyn. O split automático via Asaas me poupa horas de conciliação financeira.",
     name: "Rafael Prado",
     role: "Produtor — Escola de Copy",
     initials: "RP",

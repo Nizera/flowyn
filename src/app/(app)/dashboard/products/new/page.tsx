@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { ProductWizard } from './ProductWizard'
+import crypto from 'crypto'
 
 const ADMIN_EMAIL = 'dnlmarianoneto@gmail.com'
 
@@ -52,6 +54,15 @@ async function createProductAction(data: any): Promise<{ error: string } | void>
     console.error('[createProductAction] DB Error:', error)
     return { error: `Erro ao criar produto: ${error?.message || 'resposta vazia do banco'}` }
   }
+
+  const supabaseAdmin = createAdminClient()
+  await supabaseAdmin
+    .from('product_private_settings')
+    .upsert({
+      product_id: product.id,
+      webhook_secret: `whsec_${crypto.randomBytes(32).toString('hex')}`,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'product_id' })
 
   // 2. Create plans
   if (data.plans?.length > 0) {

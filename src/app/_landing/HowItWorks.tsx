@@ -15,7 +15,7 @@ const steps = [
   {
     icon: "03",
     title: "Receba e escale",
-    desc: "O Stripe cuida do split automático a cada venda. Criadores e afiliados recebem sua parte sem nenhuma intervenção manual.",
+    desc: "O Asaas cuida do split automático a cada venda. Criadores e afiliados recebem sua parte sem nenhuma intervenção manual.",
   },
 ];
 

@@ -99,7 +99,7 @@ export default function FinalCTA() {
           </Link>
         </div>
         <p style={{ marginTop: 24, fontSize: 13, color: "rgba(255,255,255,0.25)" }}>
-          Sem mensalidade · Comissões automáticas via Stripe · Cancele quando quiser
+          Sem mensalidade · Comissões automáticas via Asaas · Cancele quando quiser
         </p>
       </div>
     </section>
