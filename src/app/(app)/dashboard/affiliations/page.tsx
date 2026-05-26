@@ -1,11 +1,23 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { Link2, TrendingUp, DollarSign, Store, ExternalLink, Copy } from 'lucide-react'
 import { AffiliationPixelSection } from './AffiliationPixelSection'
 
+function isLocalUrl(value?: string) {
+  return !value || /localhost|127\.0\.0\.1/i.test(value)
+}
+
 export default async function AffiliationsPage() {
   const supabase = await createClient()
+  const requestHeaders = await headers()
+  const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL
+  const host = requestHeaders.get('x-forwarded-host') || requestHeaders.get('host')
+  const protocol = requestHeaders.get('x-forwarded-proto') || 'https'
+  const requestAppUrl = host ? `${protocol}://${host}` : 'http://localhost:3000'
+  const checkoutBase = (isLocalUrl(configuredAppUrl) ? requestAppUrl : configuredAppUrl!).replace(/\/$/, '')
+
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
@@ -94,8 +106,6 @@ export default async function AffiliationsPage() {
               const plans = product.plans as any[] || []
               const minPrice = plans.length > 0 ? Math.min(...plans.map((p: any) => Number(p.price))) : null
 
-              // Use the production URL from env, fallback to localhost for dev
-              const checkoutBase = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
               const affiliateLinks = plans.map((pl: any) => ({
                 planName: pl.name,
                 url: `${checkoutBase}/checkout/${pl.id}?ref=${aff.tracking_id}`
