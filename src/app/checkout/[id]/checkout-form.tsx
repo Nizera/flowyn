@@ -23,6 +23,7 @@ interface CheckoutFormProps {
   orderBump: OrderBumpData
   primaryColor?: string
   buttonText?: string
+  previewMode?: boolean
 }
 
 function money(value: number) {
@@ -40,6 +41,7 @@ export function CheckoutForm({
   orderBump,
   primaryColor = '#059669',
   buttonText = 'Pagar',
+  previewMode = false,
 }: CheckoutFormProps) {
   const [addOrderBump, setAddOrderBump] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -75,6 +77,10 @@ export function CheckoutForm({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (previewMode) {
+      setError('Preview do checkout: nenhum pagamento sera processado.')
+      return
+    }
     setLoading(true)
     setError(null)
 

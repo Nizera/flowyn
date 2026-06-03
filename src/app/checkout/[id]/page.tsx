@@ -6,7 +6,7 @@ import { normalizeCheckoutConfig } from '@/lib/checkout-customization'
 
 interface CheckoutPageProps {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ ref?: string }>
+  searchParams: Promise<{ ref?: string; preview?: string; draft?: string }>
 }
 
 function money(value: number) {
@@ -15,8 +15,10 @@ function money(value: number) {
 
 export default async function CheckoutPage({ params, searchParams }: CheckoutPageProps) {
   const { id } = await params
-  const { ref } = await searchParams
+  const { ref, preview, draft } = await searchParams
   const supabase = await createClient()
+  const isPreviewMode = preview === '1'
+  const wantsDraftPreview = isPreviewMode && draft === '1'
 
   const { data: plan, error: planError } = await supabase
     .from('plans')
@@ -58,11 +60,20 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   const product = plan.product as any
   const { data: customization } = await supabase
     .from('checkout_customizations')
-    .select('published_config')
+    .select('draft_config, published_config')
     .eq('product_id', product.id)
     .maybeSingle()
 
-  const checkoutConfig = normalizeCheckoutConfig(customization?.published_config, product)
+  let canPreviewDraft = false
+  if (wantsDraftPreview) {
+    const { data: { user } } = await supabase.auth.getUser()
+    canPreviewDraft = user?.id === product.owner_id
+  }
+
+  const checkoutConfig = normalizeCheckoutConfig(
+    canPreviewDraft ? customization?.draft_config : customization?.published_config,
+    product
+  )
   const producerAccess = await getPlatformAccess(product.owner_id)
 
   if (!producerAccess.allowed) {
@@ -110,7 +121,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: checkoutConfig.backgroundColor }}>
-      <PixelScripts pixels={allPixels} />
+      {!isPreviewMode && <PixelScripts pixels={allPixels} />}
 
       <header className="border-b border-slate-200 bg-white/95 px-4 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-3">
@@ -193,6 +204,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
                 pixels={allPixels}
                 primaryColor={checkoutConfig.primaryColor}
                 buttonText={checkoutConfig.buttonText}
+                previewMode={isPreviewMode}
                 orderBump={{
                   active: !!product.order_bump_price,
                   title: product.order_bump_title,
