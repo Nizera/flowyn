@@ -125,7 +125,12 @@ export function CheckoutForm({
   }
 
   const inputClass =
-    'w-full bg-white border border-slate-200 rounded-xl py-3.5 pl-11 pr-4 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none'
+    'w-full bg-white border border-slate-200 rounded-xl py-3.5 pl-11 pr-4 text-slate-900 placeholder:text-slate-400 focus:ring-2 transition-all outline-none'
+  const plainInputClass =
+    'w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 placeholder:text-slate-400 focus:ring-2 outline-none'
+  const focusStyle = {
+    '--tw-ring-color': `${primaryColor}26`,
+  } as React.CSSProperties
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -146,6 +151,7 @@ export function CheckoutForm({
               }}
               placeholder="Seu nome completo"
               className={inputClass}
+              style={focusStyle}
             />
           </div>
         </div>
@@ -164,6 +170,7 @@ export function CheckoutForm({
               onChange={e => setCustomerEmail(e.target.value)}
               placeholder="seu@email.com"
               className={inputClass}
+              style={focusStyle}
             />
           </div>
         </div>
@@ -182,6 +189,7 @@ export function CheckoutForm({
                 onChange={e => setCustomerDocument(digits(e.target.value))}
                 placeholder="Somente números"
                 className={inputClass}
+                style={focusStyle}
               />
             </div>
           </div>
@@ -199,6 +207,7 @@ export function CheckoutForm({
                 onChange={e => setCustomerPhone(digits(e.target.value))}
                 placeholder="DDD + número"
                 className={inputClass}
+                style={focusStyle}
               />
             </div>
           </div>
@@ -208,15 +217,22 @@ export function CheckoutForm({
       {orderBump.active && orderBump.price && (
         <button
           type="button"
-          className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-            addOrderBump
-              ? 'bg-emerald-50 border-emerald-500'
-              : 'bg-slate-50 border-slate-200 border-dashed hover:border-emerald-400'
-          }`}
+          className="w-full rounded-2xl border-2 p-4 text-left transition-all"
+          style={{
+            backgroundColor: addOrderBump ? `${primaryColor}10` : '#f8fafc',
+            borderColor: addOrderBump ? primaryColor : '#e2e8f0',
+            borderStyle: addOrderBump ? 'solid' : 'dashed',
+          }}
           onClick={() => setAddOrderBump(!addOrderBump)}
         >
           <div className="flex gap-3">
-            <div className={`mt-1 w-5 h-5 rounded border flex items-center justify-center ${addOrderBump ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-slate-300'}`}>
+            <div
+              className="mt-1 flex h-5 w-5 items-center justify-center rounded border"
+              style={{
+                backgroundColor: addOrderBump ? primaryColor : '#ffffff',
+                borderColor: addOrderBump ? primaryColor : '#cbd5e1',
+              }}
+            >
               {addOrderBump && <span className="text-white text-xs font-bold">✓</span>}
             </div>
             {orderBump.imageUrl && (
@@ -228,7 +244,7 @@ export function CheckoutForm({
               </span>
               <h4 className="font-bold text-slate-900 leading-tight mt-2">{orderBump.title || 'Adicionar ao pedido'}</h4>
               <p className="text-sm text-slate-600 mt-1">{orderBump.description}</p>
-              <p className="font-bold text-emerald-600 mt-2">R$ {money(bumpPrice || Number(orderBump.price))}</p>
+              <p className="mt-2 font-bold" style={{ color: primaryColor }}>R$ {money(bumpPrice || Number(orderBump.price))}</p>
             </div>
           </div>
         </button>
@@ -236,7 +252,7 @@ export function CheckoutForm({
 
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-4">
         <div className="flex items-center gap-2 text-slate-900 font-bold">
-          <CreditCard className="w-5 h-5 text-emerald-600" />
+          <CreditCard className="w-5 h-5" style={{ color: primaryColor }} />
           Cartão de crédito
         </div>
 
@@ -250,7 +266,8 @@ export function CheckoutForm({
             value={cardHolderName}
             onChange={e => setCardHolderName(e.target.value)}
             placeholder="Como aparece no cartão"
-            className="w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+            className={plainInputClass}
+            style={focusStyle}
           />
         </div>
 
@@ -266,14 +283,15 @@ export function CheckoutForm({
             value={cardNumber}
             onChange={e => setCardNumber(digits(e.target.value).slice(0, 19))}
             placeholder="0000 0000 0000 0000"
-            className="w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+            className={plainInputClass}
+            style={focusStyle}
           />
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <input required inputMode="numeric" autoComplete="cc-exp-month" value={expiryMonth} onChange={e => setExpiryMonth(digits(e.target.value).slice(0, 2))} placeholder="MM" className="bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" />
-          <input required inputMode="numeric" autoComplete="cc-exp-year" value={expiryYear} onChange={e => setExpiryYear(digits(e.target.value).slice(0, 4))} placeholder="AAAA" className="bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" />
-          <input required inputMode="numeric" autoComplete="cc-csc" value={ccv} onChange={e => setCcv(digits(e.target.value).slice(0, 4))} placeholder="CVV" className="bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" />
+          <input required inputMode="numeric" autoComplete="cc-exp-month" value={expiryMonth} onChange={e => setExpiryMonth(digits(e.target.value).slice(0, 2))} placeholder="MM" className={plainInputClass} style={focusStyle} />
+          <input required inputMode="numeric" autoComplete="cc-exp-year" value={expiryYear} onChange={e => setExpiryYear(digits(e.target.value).slice(0, 4))} placeholder="AAAA" className={plainInputClass} style={focusStyle} />
+          <input required inputMode="numeric" autoComplete="cc-csc" value={ccv} onChange={e => setCcv(digits(e.target.value).slice(0, 4))} placeholder="CVV" className={plainInputClass} style={focusStyle} />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -283,18 +301,18 @@ export function CheckoutForm({
             </label>
             <div className="relative">
               <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input id="postal_code" required value={postalCode} onChange={e => setPostalCode(digits(e.target.value).slice(0, 8))} placeholder="00000000" className={inputClass} />
+              <input id="postal_code" required value={postalCode} onChange={e => setPostalCode(digits(e.target.value).slice(0, 8))} placeholder="00000000" className={inputClass} style={focusStyle} />
             </div>
           </div>
           <div>
             <label htmlFor="address_number" className="block text-sm font-semibold text-slate-700 mb-2">
               Número
             </label>
-            <input id="address_number" required value={addressNumber} onChange={e => setAddressNumber(e.target.value)} placeholder="123" className="w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" />
+            <input id="address_number" required value={addressNumber} onChange={e => setAddressNumber(e.target.value)} placeholder="123" className={plainInputClass} style={focusStyle} />
           </div>
         </div>
 
-        <input value={addressComplement} onChange={e => setAddressComplement(e.target.value)} placeholder="Complemento (opcional)" className="w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none" />
+        <input value={addressComplement} onChange={e => setAddressComplement(e.target.value)} placeholder="Complemento (opcional)" className={plainInputClass} style={focusStyle} />
       </div>
 
       {error && (

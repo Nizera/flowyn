@@ -1,5 +1,4 @@
 import { createClient } from '@/utils/supabase/server'
-import { redirect } from 'next/navigation'
 import { CheckoutForm } from './checkout-form'
 import { PixelScripts } from '@/components/PixelScripts'
 import { getPlatformAccess } from '@/lib/platform-access'
@@ -10,12 +9,15 @@ interface CheckoutPageProps {
   searchParams: Promise<{ ref?: string }>
 }
 
+function money(value: number) {
+  return Number(value || 0).toFixed(2).replace('.', ',')
+}
+
 export default async function CheckoutPage({ params, searchParams }: CheckoutPageProps) {
   const { id } = await params
   const { ref } = await searchParams
   const supabase = await createClient()
 
-  // Fetch the plan and its product
   const { data: plan, error: planError } = await supabase
     .from('plans')
     .select('*, product:products(*, owner:profiles(full_name))')
@@ -24,22 +26,20 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
 
   if (planError || !plan) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-lg p-12 text-center max-w-md">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl">❌</span>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Plano não encontrado</h1>
-          <p className="text-slate-500">O link de checkout que você acessou não é válido ou o plano foi removido.</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+        <div className="max-w-md rounded-3xl bg-white p-10 text-center shadow-sm ring-1 ring-slate-200">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-2xl text-red-600">!</div>
+          <h1 className="text-2xl font-black text-slate-950">Plano nao encontrado</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-500">O link de checkout que voce acessou nao e valido ou o plano foi removido.</p>
         </div>
       </div>
     )
   }
 
-  // If there's a ref param, look up the affiliate
   let affiliateId: string | null = null
   let affiliateName: string | null = null
   let affiliationId: string | null = null
+
   if (ref) {
     const { data: affiliation } = await supabase
       .from('affiliations')
@@ -61,25 +61,22 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     .select('published_config')
     .eq('product_id', product.id)
     .maybeSingle()
+
   const checkoutConfig = normalizeCheckoutConfig(customization?.published_config, product)
   const producerAccess = await getPlatformAccess(product.owner_id)
 
   if (!producerAccess.allowed) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-lg p-12 text-center max-w-md">
-          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl">!</span>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Checkout temporariamente indisponivel</h1>
-          <p className="text-slate-500">Este produto esta pausado enquanto o produtor regulariza o acesso a plataforma.</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+        <div className="max-w-md rounded-3xl bg-white p-10 text-center shadow-sm ring-1 ring-slate-200">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-2xl font-black text-amber-600">!</div>
+          <h1 className="text-2xl font-black text-slate-950">Checkout temporariamente indisponivel</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Este produto esta pausado enquanto o produtor regulariza o acesso a plataforma.</p>
         </div>
       </div>
     )
   }
 
-  // ── Fetch pixels ──────────────────────────────────────────────────────────
-  // Producer pixels linked to this plan
   const { data: planPixelRows } = await supabase
     .from('plan_pixels')
     .select('pixel:pixels(platform, pixel_id, is_active)')
@@ -90,7 +87,6 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     .filter((p: any) => p?.is_active)
     .map((p: any) => ({ platform: p.platform, pixel_id: p.pixel_id }))
 
-  // Affiliate pixels linked to their affiliation — scoped to this plan or global (plan_id IS NULL)
   let affiliatePixels: { platform: string; pixel_id: string }[] = []
   if (affiliationId) {
     const { data: affPixelRows } = await supabase
@@ -105,7 +101,6 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
       .map((p: any) => ({ platform: p.platform, pixel_id: p.pixel_id }))
   }
 
-  // Merge both — deduplicate by pixel_id
   const seenPixelIds = new Set<string>()
   const allPixels = [...producerPixels, ...affiliatePixels].filter(p => {
     if (seenPixelIds.has(p.pixel_id)) return false
@@ -115,55 +110,79 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: checkoutConfig.backgroundColor }}>
-      {/* Pixel Scripts — injected in <head> via next/script */}
       <PixelScripts pixels={allPixels} />
 
-      {/* Top Bar */}
-      <header className="bg-white border-b border-slate-200 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center gap-3">
+      <header className="border-b border-slate-200 bg-white/95 px-4 py-4 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center gap-3">
           {product.logo_url ? (
-            <img src={product.logo_url} alt={product.name} className="w-8 h-8 rounded-lg object-cover" />
+            <img src={product.logo_url} alt={product.name} className="h-10 w-10 rounded-xl border border-slate-200 object-cover" />
           ) : (
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <span className="font-bold text-primary text-sm">{product.name.charAt(0)}</span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50">
+              <span className="text-sm font-black" style={{ color: checkoutConfig.primaryColor }}>{product.name.charAt(0)}</span>
             </div>
           )}
-          <span className="font-bold text-slate-900">{product.name}</span>
-          <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium ml-auto">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-black text-slate-950">{product.name}</p>
+            <p className="text-xs font-medium text-slate-500">Checkout seguro Flowyn</p>
+          </div>
+          <div className="ml-auto hidden items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700 sm:flex">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
             {checkoutConfig.securityText}
-          </span>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto p-6 md:p-10">
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          
-          {/* Left: Checkout Form */}
-          <div className="lg:col-span-3">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-              {checkoutConfig.blocks.banner && checkoutConfig.bannerImageUrl && (
-                <img src={checkoutConfig.bannerImageUrl} alt={product.name} className="mb-6 h-44 w-full rounded-2xl object-cover" />
-              )}
-              <div className="mb-8 flex items-start gap-4">
-                {checkoutConfig.mockupImageUrl && (
-                  <img src={checkoutConfig.mockupImageUrl} alt={product.name} className="h-20 w-20 rounded-2xl border border-slate-200 object-cover" />
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:py-10">
+        {checkoutConfig.blocks.banner && checkoutConfig.bannerImageUrl && (
+          <img src={checkoutConfig.bannerImageUrl} alt={product.name} className="mb-6 h-52 w-full rounded-[28px] border border-slate-200 object-cover shadow-sm lg:h-64" />
+        )}
+
+        <div className="grid gap-6 lg:grid-cols-[1fr_390px] lg:items-start">
+          <section className="space-y-6">
+            <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+                {(checkoutConfig.mockupImageUrl || product.logo_url) && (
+                  <img
+                    src={checkoutConfig.mockupImageUrl || product.logo_url}
+                    alt={product.name}
+                    className="h-24 w-24 rounded-2xl border border-slate-200 object-cover shadow-sm"
+                  />
                 )}
-                <div>
-                  <h1 className="text-2xl font-bold text-slate-900 mb-1">{checkoutConfig.headline}</h1>
-                  <p className="text-slate-500 text-sm">{checkoutConfig.subheadline}</p>
+                <div className="max-w-2xl">
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.18em]" style={{ color: checkoutConfig.primaryColor }}>
+                    Acesso imediato
+                  </p>
+                  <h1 className="text-3xl font-black leading-tight text-slate-950 sm:text-4xl">
+                    {checkoutConfig.headline}
+                  </h1>
+                  <p className="mt-3 text-base leading-7 text-slate-600">
+                    {checkoutConfig.subheadline}
+                  </p>
                 </div>
               </div>
 
               {checkoutConfig.blocks.benefits && checkoutConfig.benefits.length > 0 && (
-                <div className="mb-8 grid gap-3 sm:grid-cols-3">
+                <div className="mt-8 grid gap-3 sm:grid-cols-3">
                   {checkoutConfig.benefits.map(benefit => (
-                    <div key={benefit} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">
-                      <span style={{ color: checkoutConfig.primaryColor }}>●</span> {benefit}
+                    <div key={benefit} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">
+                      <span className="mr-2 inline-block h-2 w-2 rounded-full align-middle" style={{ backgroundColor: checkoutConfig.primaryColor }} />
+                      {benefit}
                     </div>
                   ))}
                 </div>
               )}
+            </div>
 
+            <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+              <div className="mb-6 flex items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Pagamento</p>
+                  <h2 className="mt-1 text-2xl font-black text-slate-950">Dados do comprador</h2>
+                </div>
+                <div className="rounded-full bg-slate-50 px-3 py-1.5 text-xs font-black text-slate-500">
+                  Cartao
+                </div>
+              </div>
               <CheckoutForm
                 planId={plan.id}
                 productId={plan.product_id}
@@ -184,64 +203,82 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
                 }}
               />
             </div>
-          </div>
+          </section>
 
-          {/* Right: Order Summary */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sticky top-8">
-              <h2 className="text-lg font-bold text-slate-900 mb-6">Resumo do Pedido</h2>
-              
-              <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
-                {product.logo_url ? (
-                  <img src={checkoutConfig.mockupImageUrl || product.logo_url} alt={product.name} className="w-14 h-14 rounded-xl object-cover border border-slate-200" />
-                ) : (
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20">
-                    <span className="font-bold text-primary text-2xl">{product.name.charAt(0)}</span>
+          <aside className="lg:sticky lg:top-8">
+            <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 p-6">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Resumo do pedido</p>
+                <div className="mt-5 flex gap-4">
+                  {(checkoutConfig.mockupImageUrl || product.logo_url) ? (
+                    <img
+                      src={checkoutConfig.mockupImageUrl || product.logo_url}
+                      alt={product.name}
+                      className="h-20 w-20 rounded-2xl border border-slate-200 object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50">
+                      <span className="text-2xl font-black" style={{ color: checkoutConfig.primaryColor }}>{product.name.charAt(0)}</span>
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <h2 className="line-clamp-2 text-lg font-black leading-tight text-slate-950">{product.name}</h2>
+                    <p className="mt-1 text-sm font-semibold text-slate-500">Plano {plan.name}</p>
+                    {plan.billing_type === 'recurring' && <p className="mt-1 text-xs font-bold text-slate-400">Cobranca mensal</p>}
                   </div>
-                )}
-                <div>
-                  <h3 className="font-bold text-slate-900">{product.name}</h3>
-                  <p className="text-sm text-slate-500">Plano {plan.name}</p>
                 </div>
               </div>
 
-              <div className="space-y-3 mb-6 pb-6 border-b border-slate-100">
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Plano</span>
-                  <span className="font-medium text-slate-900">{plan.name}</span>
+              <div className="space-y-4 p-6">
+                <div className="flex justify-between gap-4 text-sm">
+                  <span className="text-slate-500">Produto</span>
+                  <span className="text-right font-bold text-slate-900">{product.name}</span>
                 </div>
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between gap-4 text-sm">
                   <span className="text-slate-500">Produtor</span>
-                  <span className="font-medium text-slate-900">{product.owner?.full_name || 'Anônimo'}</span>
+                  <span className="text-right font-bold text-slate-900">{product.owner?.full_name || 'Anonimo'}</span>
                 </div>
                 {affiliateName && (
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between gap-4 text-sm">
                     <span className="text-slate-500">Indicado por</span>
-                    <span className="font-medium text-primary">{affiliateName}</span>
+                    <span className="text-right font-bold" style={{ color: checkoutConfig.primaryColor }}>{affiliateName}</span>
+                  </div>
+                )}
+                <div className="border-t border-slate-100 pt-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Subtotal</span>
+                    <span className="font-bold text-slate-900">R$ {money(plan.price)}</span>
+                  </div>
+                  <div className="mt-3 flex justify-between text-sm">
+                    <span className="text-slate-500">Taxa Flowyn</span>
+                    <span className="font-black text-emerald-600">R$ 0,00</span>
+                  </div>
+                </div>
+                <div className="flex items-end justify-between border-t border-slate-100 pt-5">
+                  <span className="text-base font-black text-slate-950">Total</span>
+                  <span id="checkout-total-amount" data-base-price={plan.price} data-bump-price={product.order_bump_price || 0} className="text-3xl font-black text-slate-950">
+                    R$ {money(plan.price)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-3 bg-slate-50 p-6">
+                <div className="rounded-2xl bg-white p-4 text-xs font-bold leading-5 text-slate-500">
+                  {checkoutConfig.securityText}. A Flowyn nao armazena os dados do cartao.
+                </div>
+                {checkoutConfig.blocks.guarantee && (
+                  <div className="rounded-2xl bg-white p-4 text-xs font-bold leading-5 text-slate-500">
+                    {checkoutConfig.guaranteeText}
                   </div>
                 )}
               </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-bold text-slate-900">Total</span>
-                <span id="checkout-total-amount" data-base-price={plan.price} data-bump-price={product.order_bump_price || 0} className="text-3xl font-extrabold text-slate-900">
-                  R$ {Number(plan.price).toFixed(2).replace('.', ',')}
-                </span>
-              </div>
-              {plan.billing_type === 'recurring' && <p className="text-xs text-slate-400 mt-2 text-right">Cobranca recorrente mensal</p>}
-              {checkoutConfig.blocks.guarantee && (
-                <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-xs text-slate-500">
-                  {checkoutConfig.guaranteeText}
-                </div>
-              )}
             </div>
-          </div>
-
+          </aside>
         </div>
       </main>
 
-      <footer className="text-center py-8 text-xs text-slate-400">
-        Powered by <span className="font-bold text-primary">Flowyn</span> - Checkout e afiliados
+      <footer className="px-4 pb-10 text-center text-xs font-semibold text-slate-400">
+        Powered by <span className="font-black" style={{ color: checkoutConfig.primaryColor }}>Flowyn</span>
       </footer>
     </div>
   )

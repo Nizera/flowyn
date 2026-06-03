@@ -146,6 +146,7 @@ Objetivo: permitir que o produtor edite e visualize o checkout antes de publicar
 ### 11.2 Preview Visual [~]
 
 - [x] Renderizar preview fiel do checkout atual.
+- [x] Reformular checkout publicado para layout transparente branco.
 - [x] Exibir produto, plano, preço e produtor.
 - [x] Exibir order bump no preview quando existir.
 - [ ] Exibir estado com afiliado simulado.
