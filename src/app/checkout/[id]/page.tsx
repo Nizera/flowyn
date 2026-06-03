@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { CheckoutForm } from './checkout-form'
 import { PixelScripts } from '@/components/PixelScripts'
 import { getPlatformAccess } from '@/lib/platform-access'
+import { normalizeCheckoutConfig } from '@/lib/checkout-customization'
 
 interface CheckoutPageProps {
   params: Promise<{ id: string }>
@@ -55,6 +56,12 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   }
 
   const product = plan.product as any
+  const { data: customization } = await supabase
+    .from('checkout_customizations')
+    .select('published_config')
+    .eq('product_id', product.id)
+    .maybeSingle()
+  const checkoutConfig = normalizeCheckoutConfig(customization?.published_config, product)
   const producerAccess = await getPlatformAccess(product.owner_id)
 
   if (!producerAccess.allowed) {
@@ -107,7 +114,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   }) as { platform: 'meta' | 'google' | 'tiktok'; pixel_id: string }[]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen" style={{ backgroundColor: checkoutConfig.backgroundColor }}>
       {/* Pixel Scripts — injected in <head> via next/script */}
       <PixelScripts pixels={allPixels} />
 
@@ -123,7 +130,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
           )}
           <span className="font-bold text-slate-900">{product.name}</span>
           <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium ml-auto">
-            Pagamento Seguro  🔒
+            {checkoutConfig.securityText}
           </span>
         </div>
       </header>
@@ -134,8 +141,28 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
           {/* Left: Checkout Form */}
           <div className="lg:col-span-3">
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-              <h1 className="text-2xl font-bold text-slate-900 mb-1">Finalizar Compra</h1>
-              <p className="text-slate-500 text-sm mb-8">Preencha seus dados para acessar o <strong>{product.name}</strong>.</p>
+              {checkoutConfig.blocks.banner && checkoutConfig.bannerImageUrl && (
+                <img src={checkoutConfig.bannerImageUrl} alt={product.name} className="mb-6 h-44 w-full rounded-2xl object-cover" />
+              )}
+              <div className="mb-8 flex items-start gap-4">
+                {checkoutConfig.mockupImageUrl && (
+                  <img src={checkoutConfig.mockupImageUrl} alt={product.name} className="h-20 w-20 rounded-2xl border border-slate-200 object-cover" />
+                )}
+                <div>
+                  <h1 className="text-2xl font-bold text-slate-900 mb-1">{checkoutConfig.headline}</h1>
+                  <p className="text-slate-500 text-sm">{checkoutConfig.subheadline}</p>
+                </div>
+              </div>
+
+              {checkoutConfig.blocks.benefits && checkoutConfig.benefits.length > 0 && (
+                <div className="mb-8 grid gap-3 sm:grid-cols-3">
+                  {checkoutConfig.benefits.map(benefit => (
+                    <div key={benefit} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">
+                      <span style={{ color: checkoutConfig.primaryColor }}>●</span> {benefit}
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <CheckoutForm
                 planId={plan.id}
@@ -145,13 +172,15 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
                 affiliateId={affiliateId}
                 trackingId={ref || null}
                 pixels={allPixels}
+                primaryColor={checkoutConfig.primaryColor}
+                buttonText={checkoutConfig.buttonText}
                 orderBump={{
                   active: !!product.order_bump_price,
                   title: product.order_bump_title,
                   description: product.order_bump_description,
                   price: product.order_bump_price,
                   discountPercent: product.order_bump_discount_percent,
-                  imageUrl: product.order_bump_image_url
+                  imageUrl: checkoutConfig.orderBumpImageUrl || product.order_bump_image_url
                 }}
               />
             </div>
@@ -164,7 +193,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
               
               <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
                 {product.logo_url ? (
-                  <img src={product.logo_url} alt={product.name} className="w-14 h-14 rounded-xl object-cover border border-slate-200" />
+                  <img src={checkoutConfig.mockupImageUrl || product.logo_url} alt={product.name} className="w-14 h-14 rounded-xl object-cover border border-slate-200" />
                 ) : (
                   <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20">
                     <span className="font-bold text-primary text-2xl">{product.name.charAt(0)}</span>
@@ -200,6 +229,11 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
                 </span>
               </div>
               {plan.billing_type === 'recurring' && <p className="text-xs text-slate-400 mt-2 text-right">Cobranca recorrente mensal</p>}
+              {checkoutConfig.blocks.guarantee && (
+                <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-xs text-slate-500">
+                  {checkoutConfig.guaranteeText}
+                </div>
+              )}
             </div>
           </div>
 

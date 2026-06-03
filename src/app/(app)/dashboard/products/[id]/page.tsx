@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, Save, Building2, Link as LinkIcon,
-  Percent, CreditCard, Package, Globe, Lock, Truck, BookOpen, Users
+  Percent, CreditCard, Package, Globe, Lock, Truck, BookOpen, Users, Palette
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -106,6 +106,10 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
           <Link href={`/dashboard/products/${id}/journey`}
             className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 text-white/60 hover:bg-white/5 hover:text-white font-medium rounded-xl transition-colors">
             <Users className="w-4 h-4" /> Mentoria
+          </Link>
+          <Link href={`/dashboard/products/${id}/checkout-editor`}
+            className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 text-white/60 hover:bg-white/5 hover:text-white font-medium rounded-xl transition-colors">
+            <Palette className="w-4 h-4" /> Editar Checkout
           </Link>
         </div>
 

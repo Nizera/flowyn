@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   ExternalLink,
   Flame,
+  Palette,
   Plus,
   Route,
   Target,
@@ -227,6 +228,9 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
           </Link>
           <Link href={`/dashboard/products/${id}/journey`} className="rounded-xl border border-white/5 bg-white/10 px-5 py-2.5 text-sm font-bold text-white">
             Mentoria
+          </Link>
+          <Link href={`/dashboard/products/${id}/checkout-editor`} className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white/60 transition hover:bg-white/5 hover:text-white">
+            <Palette className="mr-2 inline h-4 w-4" /> Checkout
           </Link>
         </div>
 

@@ -21,6 +21,8 @@ interface CheckoutFormProps {
   trackingId: string | null
   pixels: { platform: string; pixel_id: string }[]
   orderBump: OrderBumpData
+  primaryColor?: string
+  buttonText?: string
 }
 
 function money(value: number) {
@@ -36,6 +38,8 @@ export function CheckoutForm({
   amount,
   trackingId,
   orderBump,
+  primaryColor = '#059669',
+  buttonText = 'Pagar',
 }: CheckoutFormProps) {
   const [addOrderBump, setAddOrderBump] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -302,7 +306,8 @@ export function CheckoutForm({
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-emerald-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg"
+        style={{ backgroundColor: primaryColor }}
+        className="w-full text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg"
       >
         {loading ? (
           <>
@@ -312,7 +317,7 @@ export function CheckoutForm({
         ) : (
           <>
             <Lock className="w-5 h-5" />
-            Pagar R$ {money(totalAmount)}
+            {buttonText} R$ {money(totalAmount)}
           </>
         )}
       </button>

@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Plus, ArrowRight, DollarSign, Package, Copy, ExternalLink, Building2, BookOpen, Users, CreditCard } from 'lucide-react'
+import { ArrowLeft, Save, Plus, ArrowRight, DollarSign, Package, Copy, ExternalLink, Building2, BookOpen, Users, CreditCard, Palette } from 'lucide-react'
 import { revalidatePath } from 'next/cache'
 import { getPlatformAccess } from '@/lib/platform-access'
 
@@ -108,6 +108,9 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
           </Link>
           <Link href={`/dashboard/products/${productId}/journey`} className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white/60 transition hover:bg-white/5 hover:text-white">
             <Users className="mr-2 inline h-4 w-4" /> Mentoria
+          </Link>
+          <Link href={`/dashboard/products/${productId}/checkout-editor`} className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white/60 transition hover:bg-white/5 hover:text-white">
+            <Palette className="mr-2 inline h-4 w-4" /> Checkout
           </Link>
         </div>
 

@@ -8,6 +8,7 @@ import {
   Clapperboard,
   GripVertical,
   Layers,
+  Palette,
   Plus,
   Trash2,
 } from 'lucide-react'
@@ -191,6 +192,9 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
           </Link>
           <Link href={`/dashboard/products/${id}/journey`} className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white/60 transition hover:bg-white/5 hover:text-white">
             Mentoria
+          </Link>
+          <Link href={`/dashboard/products/${id}/checkout-editor`} className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white/60 transition hover:bg-white/5 hover:text-white">
+            <Palette className="mr-2 inline h-4 w-4" /> Checkout
           </Link>
         </div>
 
