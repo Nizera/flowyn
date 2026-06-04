@@ -34,6 +34,10 @@ function firstName(name: string) {
 
 const PAID_STATUSES = new Set(['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'])
 
+function sameWallet(left?: string | null, right?: string | null) {
+  return Boolean(left && right && left.trim() === right.trim())
+}
+
 export async function POST(req: NextRequest) {
   const supabase = createAdminClient()
 
@@ -150,8 +154,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Comissao configurada fora do intervalo permitido.' }, { status: 409 })
     }
 
-    if (affiliateWalletId && affiliateWalletId === producerAccount.wallet_id) {
+    const mainWalletId = process.env.ASAAS_MAIN_WALLET_ID?.trim() || null
+    const producerUsesMainWallet = sameWallet(producerAccount.wallet_id, mainWalletId)
+
+    if (affiliateWalletId && sameWallet(affiliateWalletId, producerAccount.wallet_id)) {
       return NextResponse.json({ error: 'Produtor e afiliado nao podem utilizar a mesma carteira Asaas.' }, { status: 409 })
+    }
+
+    if (affiliateWalletId && sameWallet(affiliateWalletId, mainWalletId)) {
+      return NextResponse.json({ error: 'Afiliado nao pode utilizar a carteira principal da Flowyn.' }, { status: 409 })
     }
 
     if (affiliateId && !affiliateWalletId) {
@@ -211,16 +222,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Erro ao registrar os dados do pedido.' }, { status: 500 })
     }
 
-    const producerSplitRate = affiliateWalletId && commissionRate > 0
-      ? Number((100 - commissionRate).toFixed(2))
-      : 100
+    const split: Array<{ walletId: string; percentualValue: number }> = []
 
-    const split = [
-      { walletId: producerAccount.wallet_id, percentualValue: producerSplitRate },
-      ...(affiliateWalletId && commissionRate > 0
-        ? [{ walletId: affiliateWalletId, percentualValue: commissionRate }]
-        : []),
-    ]
+    if (producerUsesMainWallet) {
+      if (affiliateWalletId && commissionRate > 0) {
+        split.push({ walletId: affiliateWalletId, percentualValue: commissionRate })
+      }
+    } else {
+      const producerSplitRate = affiliateWalletId && commissionRate > 0
+        ? Number((100 - commissionRate).toFixed(2))
+        : 100
+      split.push({ walletId: producerAccount.wallet_id, percentualValue: producerSplitRate })
+
+      if (affiliateWalletId && commissionRate > 0) {
+        split.push({ walletId: affiliateWalletId, percentualValue: commissionRate })
+      }
+    }
 
     const payment = await createCreditCardPayment({
       customer: asaasCustomer.id,
@@ -229,7 +246,7 @@ export async function POST(req: NextRequest) {
       dueDate: today(),
       description: `${product.name} - ${plan.name}`,
       externalReference: order.id,
-      split,
+      ...(split.length > 0 ? { split } : {}),
       creditCard: {
         holderName: String(body.card?.holderName || '').trim(),
         number: cardNumber,
