@@ -10,8 +10,6 @@ interface AppLayoutUIProps {
   children: React.ReactNode
   profile: any
   user: any
-  isAffiliate: boolean
-  isProducer: boolean
   totalSales: number
   subscription?: {
     status: string
@@ -108,7 +106,7 @@ function SubscriptionBanner({ subscription }: { subscription: AppLayoutUIProps['
 
 const MOCK_NOTIFICATIONS: { id: number; title: string; body: string; time: string; read: boolean }[] = []
 
-export function AppLayoutUI({ children, profile, user, isAffiliate, isProducer, totalSales, subscription }: AppLayoutUIProps) {
+export function AppLayoutUI({ children, profile, user, totalSales, subscription }: AppLayoutUIProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isNotifOpen, setIsNotifOpen] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)

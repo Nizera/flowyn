@@ -135,7 +135,7 @@ export default function WalletPage() {
           <div>
             <h3 className="text-white font-medium mb-1">Sobre os saques</h3>
             <p className="text-sm text-zinc-400 leading-relaxed">
-              A Flowyn utiliza subcontas Asaas para receber vendas e distribuir splits automaticamente. No painel Asaas você acompanha saldo, conta bancária e transferências.
+              A Flowyn utiliza subcontas Asaas para receber suas vendas no checkout. No painel Asaas voce acompanha saldo, conta bancaria e transferencias.
             </p>
           </div>
         </div>

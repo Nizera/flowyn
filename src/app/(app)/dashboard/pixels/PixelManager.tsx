@@ -79,7 +79,7 @@ export function PixelManager({ initialPixels }: { initialPixels: Pixel[] }) {
         <div>
           <h1 className="text-2xl font-extrabold text-white tracking-tight">Pixels de Rastreamento</h1>
           <p className="text-sm text-white/40 mt-1">
-            Cadastre seus pixels e vincule-os aos planos ou afiliações para rastrear conversões.
+            Cadastre seus pixels e vincule-os aos planos para rastrear conversoes.
           </p>
         </div>
         <button

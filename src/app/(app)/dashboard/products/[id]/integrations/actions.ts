@@ -41,14 +41,6 @@ export async function testWebhookAction(productId: string, webhookUrl: string) {
       email: 'test@example.com'
     },
     amount: 1000,
-    commission: {
-      rate: 50,
-      amount: 500
-    },
-    affiliate: {
-      id: null,
-      tracking_id: null
-    },
     is_sandbox: true,
     timestamp: new Date().toISOString()
   }

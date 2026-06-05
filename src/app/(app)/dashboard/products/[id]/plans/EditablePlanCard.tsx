@@ -74,7 +74,7 @@ export function EditablePlanCard({ plan, productId }: { plan: Plan, productId: s
               />
             </div>
             <div>
-              <label className="block text-[10px] uppercase font-bold text-white/40 mb-1">Identificador SaaS</label>
+              <label className="block text-[10px] uppercase font-bold text-white/40 mb-1">Identificador externo</label>
               <input
                 type="text"
                 value={formData.plan_identifier}

@@ -129,7 +129,7 @@ export function WebhookTestPanel({ productId, currentUrl, plans }: { productId: 
         <div className="space-y-4">
           <h4 className="font-semibold text-white/80 text-sm">2. Simulação End-to-End (Sandbox)</h4>
           <p className="text-xs text-white/50 mb-4">
-            Simula uma compra real no sistema (R$ 0,00). Útil para testar se o seu SaaS cadastra e provisiona o cliente corretamente com o `plan_identifier`.
+            Simula uma compra real no sistema (R$ 0,00). Util para testar se a sua entrega externa recebe o cliente corretamente com o identificador do plano.
           </p>
           
           <div className="space-y-3">

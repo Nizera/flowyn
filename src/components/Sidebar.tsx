@@ -4,9 +4,17 @@ import Link from 'next/link'
 import { signOutAction } from '@/app/(app)/actions'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, Store, Box, Link2, User,
-  Settings, LogOut, DollarSign, CreditCard,
-  ScanLine, Wallet, PlusCircle, BookOpen, ShoppingBag, BadgeCheck, PlaySquare
+  BadgeCheck,
+  Box,
+  CreditCard,
+  LayoutDashboard,
+  LogOut,
+  PlusCircle,
+  ScanLine,
+  Settings,
+  ShoppingBag,
+  PlaySquare,
+  Wallet,
 } from 'lucide-react'
 
 export function Sidebar({ profile }: { profile: any }) {
@@ -20,8 +28,6 @@ export function Sidebar({ profile }: { profile: any }) {
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-
-        {/* Principal */}
         <Link href="/dashboard" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${pathname === '/dashboard' ? 'bg-[#00e88a]/10 text-[#00e88a]' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
           <LayoutDashboard className="w-5 h-5" />
           <span className="font-medium text-sm">Dashboard</span>
@@ -37,27 +43,6 @@ export function Sidebar({ profile }: { profile: any }) {
           <span className="font-medium text-sm">Meus Acessos</span>
         </Link>
 
-        {/* GANHAR DINHEIRO */}
-        <div className="pt-4 pb-1">
-          <span className="px-3 text-[10px] font-bold text-white/25 uppercase tracking-widest">Ganhar Dinheiro</span>
-        </div>
-
-        <Link href="/market" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/market') ? 'bg-[#00e88a]/10 text-[#00e88a]' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
-          <Store className="w-5 h-5" />
-          <span className="font-medium text-sm">Vitrine de Produtos</span>
-        </Link>
-
-        <Link href="/dashboard/affiliations" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/dashboard/affiliations') ? 'bg-[#00e88a]/10 text-[#00e88a]' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
-          <Link2 className="w-5 h-5" />
-          <span className="font-medium text-sm">Minhas Afiliações</span>
-        </Link>
-
-        <Link href="/dashboard/sales" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/dashboard/sales') ? 'bg-[#00e88a]/10 text-[#00e88a]' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
-          <DollarSign className="w-5 h-5" />
-          <span className="font-medium text-sm">Comissões</span>
-        </Link>
-
-        {/* CRIAR & VENDER */}
         <div className="pt-4 pb-1">
           <span className="px-3 text-[10px] font-bold text-white/25 uppercase tracking-widest">Criar & Vender</span>
         </div>
@@ -72,14 +57,13 @@ export function Sidebar({ profile }: { profile: any }) {
           <span className="font-medium text-sm">Meus Produtos</span>
         </Link>
 
-        <Link href="/dashboard/sales" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-white/60 hover:bg-white/5 hover:text-white`}>
+        <Link href="/dashboard/sales" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/dashboard/sales') ? 'bg-[#00e88a]/10 text-[#00e88a]' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
           <ShoppingBag className="w-5 h-5" />
           <span className="font-medium text-sm">Minhas Vendas</span>
         </Link>
 
-        {/* CONFIGURAÇÕES */}
         <div className="pt-4 pb-1">
-          <span className="px-3 text-[10px] font-bold text-white/25 uppercase tracking-widest">Configurações</span>
+          <span className="px-3 text-[10px] font-bold text-white/25 uppercase tracking-widest">Configuracoes</span>
         </div>
 
         <Link href="/dashboard/pixels" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/dashboard/pixels') ? 'bg-[#00e88a]/10 text-[#00e88a]' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
@@ -101,10 +85,8 @@ export function Sidebar({ profile }: { profile: any }) {
           <Settings className="w-5 h-5" />
           <span className="font-medium text-sm">Minha Conta</span>
         </Link>
-
       </nav>
 
-      {/* User footer */}
       <div className="p-4 border-t border-white/10">
         {profile && (
           <div className="flex items-center gap-3 px-3 py-2 mb-2">
@@ -112,7 +94,7 @@ export function Sidebar({ profile }: { profile: any }) {
               {profile.full_name?.charAt(0)?.toUpperCase() || '?'}
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-semibold text-white truncate">{profile.full_name || 'Usuário'}</p>
+              <p className="text-sm font-semibold text-white truncate">{profile.full_name || 'Usuario'}</p>
               <p className="text-xs text-white/40 truncate">Membro Flowyn</p>
             </div>
           </div>

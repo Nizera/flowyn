@@ -1,33 +1,23 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import crypto from 'crypto'
+import { BadgeCheck, Lock } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { ProductWizard } from './ProductWizard'
-import crypto from 'crypto'
-import Link from 'next/link'
-import { Lock, BadgeCheck } from 'lucide-react'
 import { getPlatformAccess } from '@/lib/platform-access'
+import { ProductWizard } from './ProductWizard'
 
-const ADMIN_EMAIL = 'dnlmarianoneto@gmail.com'
-
-// ─── Server Action: Create Product ───────────────────────────────────────────
 async function createProductAction(data: any): Promise<{ error: string } | void> {
   'use server'
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Block SaaS/MicroSaaS creation for non-admin users
-  const isAdmin = user.email === ADMIN_EMAIL
-  if (!isAdmin && (data.product_type === 'saas' || data.product_type === 'microsaas' || data.is_flowyn_saas)) {
-    return { error: 'Apenas administradores da Flowyn podem criar produtos SaaS.' }
-  }
-
   const access = await getPlatformAccess(user.id)
   if (!access.allowed) {
     return { error: 'Sua assinatura Flowyn Pro precisa estar ativa para criar produtos.' }
   }
 
-  // 1. Create product
   const { data: product, error } = await supabase
     .from('products')
     .insert({
@@ -37,12 +27,12 @@ async function createProductAction(data: any): Promise<{ error: string } | void>
       short_description: data.short_description || null,
       logo_url: data.logo_url || null,
       cover_url: data.cover_url || null,
-      site_url: data.site_url || null,
+      site_url: null,
       category: data.category,
       product_type: data.product_type,
-      is_public: data.is_public,
+      is_public: false,
       is_flowyn_saas: false,
-      commission_rate: parseFloat(data.commission_rate) || 40,
+      commission_rate: 0,
       checkout_banner_url: data.checkout_banner_url || null,
       checkout_video_url: data.checkout_video_url || null,
       delivery_type: data.delivery_type,
@@ -72,7 +62,6 @@ async function createProductAction(data: any): Promise<{ error: string } | void>
       updated_at: new Date().toISOString(),
     }, { onConflict: 'product_id' })
 
-  // 2. Create plans
   if (data.plans?.length > 0) {
     const plans = data.plans.map((p: any) => ({
       product_id: product.id,
@@ -90,7 +79,6 @@ async function createProductAction(data: any): Promise<{ error: string } | void>
   redirect(`/dashboard/products/${product.id}`)
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
 export default async function NewProductPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -99,16 +87,13 @@ export default async function NewProductPage() {
 
   return (
     <div className="py-4">
-      {/* Header */}
       <div className="mb-10">
         <h1 className="text-3xl font-extrabold text-white">Criar Novo Produto</h1>
-        <p className="text-white/50 text-sm mt-1">
-          Siga as etapas abaixo para configurar e publicar seu produto.
-        </p>
+        <p className="mt-1 text-sm text-white/50">Configure seu produto, plano e checkout para vender.</p>
       </div>
 
       {access.allowed ? (
-        <div className="bg-[#111111] border border-white/10 rounded-3xl p-8 md:p-12">
+        <div className="rounded-3xl border border-white/10 bg-[#111111] p-8 md:p-12">
           <ProductWizard createProductAction={createProductAction} userId={user.id} />
         </div>
       ) : (
@@ -121,10 +106,7 @@ export default async function NewProductPage() {
             <p className="mt-2 text-sm text-white/50">
               Para manter a Flowyn sem taxa por venda, a criacao de produtos fica liberada para contas em teste gratis, ativas ou em regularizacao.
             </p>
-            <Link
-              href="/dashboard/settings/subscription"
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#00e88a] px-5 py-3 text-sm font-black text-black transition hover:bg-[#04f294]"
-            >
+            <Link href="/dashboard/settings/subscription" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#00e88a] px-5 py-3 text-sm font-black text-black transition hover:bg-[#04f294]">
               <BadgeCheck className="h-4 w-4" />
               Ativar Flowyn Pro
             </Link>

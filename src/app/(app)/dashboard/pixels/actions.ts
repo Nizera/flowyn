@@ -66,19 +66,3 @@ export async function removePlanPixel(planPixelId: string) {
   await supabase.from('plan_pixels').delete().eq('id', planPixelId)
   revalidatePath('/dashboard/products')
 }
-
-export async function addAffiliationPixel(affiliationId: string, pixelId: string, planId?: string | null) {
-  const supabase = await createClient()
-  await supabase.from('affiliation_pixels').insert({
-    affiliation_id: affiliationId,
-    pixel_id: pixelId,
-    ...(planId ? { plan_id: planId } : {}),
-  })
-  revalidatePath('/dashboard/affiliations')
-}
-
-export async function removeAffiliationPixel(affPixelId: string) {
-  const supabase = await createClient()
-  await supabase.from('affiliation_pixels').delete().eq('id', affPixelId)
-  revalidatePath('/dashboard/affiliations')
-}

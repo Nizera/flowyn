@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { CheckCircle, Eye, EyeOff, Loader2, Lock } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
-import { CheckCircle, Lock, Eye, EyeOff, Loader2, ExternalLink } from 'lucide-react'
 
 function AcceptInviteForm() {
   const router = useRouter()
@@ -15,22 +15,16 @@ function AcceptInviteForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
-  const [siteUrl, setSiteUrl] = useState<string | null>(null)
-  const [productName, setProductName] = useState<string>('')
+  const [productName, setProductName] = useState('')
   const [error, setError] = useState('')
   const [sessionReady, setSessionReady] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
-
-    // Listen for the invite token being processed from the URL hash
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session) {
-        setSessionReady(true)
-      }
+      if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session) setSessionReady(true)
     })
 
-    // Also check if session is already active
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) setSessionReady(true)
     })
@@ -38,19 +32,17 @@ function AcceptInviteForm() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  // Once session is ready, fetch the product's site_url using the order_id
   useEffect(() => {
     if (!sessionReady || !orderId) return
 
     const supabase = createClient()
     supabase
       .from('orders')
-      .select('id, product:products(name, site_url)')
+      .select('id, product:products(name)')
       .eq('id', orderId)
       .single()
       .then(({ data }) => {
         const product = data?.product as any
-        if (product?.site_url) setSiteUrl(product.site_url)
         if (product?.name) setProductName(product.name)
       })
   }, [sessionReady, orderId])
@@ -63,8 +55,9 @@ function AcceptInviteForm() {
       setError('A senha deve ter pelo menos 6 caracteres.')
       return
     }
+
     if (password !== confirmPassword) {
-      setError('As senhas não coincidem.')
+      setError('As senhas nao coincidem.')
       return
     }
 
@@ -79,40 +72,20 @@ function AcceptInviteForm() {
     }
 
     setSuccess(true)
-
-    // Redirect to producer's SaaS after a short delay
-    setTimeout(() => {
-      if (siteUrl) {
-        window.location.href = siteUrl
-      } else {
-        router.push('/dashboard')
-      }
-    }, 2500)
+    setTimeout(() => router.push('/learn'), 2500)
   }
 
   if (success) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl p-12 max-w-md w-full text-center">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="w-10 h-10 text-green-600" />
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+        <div className="w-full max-w-md rounded-3xl bg-white p-12 text-center shadow-2xl">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
+            <CheckCircle className="h-10 w-10 text-green-600" />
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 mb-2">
-            Conta ativada com sucesso!
-          </h1>
-          <p className="text-slate-500 mb-6">
-            {siteUrl
-              ? `Redirecionando para ${productName || 'o produto'}...`
-              : 'Redirecionando para o painel...'}
-          </p>
-          {siteUrl && (
-            <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
-              <ExternalLink className="w-4 h-4" />
-              <span className="truncate max-w-xs">{siteUrl}</span>
-            </div>
-          )}
-          <div className="mt-6 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div className="bg-green-500 h-full rounded-full animate-[progress_2.5s_linear_forwards]" />
+          <h1 className="mb-2 text-2xl font-extrabold text-slate-900">Conta ativada com sucesso!</h1>
+          <p className="mb-6 text-slate-500">Redirecionando para sua area do aluno...</p>
+          <div className="mt-6 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-green-500 animate-[progress_2.5s_linear_forwards]" />
           </div>
         </div>
       </div>
@@ -120,116 +93,91 @@ function AcceptInviteForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-md w-full">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-black flex items-center justify-center mx-auto mb-4">
-            <Lock className="w-7 h-7 text-white" />
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+      <div className="w-full max-w-md rounded-3xl bg-white p-10 shadow-2xl">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-black">
+            <Lock className="h-7 w-7 text-white" />
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-900">
-            Crie sua senha
-          </h1>
-          <p className="text-sm text-slate-500 mt-2">
-            {productName
-              ? `Defina uma senha para acessar ${productName}`
-              : 'Bem-vindo! Defina uma senha segura para acessar sua conta.'}
+          <h1 className="text-2xl font-extrabold text-slate-900">Crie sua senha</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            {productName ? `Defina uma senha para acessar ${productName}` : 'Bem-vindo! Defina uma senha segura para acessar sua conta.'}
           </p>
-          {siteUrl && (
-            <div className="mt-3 inline-flex items-center gap-1.5 bg-green-50 text-green-700 text-xs font-medium px-3 py-1.5 rounded-full border border-green-200">
-              <CheckCircle className="w-3.5 h-3.5" />
-              Você será redirecionado após ativar
-            </div>
-          )}
+          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700">
+            <CheckCircle className="h-3.5 w-3.5" />
+            Voce sera redirecionado apos ativar
+          </div>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSetPassword} className="space-y-5">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl p-3 text-center">
-              {error}
-            </div>
-          )}
+          {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-center text-sm text-red-600">{error}</div>}
 
-          {!sessionReady && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-xl p-3 flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
-              Verificando seu token de convite...
-            </div>
-          )}
+          <PasswordField
+            label="Nova senha"
+            value={password}
+            visible={showPassword}
+            onChange={setPassword}
+            onToggle={() => setShowPassword(v => !v)}
+          />
 
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">
-              Nova senha
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                placeholder="Mínimo 6 caracteres"
-                disabled={!sessionReady}
-                className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-12 text-slate-900 placeholder-slate-400 focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10 transition-all font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">
-              Confirmar senha
-            </label>
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              placeholder="Repita a senha"
-              disabled={!sessionReady}
-              className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10 transition-all font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-            />
-          </div>
+          <PasswordField
+            label="Confirmar senha"
+            value={confirmPassword}
+            visible={showPassword}
+            onChange={setConfirmPassword}
+            onToggle={() => setShowPassword(v => !v)}
+          />
 
           <button
             type="submit"
-            disabled={loading || !sessionReady}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-black px-4 py-3 text-sm font-bold text-white shadow-lg hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-black py-4 font-bold text-white transition hover:bg-slate-800 disabled:opacity-70"
           >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Ativando sua conta...
-              </>
-            ) : (
-              'Ativar minha conta'
-            )}
+            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle className="h-5 w-5" />}
+            {loading ? 'Ativando...' : 'Ativar minha conta'}
           </button>
         </form>
-
-        <p className="text-center text-xs text-slate-400 mt-6">
-          Ao continuar, você concorda com os termos de uso da plataforma Flowyn.
-        </p>
       </div>
     </div>
   )
 }
 
-// Suspense boundary needed for useSearchParams
+function PasswordField({
+  label,
+  value,
+  visible,
+  onChange,
+  onToggle,
+}: {
+  label: string
+  value: string
+  visible: boolean
+  onChange: (value: string) => void
+  onToggle: () => void
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-sm font-bold text-slate-700">{label}</label>
+      <div className="relative">
+        <input
+          type={visible ? 'text' : 'password'}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-slate-900 outline-none transition focus:border-black focus:bg-white"
+          placeholder="Minimo 6 caracteres"
+          required
+        />
+        <button type="button" onClick={onToggle} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+          {visible ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function AcceptInvitePage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
-      </div>
-    }>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Carregando...</div>}>
       <AcceptInviteForm />
     </Suspense>
   )

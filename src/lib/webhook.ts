@@ -14,14 +14,6 @@ interface WebhookPayload {
     email: string
   }
   amount: number
-  commission: {
-    rate: number
-    amount: number
-  }
-  affiliate: {
-    id: string | null
-    tracking_id: string | null
-  }
   is_sandbox: boolean
   timestamp: string
   // Campos em PT-BR para Make.com
@@ -36,7 +28,7 @@ const MAX_RETRIES = 3
 const RETRY_DELAYS = [5000, 30000, 300000] // 5s, 30s, 5min
 
 /**
- * Dispatch a webhook notification to the producer's SaaS endpoint
+ * Dispatch a webhook notification to the producer's external endpoint
  * with automatic retry logic and logging.
  */
 export async function dispatchWebhook(orderId: string): Promise<{ success: boolean; error?: string }> {
@@ -83,14 +75,6 @@ export async function dispatchWebhook(orderId: string): Promise<{ success: boole
       email: customerEmail,
     },
     amount: Number(order.amount),
-    commission: {
-      rate: Number(order.commission_rate),
-      amount: Number(order.commission_amount),
-    },
-    affiliate: {
-      id: order.affiliate_id,
-      tracking_id: order.tracking_id,
-    },
     is_sandbox: order.status === 'test' || order.id.startsWith('test_'),
     timestamp: new Date().toISOString(),
     

@@ -120,7 +120,7 @@ export default async function IntegrationsPage(props: { params: Promise<{ id: st
                 defaultValue={product.webhook_url || ''}
                 required 
                 className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl py-3.5 px-4 text-white placeholder:text-white/30 focus:ring-2 focus:ring-[#00e88a]/30 focus:border-[#00e88a] transition-all outline-none shadow-xl" 
-                placeholder="https://api.seusaas.com/webhooks/saasnex" 
+                placeholder="https://api.seusistema.com/webhooks/flowyn"
               />
               {product.webhook_url && (
                 <div className="flex items-center gap-1.5 mt-3">

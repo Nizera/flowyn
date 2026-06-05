@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Flowyn — Afiliados com até 75% de comissão por recorrência!.",
-  description: "Checkout, split financeiro e acesso automático para o seu cliente. Plataforma de vendas para SaaS com afiliados integrados.",
+  title: "Flowyn — Checkout para infoprodutores",
+  description: "Checkout transparente, area do aluno e pagamentos via Asaas para produtores digitais.",
 };
 
 export default function RootLayout({

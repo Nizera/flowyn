@@ -6,7 +6,7 @@ import { normalizeCheckoutConfig } from '@/lib/checkout-customization'
 
 interface CheckoutPageProps {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ ref?: string; preview?: string; draft?: string }>
+  searchParams: Promise<{ preview?: string; draft?: string }>
 }
 
 function money(value: number) {
@@ -15,7 +15,7 @@ function money(value: number) {
 
 export default async function CheckoutPage({ params, searchParams }: CheckoutPageProps) {
   const { id } = await params
-  const { ref, preview, draft } = await searchParams
+  const { preview, draft } = await searchParams
   const supabase = await createClient()
   const isPreviewMode = preview === '1'
   const wantsDraftPreview = isPreviewMode && draft === '1'
@@ -36,25 +36,6 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
         </div>
       </div>
     )
-  }
-
-  let affiliateId: string | null = null
-  let affiliateName: string | null = null
-  let affiliationId: string | null = null
-
-  if (ref) {
-    const { data: affiliation } = await supabase
-      .from('affiliations')
-      .select('id, affiliate_id, affiliate:profiles(full_name)')
-      .eq('tracking_id', ref)
-      .eq('product_id', plan.product_id)
-      .single()
-
-    if (affiliation) {
-      affiliateId = affiliation.affiliate_id
-      affiliateName = (affiliation.affiliate as any)?.full_name || null
-      affiliationId = affiliation.id as string
-    }
   }
 
   const product = plan.product as any
@@ -98,22 +79,8 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     .filter((p: any) => p?.is_active)
     .map((p: any) => ({ platform: p.platform, pixel_id: p.pixel_id }))
 
-  let affiliatePixels: { platform: string; pixel_id: string }[] = []
-  if (affiliationId) {
-    const { data: affPixelRows } = await supabase
-      .from('affiliation_pixels')
-      .select('pixel:pixels(platform, pixel_id, is_active), plan_id')
-      .eq('affiliation_id', affiliationId)
-
-    affiliatePixels = (affPixelRows ?? [])
-      .filter((r: any) => r.plan_id === null || r.plan_id === plan.id)
-      .map((r: any) => r.pixel)
-      .filter((p: any) => p?.is_active)
-      .map((p: any) => ({ platform: p.platform, pixel_id: p.pixel_id }))
-  }
-
   const seenPixelIds = new Set<string>()
-  const allPixels = [...producerPixels, ...affiliatePixels].filter(p => {
+  const allPixels = producerPixels.filter(p => {
     if (seenPixelIds.has(p.pixel_id)) return false
     seenPixelIds.add(p.pixel_id)
     return true
@@ -198,9 +165,6 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
                 planId={plan.id}
                 productId={plan.product_id}
                 amount={plan.price}
-                commissionRate={product.commission_rate}
-                affiliateId={affiliateId}
-                trackingId={ref || null}
                 pixels={allPixels}
                 primaryColor={checkoutConfig.primaryColor}
                 buttonText={checkoutConfig.buttonText}
@@ -250,12 +214,6 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
                   <span className="text-slate-500">Produtor</span>
                   <span className="text-right font-bold text-slate-900">{product.owner?.full_name || 'Anonimo'}</span>
                 </div>
-                {affiliateName && (
-                  <div className="flex justify-between gap-4 text-sm">
-                    <span className="text-slate-500">Indicado por</span>
-                    <span className="text-right font-bold" style={{ color: checkoutConfig.primaryColor }}>{affiliateName}</span>
-                  </div>
-                )}
                 <div className="border-t border-slate-100 pt-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500">Subtotal</span>

@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { DollarSign, TrendingUp, Clock, CheckCircle2, XCircle } from 'lucide-react'
+import { CheckCircle2, Clock, DollarSign, TrendingUp, XCircle } from 'lucide-react'
 
 export default async function SalesPage() {
   const supabase = await createClient()
@@ -8,191 +8,100 @@ export default async function SalesPage() {
 
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
+  const { data: myProducts } = await supabase
+    .from('products')
+    .select('id')
+    .eq('owner_id', user.id)
 
-  const isProducer = profile?.role === 'producer'
-
+  const productIds = myProducts?.map(p => p.id) || []
   let orders: any[] = []
 
-  if (isProducer) {
-    // Producer sees all orders for their products
-    const { data: myProducts } = await supabase
-      .from('products')
-      .select('id')
-      .eq('owner_id', user.id)
-
-    const productIds = myProducts?.map(p => p.id) || []
-
-    if (productIds.length > 0) {
-      const { data } = await supabase
-        .from('orders')
-        .select('*, product:products(name), plan:plans(name), affiliate:profiles(full_name)')
-        .in('product_id', productIds)
-        .order('created_at', { ascending: false })
-
-      orders = data || []
-    }
-  } else {
-    // Affiliate sees orders attributed to them
+  if (productIds.length > 0) {
     const { data } = await supabase
       .from('orders')
       .select('*, product:products(name), plan:plans(name)')
-      .eq('affiliate_id', user.id)
+      .in('product_id', productIds)
       .order('created_at', { ascending: false })
 
     orders = data || []
   }
 
-  const totalRevenue = orders.filter(o => o.status === 'paid').reduce((acc, o) => acc + Number(o.amount), 0)
-  const totalCommissions = orders.filter(o => o.status === 'paid').reduce((acc, o) => acc + Number(o.commission_amount), 0)
-  const paidCount = orders.filter(o => o.status === 'paid').length
+  const paidOrders = orders.filter(o => o.status === 'paid')
+  const totalRevenue = paidOrders.reduce((acc, o) => acc + Number(o.amount), 0)
+  const paidCount = paidOrders.length
   const pendingCount = orders.filter(o => o.status === 'pending').length
+  const averageTicket = paidCount > 0 ? totalRevenue / paidCount : 0
 
   return (
     <div className="w-full pb-12">
-      <main className="max-w-7xl mx-auto">
-
+      <main className="mx-auto max-w-7xl">
         <div className="mb-8">
-          <h2 className="text-3xl font-extrabold text-white tracking-tight">
-            {isProducer ? 'Relatório de Vendas' : 'Minhas Comissões'}
-          </h2>
-          <p className="text-white/60 mt-1 font-medium">
-            {isProducer ? 'Acompanhe todas as transações dos seus produtos.' : 'Veja todas as vendas atribuídas a você.'}
-          </p>
+          <h2 className="text-3xl font-extrabold tracking-tight text-white">Minhas Vendas</h2>
+          <p className="mt-1 font-medium text-white/60">Acompanhe todas as transacoes dos seus produtos.</p>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-[#111111] border border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-[#00e88a]/30 transition-colors">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#00e88a]/5 rounded-full blur-[40px] -mr-10 -mt-10 pointer-events-none group-hover:bg-[#00e88a]/10 transition-colors" />
-            <div className="flex justify-between items-start mb-3 relative z-10">
-              <p className="text-sm font-semibold text-white/50 uppercase tracking-wider">
-                {isProducer ? 'Faturamento Total' : 'Comissões Ganhas'}
-              </p>
-              <div className="bg-[#00e88a]/10 text-[#00e88a] p-2 rounded-xl">
-                <DollarSign className="w-4 h-4" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-white relative z-10">
-              R$ {(isProducer ? totalRevenue : totalCommissions).toFixed(2).replace('.', ',')}
-            </h3>
-          </div>
-
-          <div className="bg-[#111111] border border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-[#00e88a]/30 transition-colors">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#00e88a]/5 rounded-full blur-[40px] -mr-10 -mt-10 pointer-events-none group-hover:bg-[#00e88a]/10 transition-colors" />
-            <div className="flex justify-between items-start mb-3 relative z-10">
-              <p className="text-sm font-semibold text-white/50 uppercase tracking-wider">
-                {isProducer ? 'Comissões Geradas' : 'Volume Gerado'}
-              </p>
-              <div className="bg-[#00e88a]/10 text-[#00e88a] p-2 rounded-xl border border-[#00e88a]/20">
-                <TrendingUp className="w-4 h-4" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-white relative z-10">
-              R$ {(isProducer ? totalCommissions : totalRevenue).toFixed(2).replace('.', ',')}
-            </h3>
-          </div>
-
-          <div className="bg-[#111111] border border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-blue-500/30 transition-colors">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] -mr-10 -mt-10 pointer-events-none group-hover:bg-blue-500/10 transition-colors" />
-            <div className="flex justify-between items-start mb-3 relative z-10">
-              <p className="text-sm font-semibold text-white/50 uppercase tracking-wider">Vendas Aprovadas</p>
-              <div className="bg-blue-500/10 text-blue-400 p-2 rounded-xl border border-blue-500/20">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-white relative z-10">{paidCount}</h3>
-          </div>
-
-          <div className="bg-[#111111] border border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-amber-500/30 transition-colors">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-[40px] -mr-10 -mt-10 pointer-events-none group-hover:bg-amber-500/10 transition-colors" />
-            <div className="flex justify-between items-start mb-3 relative z-10">
-              <p className="text-sm font-semibold text-white/50 uppercase tracking-wider">Pendentes</p>
-              <div className="bg-amber-500/10 text-amber-400 p-2 rounded-xl border border-amber-500/20">
-                <Clock className="w-4 h-4" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-white relative z-10">{pendingCount}</h3>
-          </div>
+        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-4">
+          <SummaryCard title="Faturamento Total" value={`R$ ${totalRevenue.toFixed(2).replace('.', ',')}`} icon={<DollarSign className="h-4 w-4" />} />
+          <SummaryCard title="Ticket Medio" value={`R$ ${averageTicket.toFixed(2).replace('.', ',')}`} icon={<TrendingUp className="h-4 w-4" />} />
+          <SummaryCard title="Vendas Aprovadas" value={String(paidCount)} icon={<CheckCircle2 className="h-4 w-4" />} blue />
+          <SummaryCard title="Pendentes" value={String(pendingCount)} icon={<Clock className="h-4 w-4" />} amber />
         </div>
 
-        {/* Orders Table */}
-        <div className="bg-[#111111] border border-white/10 rounded-2xl shadow-xl overflow-hidden">
-          <div className="px-6 py-5 border-b border-white/5">
-            <h3 className="text-lg font-bold text-white">Histórico de Transações</h3>
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#111111] shadow-xl">
+          <div className="border-b border-white/5 px-6 py-5">
+            <h3 className="text-lg font-bold text-white">Historico de Transacoes</h3>
           </div>
 
           {orders.length === 0 ? (
-            <div className="text-center py-16">
-              <DollarSign className="w-12 h-12 text-white/20 mx-auto mb-3" />
-              <h4 className="text-lg font-bold text-white mb-1">Nenhuma transação ainda</h4>
-              <p className="text-white/50 text-sm">
-                {isProducer 
-                  ? 'Quando alguém comprar seus produtos, as vendas aparecerão aqui.'
-                  : 'Quando você gerar vendas com seus links, elas aparecerão aqui.'}
-              </p>
+            <div className="py-16 text-center">
+              <DollarSign className="mx-auto mb-3 h-12 w-12 text-white/20" />
+              <h4 className="mb-1 text-lg font-bold text-white">Nenhuma transacao ainda</h4>
+              <p className="text-sm text-white/50">Quando alguem comprar seus produtos, as vendas aparecerao aqui.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-[#0a0a0a] text-white/50 uppercase text-xs tracking-wider border-b border-white/5">
+                <thead className="border-b border-white/5 bg-[#0a0a0a] text-xs uppercase tracking-wider text-white/50">
                   <tr>
-                    <th className="text-left px-6 py-4 font-semibold whitespace-nowrap">Cliente</th>
-                    <th className="text-left px-6 py-4 font-semibold whitespace-nowrap">Produto / Plano</th>
-                    {isProducer && <th className="text-left px-6 py-4 font-semibold whitespace-nowrap">Afiliado</th>}
-                    <th className="text-right px-6 py-4 font-semibold whitespace-nowrap">Valor</th>
-                    <th className="text-right px-6 py-4 font-semibold whitespace-nowrap">Comissão</th>
-                    <th className="text-center px-6 py-4 font-semibold whitespace-nowrap">Status</th>
-                    <th className="text-right px-6 py-4 font-semibold whitespace-nowrap">Data</th>
+                    <th className="whitespace-nowrap px-6 py-4 text-left font-semibold">Cliente</th>
+                    <th className="whitespace-nowrap px-6 py-4 text-left font-semibold">Produto / Plano</th>
+                    <th className="whitespace-nowrap px-6 py-4 text-right font-semibold">Valor</th>
+                    <th className="whitespace-nowrap px-6 py-4 text-center font-semibold">Status</th>
+                    <th className="whitespace-nowrap px-6 py-4 text-right font-semibold">Data</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {orders.map((order) => (
-                    <tr key={order.id} className="hover:bg-white/5 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                  {orders.map(order => (
+                    <tr key={order.id} className="transition-colors hover:bg-white/5">
+                      <td className="whitespace-nowrap px-6 py-4">
                         <div>
                           <p className="font-semibold text-white">{order.customer_name}</p>
                           <p className="text-xs text-white/50">{order.customer_email}</p>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <p className="font-medium text-white">{order.product?.name || '—'}</p>
-                        <p className="text-xs text-white/50">{order.plan?.name || '—'}</p>
+                      <td className="whitespace-nowrap px-6 py-4">
+                        <p className="font-medium text-white">{order.product?.name || '-'}</p>
+                        <p className="text-xs text-white/50">{order.plan?.name || '-'}</p>
                       </td>
-                      {isProducer && (
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-white/70">{order.affiliate?.full_name || '—'}</span>
-                          {order.tracking_id && (
-                            <p className="text-[10px] text-white/40 font-mono mt-0.5">{order.tracking_id}</p>
-                          )}
-                        </td>
-                      )}
-                      <td className="px-6 py-4 text-right font-bold text-white whitespace-nowrap">
+                      <td className="whitespace-nowrap px-6 py-4 text-right font-bold text-white">
                         R$ {Number(order.amount).toFixed(2).replace('.', ',')}
                       </td>
-                      <td className="px-6 py-4 text-right font-semibold text-[#00e88a] whitespace-nowrap">
-                        R$ {Number(order.commission_amount).toFixed(2).replace('.', ',')}
-                      </td>
-                      <td className="px-6 py-4 text-center whitespace-nowrap">
+                      <td className="whitespace-nowrap px-6 py-4 text-center">
                         {order.status === 'paid' ? (
-                          <span className="inline-flex items-center gap-1 bg-[#00e88a]/10 text-[#00e88a] border border-[#00e88a]/20 px-2.5 py-1 rounded-full text-xs font-bold">
-                            <CheckCircle2 className="w-3 h-3" /> Pago
+                          <span className="inline-flex items-center gap-1 rounded-full border border-[#00e88a]/20 bg-[#00e88a]/10 px-2.5 py-1 text-xs font-bold text-[#00e88a]">
+                            <CheckCircle2 className="h-3 w-3" /> Pago
                           </span>
                         ) : order.status === 'refunded' ? (
-                          <span className="inline-flex items-center gap-1 bg-red-500/10 text-red-400 border border-red-500/20 px-2.5 py-1 rounded-full text-xs font-bold">
-                            <XCircle className="w-3 h-3" /> Reembolsado
+                          <span className="inline-flex items-center gap-1 rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-400">
+                            <XCircle className="h-3 w-3" /> Reembolsado
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-full text-xs font-bold">
-                            <Clock className="w-3 h-3" /> Pendente
+                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-400">
+                            <Clock className="h-3 w-3" /> Pendente
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-right text-white/50 text-xs whitespace-nowrap">
+                      <td className="whitespace-nowrap px-6 py-4 text-right text-xs text-white/50">
                         {new Date(order.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
                       </td>
                     </tr>
@@ -202,9 +111,21 @@ export default async function SalesPage() {
             </div>
           )}
         </div>
-
       </main>
     </div>
   )
 }
 
+function SummaryCard({ title, value, icon, blue, amber }: { title: string; value: string; icon: React.ReactNode; blue?: boolean; amber?: boolean }) {
+  const color = blue ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' : amber ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' : 'text-[#00e88a] bg-[#00e88a]/10 border-[#00e88a]/20'
+  return (
+    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-[#111111] p-6 shadow-xl transition-colors hover:border-[#00e88a]/30">
+      <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[#00e88a]/5 blur-[40px] transition-colors group-hover:bg-[#00e88a]/10" />
+      <div className="relative z-10 mb-3 flex items-start justify-between">
+        <p className="text-sm font-semibold uppercase tracking-wider text-white/50">{title}</p>
+        <div className={`rounded-xl border p-2 ${color}`}>{icon}</div>
+      </div>
+      <h3 className="relative z-10 text-2xl font-bold text-white">{value}</h3>
+    </div>
+  )
+}

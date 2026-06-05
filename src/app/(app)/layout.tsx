@@ -20,49 +20,33 @@ export default async function AppLayout({
     .eq('id', user.id)
     .single()
 
-  const isAffiliate = profile?.role === 'affiliate'
-  const isProducer = profile?.role === 'producer'
-
   const { data: subscription } = await supabase
     .from('platform_subscriptions')
     .select('status, trial_ends_at, grace_period_ends_at')
     .eq('user_id', user.id)
     .maybeSingle()
 
-  // Fetch total sales depending on role
+  const { data: products } = await supabase
+    .from('products')
+    .select('id')
+    .eq('owner_id', user.id)
+
   let totalSales = 0
-  if (isProducer) {
-    const { data: products } = await supabase
-      .from('products')
-      .select('id')
-      .eq('owner_id', user.id)  // ← owner_id, not user_id
-
-    if (products && products.length > 0) {
-      const productIds = products.map((p: any) => p.id)
-      const { data: orders } = await supabase
-        .from('orders')
-        .select('amount, status')
-        .in('product_id', productIds)
-
-      const paid = (orders ?? []).filter((o: any) => o.status === 'paid')
-      totalSales = paid.reduce((sum: number, o: any) => sum + Number(o.amount), 0)
-    }
-  } else if (isAffiliate) {
+  if (products && products.length > 0) {
+    const productIds = products.map((p: any) => p.id)
     const { data: orders } = await supabase
       .from('orders')
-      .select('commission_amount, status')
-      .eq('affiliate_id', user.id)
+      .select('amount, status')
+      .in('product_id', productIds)
 
     const paid = (orders ?? []).filter((o: any) => o.status === 'paid')
-    totalSales = paid.reduce((sum: number, o: any) => sum + Number(o.commission_amount), 0)
+    totalSales = paid.reduce((sum: number, o: any) => sum + Number(o.amount), 0)
   }
 
   return (
     <AppLayoutUI
       profile={profile}
       user={user}
-      isAffiliate={isAffiliate}
-      isProducer={isProducer}
       totalSales={totalSales}
       subscription={subscription}
     >

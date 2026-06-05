@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash } from 'crypto'
-import {
-  createCreditCardPayment,
-  createCustomer,
-  onlyDigits,
-} from '@/lib/asaas'
+import { createCreditCardPayment, createCustomer, onlyDigits } from '@/lib/asaas'
 import { fulfillPaidOrder } from '@/lib/order-fulfillment'
 import { getPlatformAccess } from '@/lib/platform-access'
 import { createAdminClient } from '@/utils/supabase/admin'
+
+const PAID_STATUSES = new Set(['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'])
 
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -31,8 +29,6 @@ function maskEmail(email: string) {
 function firstName(name: string) {
   return name.split(/\s+/)[0] || 'Cliente'
 }
-
-const PAID_STATUSES = new Set(['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'])
 
 function sameWallet(left?: string | null, right?: string | null) {
   return Boolean(left && right && left.trim() === right.trim())
@@ -65,7 +61,6 @@ export async function POST(req: NextRequest) {
     const customerEmail = String(body.customer_email || '').trim()
     const customerDocument = onlyDigits(body.customer_document)
     const customerPhone = onlyDigits(body.customer_phone)
-    const trackingId = body.tracking_id ? String(body.tracking_id) : null
     const addOrderBump = Boolean(body.add_order_bump)
 
     if (!planId || !customerName || !customerEmail || !customerDocument || !customerPhone) {
@@ -87,7 +82,7 @@ export async function POST(req: NextRequest) {
       .select(`
         *,
         product:products(
-          id, name, commission_rate, owner_id, is_flowyn_saas,
+          id, name, owner_id,
           order_bump_title, order_bump_description, order_bump_price, order_bump_discount_percent
         )
       `)
@@ -95,7 +90,7 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (planError || !plan) {
-      return NextResponse.json({ error: 'Plano não encontrado.' }, { status: 404 })
+      return NextResponse.json({ error: 'Plano nao encontrado.' }, { status: 404 })
     }
 
     const product = plan.product as any
@@ -112,61 +107,17 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (!producerAccount?.wallet_id) {
-      return NextResponse.json({ error: 'Produtor ainda não conectou a carteira Asaas.' }, { status: 409 })
+      return NextResponse.json({ error: 'Produtor ainda nao conectou a carteira Asaas.' }, { status: 409 })
     }
 
-    let affiliateId: string | null = null
-    let affiliateWalletId: string | null = null
-
-    if (trackingId) {
-      const { data: affiliation } = await supabase
-        .from('affiliations')
-        .select('affiliate_id, status')
-        .eq('tracking_id', trackingId)
-        .eq('product_id', product.id)
-        .single()
-
-      if (affiliation?.status === 'active') {
-        affiliateId = affiliation.affiliate_id
-        const { data: affiliateAccount } = await supabase
-          .from('payment_accounts')
-          .select('wallet_id')
-          .eq('user_id', affiliateId)
-          .eq('provider', 'asaas')
-          .single()
-        affiliateWalletId = affiliateAccount?.wallet_id || null
-      }
-    }
-
-    const commissionRate = product.is_flowyn_saas ? 75 : Number(product.commission_rate || 0)
     const baseAmount = Number(plan.price)
     const rawBumpAmount = addOrderBump && product.order_bump_price ? Number(product.order_bump_price) : 0
     const discount = rawBumpAmount > 0 ? Number(product.order_bump_discount_percent || 0) : 0
     const orderBumpAmount = rawBumpAmount > 0 && discount > 0 ? rawBumpAmount * (1 - discount / 100) : rawBumpAmount
     const totalAmount = Number((baseAmount + orderBumpAmount).toFixed(2))
-    const commissionAmount = affiliateId ? Number(((totalAmount * commissionRate) / 100).toFixed(2)) : 0
 
     if (!Number.isFinite(baseAmount) || baseAmount <= 0 || !Number.isFinite(totalAmount) || totalAmount <= 0) {
       return NextResponse.json({ error: 'Valor do produto invalido.' }, { status: 400 })
-    }
-
-    if (!Number.isFinite(commissionRate) || commissionRate < 0 || commissionRate > 100) {
-      return NextResponse.json({ error: 'Comissao configurada fora do intervalo permitido.' }, { status: 409 })
-    }
-
-    const mainWalletId = process.env.ASAAS_MAIN_WALLET_ID?.trim() || null
-    const producerUsesMainWallet = sameWallet(producerAccount.wallet_id, mainWalletId)
-
-    if (affiliateWalletId && sameWallet(affiliateWalletId, producerAccount.wallet_id)) {
-      return NextResponse.json({ error: 'Produtor e afiliado nao podem utilizar a mesma carteira Asaas.' }, { status: 409 })
-    }
-
-    if (affiliateWalletId && sameWallet(affiliateWalletId, mainWalletId)) {
-      return NextResponse.json({ error: 'Afiliado nao pode utilizar a carteira principal da Flowyn.' }, { status: 409 })
-    }
-
-    if (affiliateId && !affiliateWalletId) {
-      return NextResponse.json({ error: 'Afiliado ainda não conectou a carteira Asaas.' }, { status: 409 })
     }
 
     const customerPayload = {
@@ -185,17 +136,17 @@ export async function POST(req: NextRequest) {
       .insert({
         product_id: product.id,
         plan_id: plan.id,
-        affiliate_id: affiliateId,
+        affiliate_id: null,
         customer_name: firstName(customerName),
         customer_email: maskEmail(customerEmail),
         amount: totalAmount,
-        commission_rate: affiliateId ? commissionRate : 0,
-        commission_amount: commissionAmount,
-        producer_amount: Number((totalAmount - commissionAmount).toFixed(2)),
+        commission_rate: 0,
+        commission_amount: 0,
+        producer_amount: totalAmount,
         status: 'pending',
         asaas_customer_id: asaasCustomer.id,
         payment_provider: 'asaas',
-        tracking_id: trackingId,
+        tracking_id: null,
         includes_order_bump: orderBumpAmount > 0,
         order_bump_amount: orderBumpAmount,
       })
@@ -222,22 +173,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Erro ao registrar os dados do pedido.' }, { status: 500 })
     }
 
-    const split: Array<{ walletId: string; percentualValue: number }> = []
-
-    if (producerUsesMainWallet) {
-      if (affiliateWalletId && commissionRate > 0) {
-        split.push({ walletId: affiliateWalletId, percentualValue: commissionRate })
-      }
-    } else {
-      const producerSplitRate = affiliateWalletId && commissionRate > 0
-        ? Number((100 - commissionRate).toFixed(2))
-        : 100
-      split.push({ walletId: producerAccount.wallet_id, percentualValue: producerSplitRate })
-
-      if (affiliateWalletId && commissionRate > 0) {
-        split.push({ walletId: affiliateWalletId, percentualValue: commissionRate })
-      }
-    }
+    const mainWalletId = process.env.ASAAS_MAIN_WALLET_ID?.trim() || null
+    const producerUsesMainWallet = sameWallet(producerAccount.wallet_id, mainWalletId)
+    const split = producerUsesMainWallet
+      ? []
+      : [{ walletId: producerAccount.wallet_id, percentualValue: 100 }]
 
     const payment = await createCreditCardPayment({
       customer: asaasCustomer.id,

@@ -16,9 +16,6 @@ interface CheckoutFormProps {
   planId: string
   productId: string
   amount: number
-  commissionRate: number
-  affiliateId: string | null
-  trackingId: string | null
   pixels: { platform: string; pixel_id: string }[]
   orderBump: OrderBumpData
   primaryColor?: string
@@ -37,7 +34,6 @@ function digits(value: string) {
 export function CheckoutForm({
   planId,
   amount,
-  trackingId,
   orderBump,
   primaryColor = '#059669',
   buttonText = 'Pagar',
@@ -94,7 +90,6 @@ export function CheckoutForm({
           customer_email: customerEmail,
           customer_document: customerDocument,
           customer_phone: customerPhone,
-          tracking_id: trackingId,
           add_order_bump: addOrderBump,
           card: {
             holderName: cardHolderName || customerName,

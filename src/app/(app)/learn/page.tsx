@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { BookOpen, Clapperboard, Compass, Play, Route, Sparkles } from 'lucide-react'
+import { BookOpen, Clapperboard, Play, Route, Sparkles } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { claimPendingStudentAccess } from '@/lib/student-access'
@@ -53,10 +53,9 @@ export default async function LearnLibraryPage() {
               Continuar
             </Link>
           ) : (
-            <Link href="/market" className="mt-6 inline-flex w-fit items-center gap-2 rounded-xl bg-[#00e88a] px-5 py-3 text-sm font-black text-black transition hover:bg-[#04f294]">
-              <Compass className="h-4 w-4" />
-              Explorar vitrine
-            </Link>
+            <div className="mt-6 inline-flex w-fit rounded-xl border border-white/10 bg-black/35 px-5 py-3 text-sm font-bold text-white/60">
+              Seus acessos comprados aparecerao aqui.
+            </div>
           )}
         </div>
       </section>

@@ -26,7 +26,6 @@ export async function login(formData: FormData) {
 // ─── SIGNUP ──────────────────────────────────────────────────────────────────
 export async function signup(formData: FormData) {
   const supabase = await createClient()
-  const requestedRole = formData.get('role') === 'producer' ? 'producer' : 'affiliate'
 
   const data = {
     email: formData.get('email') as string,
@@ -34,7 +33,7 @@ export async function signup(formData: FormData) {
     options: {
       data: {
         full_name: formData.get('full_name') as string,
-        role: requestedRole,
+        role: 'producer',
       }
     }
   }

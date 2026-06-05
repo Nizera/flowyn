@@ -3,7 +3,7 @@ import { Webhook, Zap, ArrowRight, CheckCircle2, Database, Layers, Server } from
 
 export const metadata = {
   title: 'Guia de Integração Make.com | Flowyn',
-  description: 'Conecte seu SaaS a Flowyn em 3 minutos usando o Make.com. Sem escrever uma única linha de código.',
+  description: 'Conecte sua entrega externa a Flowyn em poucos minutos usando o Make.com.',
 }
 
 export default function WebhookDocsPage() {
@@ -80,7 +80,7 @@ export default function WebhookDocsPage() {
   "id_do_pedido": "ord_123456",
   "id_do_produto": "prd_7890",
   "id_do_plano": "pln_basic",
-  ... (outros dados avançados como tracking de afiliados)
+  ... (outros dados avancados do pedido)
 }`}
             </pre>
           </div>
@@ -118,7 +118,7 @@ export default function WebhookDocsPage() {
             Conecte ao seu Banco de Dados
           </h3>
           <p className="text-white/70 leading-relaxed mb-6">
-            Volte para o Make. Agora que o Make.com já sabe receber nossos dados, você só precisa dizer a ele onde salvar o acesso do seu cliente. Escolha o banco de dados que você utiliza no seu SaaS abaixo:
+            Volte para o Make. Agora que o Make.com ja sabe receber nossos dados, voce so precisa dizer a ele onde salvar o acesso do seu cliente. Escolha o banco de dados que voce utiliza na sua entrega externa abaixo:
           </p>
 
           <div className="space-y-8 mt-8">

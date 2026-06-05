@@ -119,7 +119,7 @@ export default async function SubscriptionPage() {
               {[
                 'Criar produtos e planos',
                 'Checkout transparente no ar',
-                'Split Asaas para produtor e afiliado',
+                'Checkout e area do aluno inclusos',
                 'Carteira CPF/CNPJ sem taxa Flowyn por venda',
               ].map(item => (
                 <div key={item} className="flex items-center gap-2 text-sm text-white/60">

@@ -65,7 +65,7 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
         email_confirm: true,
         user_metadata: {
           full_name: deliveryCustomerName,
-          role: 'affiliate',
+          role: 'customer',
         },
       })
 
