@@ -144,9 +144,9 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
             ) : (
               <div className="overflow-hidden rounded-lg border border-slate-200">
                 {plans.map(plan => {
-                  const planPixels = (allPlanPixels ?? [] as PlanPixelRow[])
-                    .filter((pp) => pp.plan_id === plan.id)
-                    .map((pp) => ({ id: pp.id, pixel: pp.pixel }))
+                  const planPixels = (allPlanPixels ?? [])
+                    .filter((pp: { plan_id: string }) => pp.plan_id === plan.id)
+                    .map((pp: { id: string; pixel: unknown }) => ({ id: pp.id, pixel: pp.pixel as PixelRow })) as unknown as PlanPixelRow[]
                   return (
                     <div key={plan.id} className="border-b border-slate-100 last:border-b-0">
                       <EditablePlanCard plan={plan} productId={productId} />
