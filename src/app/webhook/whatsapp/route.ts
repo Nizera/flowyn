@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 
-const WHATSAPP_TOKEN = process.env.WHATSAPP_WEBHOOK_TOKEN || '@flowyn1'
+const WHATSAPP_TOKEN = process.env.WHATSAPP_WEBHOOK_TOKEN || 'flowyn123'
 
 type WhatsAppEntry = {
   id: string
