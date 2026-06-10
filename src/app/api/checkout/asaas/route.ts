@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createCreditCardPayment, createCustomer, createPixPayment, getPixQrCode, onlyDigits } from '@/lib/asaas'
+import { createCreditCardPayment, createCustomer, createPixPayment, onlyDigits } from '@/lib/asaas'
 import { fulfillPaidOrder } from '@/lib/order-fulfillment'
 import { getPlatformAccess } from '@/lib/platform-access'
 import { createAdminClient } from '@/utils/supabase/admin'
@@ -239,10 +239,6 @@ export async function POST(req: NextRequest) {
         ...(split.length > 0 ? { split } : {}),
       }, process.env.ASAAS_API_KEY!)
 
-      step = 'pix_qrcode'
-
-      const pixData = await getPixQrCode(payment.id, process.env.ASAAS_API_KEY!)
-
       await supabase
         .from('orders')
         .update({
@@ -257,8 +253,8 @@ export async function POST(req: NextRequest) {
         order_id: order.id,
         payment_id: payment.id,
         status: payment.status,
-        pixQrCode: pixData.encodedImage,
-        pixKey: pixData.payload,
+        pixQrCode: payment.pixQrCode ?? null,
+        pixKey: payment.pixKey ?? null,
       })
     }
 
