@@ -95,13 +95,13 @@ export async function asaasRequest<T>(path: string, options: RequestOptions = {}
   const data = text ? JSON.parse(text) : null
 
   if (!response.ok) {
-    console.error('[Asaas API Error]', {
+    console.error('[Asaas API Error]', JSON.stringify({
       url,
       method,
       status: response.status,
       requestBody: options.body,
       responseBody: data,
-    })
+    }, null, 2))
     throw new Error(normalizeAsaasError(data))
   }
 

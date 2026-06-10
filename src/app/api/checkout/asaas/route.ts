@@ -239,6 +239,8 @@ export async function POST(req: NextRequest) {
         ...(split.length > 0 ? { split } : {}),
       }, process.env.ASAAS_API_KEY!)
 
+      step = 'pix_qrcode'
+
       const pixData = await getPixQrCode(payment.id, process.env.ASAAS_API_KEY!)
 
       await supabase
