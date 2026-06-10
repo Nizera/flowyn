@@ -50,6 +50,7 @@ function sameWallet(left?: string | null, right?: string | null) {
 
 export async function POST(req: NextRequest) {
   const supabase = createAdminClient()
+  let step = 'init'
 
   try {
     const clientIp = getClientIp(req)
@@ -68,6 +69,8 @@ export async function POST(req: NextRequest) {
     if (!withinRateLimit) {
       return NextResponse.json({ error: 'Muitas tentativas. Aguarde um minuto e tente novamente.' }, { status: 429 })
     }
+
+    step = 'validate'
 
     const body = await getBody<Record<string, unknown>>(req)
     const planId = String(body.plan_id || '')
@@ -156,6 +159,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Valor do produto invalido.' }, { status: 400 })
     }
 
+    step = 'create_asaas_customer'
+
     const customerPayload = {
       name: customerName,
       cpfCnpj: customerDocument,
@@ -221,6 +226,8 @@ export async function POST(req: NextRequest) {
       ? []
       : [{ walletId: producerAccount.wallet_id, percentualValue: 100 }]
 
+    step = 'pix_payment'
+
     if (billingType === 'PIX') {
       const payment = await createPixPayment({
         customer: asaasCustomer.id,
@@ -252,6 +259,8 @@ export async function POST(req: NextRequest) {
         pixKey: pixData.payload,
       })
     }
+
+    step = 'credit_card_payment'
 
     const payment = await createCreditCardPayment({
       customer: asaasCustomer.id,
@@ -302,19 +311,31 @@ export async function POST(req: NextRequest) {
     })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
+    const errName = err instanceof Error ? err.name : typeof err
+    const stack = err instanceof Error ? err.stack?.split('\n').slice(0, 3).join(' ') : ''
+
+    // Try to extract Asaas API error details if the message is JSON
+    let asaasDetail = ''
+    try {
+      const parsed = JSON.parse(message)
+      if (parsed.errors?.[0]?.description) asaasDetail = parsed.errors[0].description
+    } catch {}
 
     console.error('[Asaas Checkout] Error:', {
+      step,
       message,
+      errName,
+      asaasDetail,
       hasAsaasKey: Boolean(process.env.ASAAS_API_KEY),
       asaasUrl: process.env.ASAAS_API_URL || '(default sandbox)',
       hasMainWallet: Boolean(process.env.ASAAS_MAIN_WALLET_ID),
     })
 
-    if (message.includes('ASAAS_API_KEY') || message.includes('api_key') || message.toLowerCase().includes('unauthorized') || message.toLowerCase().includes('invalid_api')) {
+    if (message.includes('ASAAS_API_KEY') || message.includes('api_key') || message.toLowerCase().includes('unauthorized') || message.toLowerCase().includes('invalid_api') || message.toLowerCase().includes('invalid api')) {
       return NextResponse.json({ error: 'Pagamento indisponível no momento. Tente novamente mais tarde.' }, { status: 503 })
     }
 
-    if (message.includes('ENOTFOUND') || message.includes('ECONNREFUSED') || message.includes('ETIMEDOUT') || message.includes('fetch failed')) {
+    if (message.includes('ENOTFOUND') || message.includes('ECONNREFUSED') || message.includes('ETIMEDOUT') || message.includes('fetch failed') || message.includes('econnreset')) {
       return NextResponse.json({ error: 'Serviço de pagamento temporariamente indisponível. Tente novamente em instantes.' }, { status: 503 })
     }
 
@@ -322,6 +343,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Configuração de pagamento do produtor inválida. Ele precisa revisar a conta Asaas.' }, { status: 502 })
     }
 
-    return NextResponse.json({ error: 'Erro ao processar pagamento. Entre em contato com o suporte informando o horário exato.' }, { status: 500 })
+    if (asaasDetail) {
+      return NextResponse.json({ error: `Pagamento recusado: ${asaasDetail}` }, { status: 502 })
+    }
+
+    return NextResponse.json({
+      error: 'Erro ao processar pagamento. Entre em contato com o suporte informando o horário exato.',
+      _step: process.env.NODE_ENV === 'development' ? step : undefined,
+    }, { status: 500 })
   }
 }
