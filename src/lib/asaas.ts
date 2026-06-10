@@ -147,14 +147,6 @@ export async function createCustomer(payload: AsaasCustomerPayload, apiKey: stri
   })
 }
 
-export async function updateCustomer(customerId: string, payload: AsaasCustomerPayload, apiKey: string) {
-  return asaasRequest<{ id: string; name: string; email?: string }>(`/customers/${customerId}`, {
-    apiKey,
-    method: 'PUT',
-    body: payload,
-  })
-}
-
 export async function createCreditCardPayment(
   payload: {
     customer: string
