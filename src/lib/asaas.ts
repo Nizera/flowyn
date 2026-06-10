@@ -234,6 +234,7 @@ export async function createPixPayment(
     dueDate: string
     description?: string
     externalReference: string
+    remoteIp?: string
     split?: Array<{ walletId: string; percentualValue?: number; fixedValue?: number }>
   },
   apiKey: string

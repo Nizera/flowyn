@@ -220,8 +220,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Erro ao registrar os dados do pedido.' }, { status: 500 })
     }
 
-    const mainWalletId = process.env.ASAAS_MAIN_WALLET_ID?.trim() || null
-    const producerUsesMainWallet = sameWallet(producerAccount.wallet_id, mainWalletId)
+    const mainWalletId = process.env.ASAAS_MAIN_WALLET_ID?.trim()
+    const producerUsesMainWallet = !mainWalletId || sameWallet(producerAccount.wallet_id, mainWalletId)
     const split = producerUsesMainWallet
       ? []
       : [{ walletId: producerAccount.wallet_id, percentualValue: 100 }]
@@ -233,9 +233,10 @@ export async function POST(req: NextRequest) {
         customer: asaasCustomer.id,
         billingType: 'PIX',
         value: totalAmount,
-        dueDate: today(),
+        dueDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
         description: `${product.name} - ${plan.name}`,
         externalReference: order.id,
+        remoteIp: clientIp,
         ...(split.length > 0 ? { split } : {}),
       }, process.env.ASAAS_API_KEY!)
 
