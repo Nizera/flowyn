@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { CreditCard, Loader2, Lock, Mail, MapPin, Phone, ShieldCheck, User as UserIcon, QrCode } from 'lucide-react'
+import { ArrowRight, CreditCard, Loader2, Lock, Mail, MapPin, Phone, ShieldCheck, User as UserIcon, QrCode } from 'lucide-react'
 
 interface OrderBumpData {
   active: boolean
@@ -45,6 +45,7 @@ export function CheckoutForm({
   const [pixQrCode, setPixQrCode] = useState<string | null>(null)
   const [pixKey, setPixKey] = useState<string | null>(null)
   const [pixPaymentId, setPixPaymentId] = useState<string | null>(null)
+  const [pixInvoiceUrl, setPixInvoiceUrl] = useState<string | null>(null)
 
   const [customerName, setCustomerName] = useState('')
   const [customerEmail, setCustomerEmail] = useState('')
@@ -128,6 +129,7 @@ export function CheckoutForm({
         setPixQrCode(data.pixQrCode || null)
         setPixKey(data.pixKey || null)
         setPixPaymentId(data.order_id || null)
+        setPixInvoiceUrl(data.invoice_url || null)
         setLoading(false)
         return
       }
@@ -195,7 +197,33 @@ export function CheckoutForm({
           className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white transition"
           style={{ backgroundColor: primaryColor }}
         >
-          Acompanhar pedido
+          Ja paguei
+          <ArrowRight className="h-4 w-4" />
+        </a>
+      </div>
+    )
+  }
+
+  if (pixPaymentId) {
+    return (
+      <div className="space-y-6 text-center">
+        <div className="rounded-2xl bg-slate-50 p-6">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full" style={{ backgroundColor: `${primaryColor}15` }}>
+            <QrCode className="h-7 w-7" style={{ color: primaryColor }} />
+          </div>
+          <h3 className="text-lg font-black text-slate-900">Pagamento via PIX</h3>
+          <p className="mt-1 text-sm text-slate-500">Pedido criado com sucesso! Finalize o pagamento no ambiente do Asaas.</p>
+        </div>
+
+        <a
+          href={pixInvoiceUrl || '#'}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white transition"
+          style={{ backgroundColor: primaryColor }}
+        >
+          Pagar no Asaas
+          <ArrowRight className="h-4 w-4" />
         </a>
       </div>
     )

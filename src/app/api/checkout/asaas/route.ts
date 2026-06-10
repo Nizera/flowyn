@@ -239,8 +239,6 @@ export async function POST(req: NextRequest) {
         ...(split.length > 0 ? { split } : {}),
       }, process.env.ASAAS_API_KEY!)
 
-      console.log('[Asaas PIX Response]', JSON.stringify(payment, null, 2))
-
       await supabase
         .from('orders')
         .update({
@@ -257,6 +255,7 @@ export async function POST(req: NextRequest) {
         status: payment.status,
         pixQrCode: payment.pixQrCode ?? null,
         pixKey: payment.pixKey ?? null,
+        invoice_url: payment.invoiceUrl ?? null,
       })
     }
 
