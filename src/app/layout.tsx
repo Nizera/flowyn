@@ -1,20 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
   subsets: ["latin"],
+  style: ["italic"],
+  weight: ["400", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "Flowyn — Checkout para infoprodutores",
-  description: "Checkout transparente, area do aluno e pagamentos via Asaas para produtores digitais.",
+  title: "Flowyn — Checkout para infoprodutores com custo previsivel",
+  description: "Venda infoprodutos com checkout transparente, entrega automatica, recebimento via Asaas e taxa Flowyn zero por venda. R$ 49/mes fixo.",
   icons: {
     icon: [
       { url: "/brand/favicon-16.png", sizes: "16x16", type: "image/png" },
@@ -31,8 +34,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col" style={{ fontFamily: "var(--font-geist-sans)" }} suppressHydrationWarning>
+    <html lang="pt-BR" className={`${inter.variable} ${playfair.variable} h-full antialiased`}>
+      <body className="min-h-full" suppressHydrationWarning>
         {children}
       </body>
     </html>

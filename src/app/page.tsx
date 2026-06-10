@@ -1,10 +1,17 @@
-import { SalesPageClient } from './SalesPageClient'
-
-export const metadata = {
-  title: 'Flowyn - Checkout para infoprodutores com custo previsivel',
-  description: 'Venda infoprodutos com checkout transparente, entrega automatica, recebimento via Asaas e taxa Flowyn zero por venda.',
-}
+import HeroSection from '@/components/landing/HeroSection'
+import ProblemSection from '@/components/landing/ProblemSection'
+import FeaturesSection from '@/components/landing/FeaturesSection'
+import PricingSection from '@/components/landing/PricingSection'
+import CtaSection from '@/components/landing/CtaSection'
 
 export default function Home() {
-  return <SalesPageClient />
+  return (
+    <main>
+      <HeroSection />
+      <ProblemSection />
+      <FeaturesSection />
+      <PricingSection />
+      <CtaSection />
+    </main>
+  )
 }
