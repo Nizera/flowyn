@@ -3,13 +3,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { Sidebar } from '@/components/Sidebar'
 import Link from 'next/link'
-import { Bell, BellOff, CalendarClock, Menu, Target, X } from 'lucide-react'
+import { Bell, CalendarClock, DollarSign, Clock, AlertTriangle, Menu, Target, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { usePathname } from 'next/navigation'
 
 type UserProfile = {
   full_name?: string | null
   email?: string | null
+}
+
+type Notification = {
+  id: string
+  title: string
+  body: string
+  time: string
+  read: boolean
+  href?: string
 }
 
 interface AppLayoutUIProps {
@@ -22,6 +31,7 @@ interface AppLayoutUIProps {
     trial_ends_at: string | null
     grace_period_ends_at: string | null
   } | null
+  notifications: Notification[]
 }
 
 const pageTitles: { match: string; title: string; subtitle: string }[] = [
@@ -109,14 +119,36 @@ function SubscriptionBanner({ subscription }: { subscription: AppLayoutUIProps['
   )
 }
 
-const MOCK_NOTIFICATIONS: { id: number; title: string; body: string; time: string; read: boolean }[] = []
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'agora'
+  if (mins < 60) return `${mins}min`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d`
+  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(new Date(dateStr))
+}
 
-export function AppLayoutUI({ children, profile, user, totalSales, subscription }: AppLayoutUIProps) {
+function notifIcon(id: string) {
+  if (id.startsWith('sale-')) return <DollarSign className="h-4 w-4 text-emerald-600" />
+  if (id.startsWith('pending-')) return <Clock className="h-4 w-4 text-amber-600" />
+  return <AlertTriangle className="h-4 w-4 text-orange-600" />
+}
+
+function notifBg(id: string) {
+  if (id.startsWith('sale-')) return 'bg-emerald-50'
+  if (id.startsWith('pending-')) return 'bg-amber-50'
+  return 'bg-orange-50'
+}
+
+export function AppLayoutUI({ children, profile, user, totalSales, subscription, notifications }: AppLayoutUIProps) {
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isNotifOpen, setIsNotifOpen] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
-  const unreadCount = MOCK_NOTIFICATIONS.filter(n => !n.read).length
+  const unreadCount = notifications.filter(n => !n.read).length
   const page = pageTitles.find(item => pathname === item.match || pathname.startsWith(`${item.match}/`)) || pageTitles[pageTitles.length - 1]
 
   useEffect(() => {
@@ -203,13 +235,51 @@ export function AppLayoutUI({ children, profile, user, totalSales, subscription 
                     <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                       <span className="text-sm font-black text-slate-950">Notificacoes</span>
                     </div>
-                    <div className="flex flex-col items-center justify-center px-4 py-10 text-center">
-                      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50">
-                        <BellOff className="h-5 w-5 text-slate-300" />
+                    {notifications.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center px-4 py-10 text-center">
+                        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50">
+                          <Bell className="h-5 w-5 text-slate-300" />
+                        </div>
+                        <p className="text-sm font-bold text-slate-500">Nenhuma notificacao</p>
+                        <p className="mt-1 text-xs text-slate-400">Atualizacoes importantes aparecem aqui.</p>
                       </div>
-                      <p className="text-sm font-bold text-slate-500">Nenhuma notificacao</p>
-                      <p className="mt-1 text-xs text-slate-400">Atualizacoes importantes aparecem aqui.</p>
-                    </div>
+                    ) : (
+                      <div className="max-h-80 overflow-y-auto">
+                        {notifications.map((n) => (
+                          n.href ? (
+                            <Link
+                              key={n.id}
+                              href={n.href}
+                              className={`flex items-start gap-3 border-b border-slate-50 px-4 py-3 transition hover:bg-slate-50 ${n.read ? 'opacity-60' : ''}`}
+                              onClick={() => setIsNotifOpen(false)}
+                            >
+                              <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${notifBg(n.id)}`}>
+                                {notifIcon(n.id)}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-bold text-slate-900">{n.title}</p>
+                                <p className="mt-0.5 text-xs leading-relaxed text-slate-500 line-clamp-2">{n.body}</p>
+                                <p className="mt-1 text-[10px] font-medium text-slate-400">{timeAgo(n.time)}</p>
+                              </div>
+                            </Link>
+                          ) : (
+                            <div
+                              key={n.id}
+                              className={`flex items-start gap-3 border-b border-slate-50 px-4 py-3 transition hover:bg-slate-50 ${n.read ? 'opacity-60' : ''}`}
+                            >
+                              <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${notifBg(n.id)}`}>
+                                {notifIcon(n.id)}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-bold text-slate-900">{n.title}</p>
+                                <p className="mt-0.5 text-xs leading-relaxed text-slate-500 line-clamp-2">{n.body}</p>
+                                <p className="mt-1 text-[10px] font-medium text-slate-400">{timeAgo(n.time)}</p>
+                              </div>
+                            </div>
+                          )
+                        ))}
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

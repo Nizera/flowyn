@@ -57,7 +57,7 @@ export function CourseLessonForm({ moduleId, userId, createLesson }: CourseLesso
         <FileUpload
           mode="video"
           label="Video nativo Flowyn"
-          hint="Opcional. MP4, WebM ou MOV com player por URL assinada."
+          hint="Opcional. MP4, WebM ou MOV — máx. 500MB por vídeo."
           userId={userId}
           folder="lesson-videos"
           currentUrl={videoFilePath}
