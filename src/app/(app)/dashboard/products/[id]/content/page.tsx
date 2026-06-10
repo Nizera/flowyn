@@ -121,7 +121,7 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
       sort_order: count || 0,
     }).select('id, title').single()
 
-    if (error || !lesson) return { ok: false, message: `Erro ao criar aula: ${error?.message || 'resposta vazia'}` }
+    if (error || !lesson) return { ok: false, message: 'Nao foi possivel criar a aula. Tente novamente.' }
 
     const resendClient = getResendClient()
     if (resendClient) {
