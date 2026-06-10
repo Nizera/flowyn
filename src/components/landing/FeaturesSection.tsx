@@ -2,7 +2,7 @@
 
 import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
-import { ArrowRight, Check, Wallet, Zap, PlayCircle } from 'lucide-react'
+import { ArrowRight, Check, Wallet, Zap, PlayCircle, Edit3 } from 'lucide-react'
 import { WordsPullUpMultiStyle, ScaleInView } from './animations'
 
 const FLOW_STEPS = [
@@ -16,10 +16,19 @@ const FLOW_STEPS = [
 const FEATURE_CARDS = [
   {
     number: '01',
+    title: 'Checkout Editável',
+    icon: Edit3,
+    items: [
+      'Página de checkout totalmente editável',
+      'Order bump nativo integrado',
+      'Personalização de cores e textos',
+      'Links de checkout para usar onde quiser',
+    ],
+  },
+  {
+    number: '02',
     title: 'Recebimento Direto',
     icon: Wallet,
-    image:
-      'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260405_171918_4a5edc79-d78f-4637-ac8b-53c43c220606.png&w=1280&q=85',
     items: [
       'Conecta sua conta Asaas',
       'Recebe como CPF ou CNPJ',
@@ -28,11 +37,9 @@ const FEATURE_CARDS = [
     ],
   },
   {
-    number: '02',
+    number: '03',
     title: 'Entrega Automática',
     icon: Zap,
-    image:
-      'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260405_171741_ed9845ab-f5b2-4018-8ce7-07cc01823522.png&w=1280&q=85',
     items: [
       'E-book com download + e-mail',
       'Curso online com módulos e certificados',
@@ -40,11 +47,9 @@ const FEATURE_CARDS = [
     ],
   },
   {
-    number: '03',
+    number: '04',
     title: 'Flowyn Play',
     icon: PlayCircle,
-    image:
-      'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260405_171809_f56666dc-c099-4778-ad82-9ad4f209567b.png&w=1280&q=85',
     items: [
       'Player de vídeo nativo',
       'Progresso e certificados automáticos',
@@ -119,42 +124,12 @@ export default function FeaturesSection() {
         {/* Flow Diagram */}
         <FlowDiagram />
 
-        {/* Video Feature Card */}
-        <div className="mt-10 lg:h-[480px] grid gap-3 sm:gap-2 md:gap-1 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-          <ScaleInView delay={0}>
-            <div className="relative h-[280px] lg:h-full rounded-2xl overflow-hidden group cursor-pointer">
-              <video
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              >
-                <source
-                  src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260406_133058_0504132a-0cf3-4450-a370-8ea3b05c95d4.mp4"
-                  type="video/mp4"
-                />
-              </video>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-5">
-                <p className="text-base font-semibold text-white">
-                  Checkout editável.
-                </p>
-                <p className="text-sm text-white/60">
-                  Order bump nativo.
-                </p>
-              </div>
-            </div>
-          </ScaleInView>
-
+        {/* Feature Cards */}
+        <div className="mt-10 grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {FEATURE_CARDS.map((card, i) => (
-            <ScaleInView key={card.title} delay={(i + 1) * 0.15}>
+            <ScaleInView key={card.title} delay={i * 0.12}>
               <div className="bg-[#212121] rounded-2xl p-5 flex flex-col h-full transition-all duration-300 hover:border-[#f97316]/20 hover:-translate-y-0.5">
-                <img
-                  src={card.image}
-                  alt=""
-                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover mb-4"
-                />
+                <card.icon size={24} className="text-[#f97316] mb-4" />
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-xs font-mono text-white/40">{card.number}</span>
                   <h3 className="text-sm font-semibold text-white">{card.title}</h3>
@@ -170,11 +145,6 @@ export default function FeaturesSection() {
                     </div>
                   ))}
                 </div>
-
-                <button className="mt-4 flex items-center gap-1.5 text-xs text-[#f97316] hover:gap-2.5 transition-all duration-200 group/link">
-                  Saber mais
-                  <ArrowRight size={12} className="-rotate-45 transition-transform duration-200 group-hover/link:-rotate-0" />
-                </button>
               </div>
             </ScaleInView>
           ))}
