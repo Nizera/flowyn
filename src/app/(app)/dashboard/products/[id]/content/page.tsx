@@ -1,7 +1,8 @@
+import type { ReactNode } from 'react'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, BookOpen, Building2, CheckCircle2, Clapperboard, CreditCard, GripVertical, Palette, ShoppingBag, Trash2, Users } from 'lucide-react'
+import { ArrowLeft, BookOpen, Building2, CheckCircle2, Clapperboard, ChevronLeft, ChevronRight, CreditCard, GripVertical, Palette, ShoppingBag, Trash2, Users } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { getResendClient } from '@/lib/resend'
@@ -38,8 +39,10 @@ function parseJsonStringArray(value: string) {
   }
 }
 
-export default async function CourseContentPage(props: { params: Promise<{ id: string }> }) {
+export default async function CourseContentPage(props: { params: Promise<{ id: string }>, searchParams: Promise<{ modulo?: string }> }) {
   const { id } = await props.params
+  const { modulo: moduloParam } = await props.searchParams
+  const currentModuleIndex = moduloParam ? Math.max(0, parseInt(moduloParam, 10)) : 0
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -208,6 +211,10 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
   const isMentorship = product.product_type === 'mentoria'
   const moduleRows = (modules ?? []) as CourseModuleRow[]
   const lessonCount = moduleRows.reduce((sum, module) => sum + (module.lessons?.length || 0), 0)
+  const totalModules = moduleRows.length
+  const currentModule = totalModules > 0 && currentModuleIndex >= 0 && currentModuleIndex < totalModules
+    ? moduleRows[currentModuleIndex]
+    : null
 
   return (
     <section className="overflow-hidden rounded-[10px] bg-white px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
@@ -226,9 +233,12 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
       <ProductTabs productId={id} active="content" />
 
       {isMentorship ? (
-        <div className="mt-10 grid border-y border-slate-200 md:grid-cols-[240px_1fr]">
-          <RowTitle title="Mentoria" description="Conteudo fica na jornada." />
-          <div className="flex flex-col gap-4 py-6 md:flex-row md:items-center md:justify-between md:pl-8">
+        <div className="mt-10 border-y border-slate-200 py-6">
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold text-slate-950">Mentoria</h3>
+            <p className="mt-1 text-sm text-slate-400">Conteudo fica na jornada.</p>
+          </div>
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <p className="max-w-2xl text-sm leading-6 text-slate-500">
               Para mentorias, use a aba Mentoria para configurar diagnostico, sessoes, tarefas e acompanhamento dos alunos.
             </p>
@@ -242,49 +252,80 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
           <DigitalDeliveryForm userId={user.id} product={product} updateDigitalDelivery={updateDigitalDelivery} />
         </div>
       ) : (
-        <div className="mt-10 max-w-6xl">
-          <div className="grid border-y border-slate-200 md:grid-cols-[240px_1fr]">
-            <RowTitle title="Resumo" description="Estrutura do curso." />
-            <div className="grid gap-6 py-6 md:grid-cols-3 md:pl-8">
-              <Metric label="Modulos" value={moduleRows.length} />
+        <div className="mt-10 max-w-6xl space-y-0">
+          {/* Resumo */}
+          <div className="border-b border-slate-200 py-6">
+            <h3 className="text-sm font-semibold text-slate-950">Resumo</h3>
+            <p className="mt-1 text-sm text-slate-400">Estrutura do curso.</p>
+            <div className="mt-4 grid gap-6 md:grid-cols-3">
+              <Metric label="Modulos" value={totalModules} />
               <Metric label="Aulas" value={lessonCount} />
               <Metric label="Entrega" value="Flowyn Play" />
             </div>
           </div>
 
-          <div className="grid border-b border-slate-200 md:grid-cols-[240px_1fr]">
-            <RowTitle title="Novo modulo" description="Organize a trilha em etapas." />
-            <div className="py-6 md:pl-8">
+          {/* Novo modulo */}
+          <div className="border-b border-slate-200 py-6">
+            <h3 className="text-sm font-semibold text-slate-950">Novo modulo</h3>
+            <p className="mt-1 text-sm text-slate-400">Organize a trilha em etapas.</p>
+            <div className="mt-4">
               <CourseModuleForm createModule={createModule} />
             </div>
           </div>
 
-          <div className="grid border-b border-slate-200 md:grid-cols-[240px_1fr]">
-            <RowTitle title="Modulos" description="Aulas e materiais do curso." />
-            <div className="space-y-4 py-6 md:pl-8">
-              {moduleRows.length === 0 ? (
+          {/* Modulos com paginacao */}
+          <div className="border-b border-slate-200 py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-950">Modulos</h3>
+                <p className="mt-1 text-sm text-slate-400">Aulas e materiais do curso.</p>
+              </div>
+              {totalModules > 1 && (
+                <div className="flex items-center gap-2">
+                  <PaginationButton
+                    href={`/dashboard/products/${id}/content?modulo=${currentModuleIndex - 1}`}
+                    disabled={currentModuleIndex <= 0}
+                    icon={<ChevronLeft className="h-4 w-4" />}
+                    label="Anterior"
+                  />
+                  <span className="text-sm font-semibold text-slate-600">
+                    {currentModuleIndex + 1} / {totalModules}
+                  </span>
+                  <PaginationButton
+                    href={`/dashboard/products/${id}/content?modulo=${currentModuleIndex + 1}`}
+                    disabled={currentModuleIndex >= totalModules - 1}
+                    icon={<ChevronRight className="h-4 w-4" />}
+                    label="Proximo"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4">
+              {totalModules === 0 ? (
                 <div className="rounded-lg border border-dashed border-slate-200 px-6 py-12 text-center">
                   <BookOpen className="mx-auto h-10 w-10 text-slate-300" />
                   <h3 className="mt-4 font-semibold text-slate-950">Nenhum modulo ainda</h3>
                   <p className="mt-1 text-sm text-slate-400">Crie o primeiro modulo para comecar a montar a trilha do aluno.</p>
                 </div>
-              ) : (
-                moduleRows.map((module, moduleIndex) => {
-                  const lessons = [...(module.lessons || [])].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
+              ) : currentModule ? (
+                (() => {
+                  const lessons = [...(currentModule.lessons || [])].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
+                  const moduleIndex = currentModuleIndex
                   return (
-                    <div key={module.id} className="rounded-lg border border-slate-200">
+                    <div className="rounded-lg border border-slate-200">
                       <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-5">
                         <div className="flex gap-3">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 font-semibold text-orange-600">
                             {moduleIndex + 1}
                           </div>
                           <div>
-                            <h3 className="font-semibold text-slate-950">{module.title}</h3>
-                            {module.description && <p className="mt-1 text-sm text-slate-400">{module.description}</p>}
+                            <h3 className="font-semibold text-slate-950">{currentModule.title}</h3>
+                            {currentModule.description && <p className="mt-1 text-sm text-slate-400">{currentModule.description}</p>}
                           </div>
                         </div>
                         <form action={deleteModule}>
-                          <input type="hidden" name="module_id" value={module.id} />
+                          <input type="hidden" name="module_id" value={currentModule.id} />
                           <button className="rounded-xl p-2 text-slate-300 transition hover:bg-red-50 hover:text-red-600" aria-label="Excluir modulo">
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -319,12 +360,12 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
                       </div>
 
                       <div className="p-5 pt-0">
-                        <CourseLessonForm moduleId={module.id} userId={user.id} createLesson={createLesson} />
+                        <CourseLessonForm moduleId={currentModule.id} userId={user.id} createLesson={createLesson} />
                       </div>
                     </div>
                   )
-                })
-              )}
+                })()
+              ) : null}
             </div>
           </div>
 
@@ -335,6 +376,21 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
         </div>
       )}
     </section>
+  )
+}
+
+function PaginationButton({ href, disabled, icon, label }: { href: string; disabled: boolean; icon: ReactNode; label: string }) {
+  if (disabled) {
+    return (
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-300">
+        {icon}
+      </span>
+    )
+  }
+  return (
+    <Link href={href} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-orange-200 hover:text-orange-600" aria-label={label}>
+      {icon}
+    </Link>
   )
 }
 
@@ -359,15 +415,6 @@ function ProductTabs({ productId, active }: { productId: string; active: string 
           </Link>
         )
       })}
-    </div>
-  )
-}
-
-function RowTitle({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="py-6 md:pr-8">
-      <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
-      <p className="mt-1 text-sm leading-6 text-slate-400">{description}</p>
     </div>
   )
 }
