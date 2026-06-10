@@ -302,14 +302,24 @@ export async function POST(req: NextRequest) {
     })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
-    console.error('[Asaas Checkout] Error:', message)
 
-    if (message.includes('ASAAS_API_KEY') || message.includes('api_key') || message.includes('Unauthorized')) {
+    console.error('[Asaas Checkout] Error:', {
+      message,
+      hasAsaasKey: Boolean(process.env.ASAAS_API_KEY),
+      asaasUrl: process.env.ASAAS_API_URL || '(default sandbox)',
+      hasMainWallet: Boolean(process.env.ASAAS_MAIN_WALLET_ID),
+    })
+
+    if (message.includes('ASAAS_API_KEY') || message.includes('api_key') || message.toLowerCase().includes('unauthorized') || message.toLowerCase().includes('invalid_api')) {
       return NextResponse.json({ error: 'Pagamento indisponível no momento. Tente novamente mais tarde.' }, { status: 503 })
     }
 
     if (message.includes('ENOTFOUND') || message.includes('ECONNREFUSED') || message.includes('ETIMEDOUT') || message.includes('fetch failed')) {
       return NextResponse.json({ error: 'Serviço de pagamento temporariamente indisponível. Tente novamente em instantes.' }, { status: 503 })
+    }
+
+    if (message.includes('subaccount') || message.includes('split') || message.includes('wallet_id')) {
+      return NextResponse.json({ error: 'Configuração de pagamento do produtor inválida. Ele precisa revisar a conta Asaas.' }, { status: 502 })
     }
 
     return NextResponse.json({ error: 'Erro ao processar pagamento. Entre em contato com o suporte informando o horário exato.' }, { status: 500 })
