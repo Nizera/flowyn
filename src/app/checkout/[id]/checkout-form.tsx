@@ -450,7 +450,7 @@ export function CheckoutForm({
       </button>
 
       <p className="text-center text-xs text-slate-400">
-        Pagamento protegido pela Asaas. Os dados do cartao nao sao armazenados pela Flowyn.
+        Pagamento processado pela Asaas. Os dados do cartao nao sao enviados para a Flowyn.
       </p>
     </form>
   )

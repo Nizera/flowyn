@@ -3,6 +3,7 @@ import { CheckoutForm } from './checkout-form'
 import { PixelScripts } from '@/components/PixelScripts'
 import { getPlatformAccess } from '@/lib/platform-access'
 import { normalizeCheckoutConfig } from '@/lib/checkout-customization'
+import { UrgencyCarousel } from '@/components/UrgencyCarousel'
 
 interface CheckoutPageProps {
   params: Promise<{ id: string }>
@@ -112,25 +113,7 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
     <div className="min-h-screen" style={{ backgroundColor: checkoutConfig.backgroundColor }}>
       {!isPreviewMode && <PixelScripts pixels={allPixels} />}
 
-      <header className="border-b border-slate-200 bg-white/95 px-4 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center gap-3">
-          {product.logo_url ? (
-            <img src={product.logo_url} alt={product.name} className="h-10 w-10 rounded-xl border border-slate-200 object-cover" />
-          ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50">
-              <span className="text-sm font-black" style={{ color: checkoutConfig.primaryColor }}>{product.name.charAt(0)}</span>
-            </div>
-          )}
-          <div className="min-w-0">
-            <p className="truncate text-sm font-black text-slate-950">{product.name}</p>
-            <p className="text-xs font-medium text-slate-500">Checkout seguro Flowyn</p>
-          </div>
-          <div className="ml-auto hidden items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700 sm:flex">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            {checkoutConfig.securityText}
-          </div>
-        </div>
-      </header>
+      <UrgencyCarousel phrases={checkoutConfig.urgencyPhrases} primaryColor={checkoutConfig.primaryColor} />
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:py-10">
         {checkoutConfig.blocks.banner && checkoutConfig.bannerImageUrl && (
@@ -250,7 +233,7 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
 
               <div className="space-y-3 bg-slate-50 p-6">
                 <div className="rounded-2xl bg-white p-4 text-xs font-bold leading-5 text-slate-500">
-                  {checkoutConfig.securityText}. A Flowyn nao armazena os dados do cartao.
+                  A Flowyn nao armazena os dados do cartao. Pagamento processado pela Asaas.
                 </div>
                 {checkoutConfig.blocks.guarantee && (
                   <div className="rounded-2xl bg-white p-4 text-xs font-bold leading-5 text-slate-500">

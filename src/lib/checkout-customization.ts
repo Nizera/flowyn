@@ -14,6 +14,7 @@ export type CheckoutCustomizationConfig = {
   benefits: string[]
   testimonials: Array<{ name: string; text: string }>
   faq: Array<{ question: string; answer: string }>
+  urgencyPhrases: string[]
   blocks: {
     banner: boolean
     benefits: boolean
@@ -47,6 +48,7 @@ export function defaultCheckoutConfig(product?: {
     benefits: ['Acesso imediato', 'Checkout seguro', 'Suporte do produtor'],
     testimonials: [],
     faq: [],
+    urgencyPhrases: ['Oferta por tempo limitado', 'Garanta seu acesso agora', 'Acesso imediato apos a compra'],
     blocks: {
       banner: true,
       benefits: true,
@@ -102,6 +104,7 @@ export function normalizeCheckoutConfig(input: unknown, product?: Parameters<typ
           answer: safeText((item as { answer?: unknown })?.answer),
         })).filter(item => item.question && item.answer).slice(0, 8)
       : defaults.faq,
+    urgencyPhrases: safeStringArray(data.urgencyPhrases, defaults.urgencyPhrases),
     blocks: {
       banner: blocks.banner ?? defaults.blocks.banner,
       benefits: blocks.benefits ?? defaults.blocks.benefits,

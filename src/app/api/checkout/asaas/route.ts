@@ -303,6 +303,15 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[Asaas Checkout] Error:', message)
-    return NextResponse.json({ error: message || 'Erro ao processar pagamento.' }, { status: 500 })
+
+    if (message.includes('ASAAS_API_KEY') || message.includes('api_key') || message.includes('Unauthorized')) {
+      return NextResponse.json({ error: 'Pagamento indisponível no momento. Tente novamente mais tarde.' }, { status: 503 })
+    }
+
+    if (message.includes('ENOTFOUND') || message.includes('ECONNREFUSED') || message.includes('ETIMEDOUT') || message.includes('fetch failed')) {
+      return NextResponse.json({ error: 'Serviço de pagamento temporariamente indisponível. Tente novamente em instantes.' }, { status: 503 })
+    }
+
+    return NextResponse.json({ error: 'Erro ao processar pagamento. Entre em contato com o suporte informando o horário exato.' }, { status: 500 })
   }
 }

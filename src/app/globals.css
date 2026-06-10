@@ -58,6 +58,11 @@ body {
   50% { box-shadow: 0 0 48px 12px rgba(249, 115, 22, 0.3); }
 }
 
+@keyframes fade-in-up {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
 .dot-pulse { animation: pulse-dot 2s ease-in-out infinite; }
 .ring-pulse { animation: pulse-ring 2.2s ease-out infinite; }
 .glow-pulse { animation: glow-orange 3s ease-in-out infinite; }

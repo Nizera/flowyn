@@ -137,6 +137,10 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
             <Field label="Garantia" value={config.guaranteeText} onChange={(value) => update('guaranteeText', value)} textarea />
           </Panel>
 
+          <Panel title="Urgencia">
+            <Field label="Frases de urgencia (uma por linha)" value={config.urgencyPhrases.join('\n')} onChange={(value) => update('urgencyPhrases', value.split('\n').map(item => item.trim()).filter(Boolean))} textarea />
+          </Panel>
+
           <Panel title="Estilo">
             <ColorField label="Cor primaria" value={config.primaryColor} onChange={(value) => update('primaryColor', value)} />
             <ColorField label="Fundo" value={config.backgroundColor} onChange={(value) => update('backgroundColor', value)} />
