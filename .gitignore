@@ -49,3 +49,7 @@ stripe.exe
 remotion/
 email-templates/
 carrossel-instagram/
+
+# local development launcher and logs
+/.dev*.log
+/start-dev-local.ps1

@@ -1,6 +1,6 @@
 'use client'
 
-import { motion, useInView, useScroll, useTransform } from 'framer-motion'
+import { motion, useInView, useScroll, useTransform, type MotionValue } from 'framer-motion'
 import { useRef, type ReactNode } from 'react'
 
 export function WordsPullUp({
@@ -104,20 +104,15 @@ export function AnimatedLetter({
 
   return (
     <p ref={ref} className={className} style={style}>
-      {chars.map((char, i) => {
-        const charProgress = i / chars.length
-        const start = Math.max(0, charProgress - 0.1)
-        const end = Math.min(1, charProgress + 0.05)
-        const opacity = useTransform(scrollYProgress, [start, end], [0.15, 1])
-
-        return (
-          <motion.span key={i} style={{ opacity }} className="inline-block">
-            {char === ' ' ? '\u00A0' : char}
-          </motion.span>
-        )
-      })}
+      {chars.map((char, i) => <AnimatedCharacter key={`${char}-${i}`} char={char} index={i} total={chars.length} progress={scrollYProgress} />)}
     </p>
   )
+}
+
+function AnimatedCharacter({ char, index, total, progress }: { char: string; index: number; total: number; progress: MotionValue<number> }) {
+  const charProgress = index / total
+  const opacity = useTransform(progress, [Math.max(0, charProgress - 0.1), Math.min(1, charProgress + 0.05)], [0.15, 1])
+  return <motion.span style={{ opacity }} className="inline-block">{char === ' ' ? '\u00A0' : char}</motion.span>
 }
 
 export function FadeInView({

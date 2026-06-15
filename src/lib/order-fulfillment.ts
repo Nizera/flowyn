@@ -2,6 +2,7 @@ import 'server-only'
 import { getResendClient } from '@/lib/resend'
 import { deliveryEmail, studentPasswordEmail } from '@/lib/email-templates'
 import { getAppUrl } from '@/lib/app-url'
+import { createStudentPasswordSetupUrl, findAuthUserIdByEmail } from '@/lib/student-password-link'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -66,17 +67,15 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
   const deliveryCustomerName = privateCustomer?.customer_name || orderData.customer_name
   const deliveryCustomerEmail = privateCustomer?.customer_email || orderData.customer_email
   const appUrl = getAppUrl()
+  let platformStudentIsNew = false
+  let platformAccessUrl: string | null = null
 
   if (product?.delivery_type === 'platform') {
-    const { data: matchedUser } = await supabase
-      .schema('auth')
-      .from('users')
-      .select('id')
-      .eq('email', deliveryCustomerEmail)
-      .maybeSingle()
-
-    let studentUserId = matchedUser?.id || null
+    let studentUserId = await findAuthUserIdByEmail(supabase, deliveryCustomerEmail)
     let setupPasswordUrl: string | null = null
+    const productPath = `/learn/${product.id}`
+    platformAccessUrl = `${appUrl}/login?redirect=${encodeURIComponent(productPath)}`
+
     if (!studentUserId) {
       const { data: createdUser } = await supabase.auth.admin.createUser({
         email: deliveryCustomerEmail,
@@ -88,16 +87,11 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
       })
 
       studentUserId = createdUser?.user?.id || null
+      platformStudentIsNew = Boolean(studentUserId)
 
-      const { data: resetLink } = await supabase.auth.admin.generateLink({
-        type: 'recovery',
-        email: deliveryCustomerEmail,
-        options: {
-          redirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent('/reset-password?next=/learn')}`,
-        },
-      })
-
-      setupPasswordUrl = resetLink?.properties?.action_link || null
+      if (studentUserId) {
+        setupPasswordUrl = await createStudentPasswordSetupUrl(supabase, deliveryCustomerEmail, product.id)
+      }
     }
 
     const accessPayload = {
@@ -156,7 +150,7 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
           customerName: deliveryCustomerName,
           productName: product.name,
           setupUrl: setupPasswordUrl,
-          learnUrl: `${appUrl}/learn`,
+          learnUrl: platformAccessUrl,
         }),
       })
 
@@ -175,7 +169,9 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
     const accessLinks: { label: string; url: string; isFile: boolean }[] = []
 
     if (product?.delivery_type === 'platform') {
-      accessLinks.push({ label: 'Acessar na Flowyn', url: `${appUrl}/learn/${product.id}`, isFile: false })
+      if (!platformStudentIsNew && platformAccessUrl) {
+        accessLinks.push({ label: 'Acessar na Flowyn', url: platformAccessUrl, isFile: false })
+      }
     } else if (product.delivery_url) {
       accessLinks.push({ label: 'Acessar Conteudo', url: product.delivery_url, isFile: false })
     }
@@ -218,7 +214,7 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
     }
 
     const resendClient = getResendClient()
-    if (resendClient) {
+    if (resendClient && (product.delivery_type === 'external' || accessLinks.length > 0)) {
       await resendClient.emails.send({
         from: 'Flowyn <noreply@flowyn.com.br>',
         to: deliveryCustomerEmail,

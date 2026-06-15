@@ -1,7 +1,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, BookOpen, Building2, CheckCircle2, CreditCard, ExternalLink, Palette, Plus, Route, ShoppingBag, Trash2, Users } from 'lucide-react'
+import { ArrowLeft, BookOpen, Building2, CalendarClock, CheckCircle2, CreditCard, FileLock2, Palette, Pencil, Plus, Route, ShoppingBag, Trash2, Users } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { getResendClient } from '@/lib/resend'
@@ -25,8 +25,14 @@ type StudentRow = {
 type SlotRow = {
   id: string
   starts_at: string
+  ends_at: string
   booked_by: string | null
+  booked_session_id?: string | null
 }
+
+type StudentSessionRow = { id: string; student_id: string; title: string; scheduled_at: string | null; status: string; reschedule_count: number; meeting_url: string | null }
+type StudentTaskRow = { id: string; student_id: string; title: string; due_at: string | null; completed_at: string | null }
+type PrivateNoteRow = { id: string; student_id: string; body: string; created_at: string }
 
 type IntakeRow = {
   student_id: string
@@ -61,6 +67,10 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
   const { data: students } = await supabase.from('student_access').select('user_id, access_email, granted_at, profile:profiles(full_name)').eq('product_id', id).order('granted_at', { ascending: false })
   const { data: slots } = await supabase.from('mentorship_availability_slots').select('*').eq('product_id', id).gte('starts_at', getRecentStartDateIso()).order('starts_at', { ascending: true })
   const { data: intakeResponses } = await supabase.from('mentorship_intake_responses').select('student_id, answers, submitted_at, profile:profiles(full_name)').eq('product_id', id).order('submitted_at', { ascending: false })
+  const { data: privateProgram } = await supabase.from('mentorship_program_private').select('default_meeting_url').eq('product_id', id).maybeSingle()
+  const { data: studentSessions } = await supabase.from('mentorship_sessions').select('id, student_id, title, scheduled_at, status, reschedule_count, meeting_url').eq('product_id', id).not('student_id', 'is', null).order('scheduled_at', { ascending: false })
+  const { data: studentTasks } = await supabase.from('mentorship_tasks').select('id, student_id, title, due_at, completed_at').eq('product_id', id).order('created_at', { ascending: false })
+  const { data: privateNotes } = await supabase.from('mentorship_private_notes').select('id, student_id, body, created_at').eq('product_id', id).order('created_at', { ascending: false })
 
   async function saveProgram(formData: FormData) {
     'use server'
@@ -74,8 +84,17 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
       promise: String(formData.get('promise') || '').trim() || null,
       session_count: Number(formData.get('session_count') || 4) || 4,
       session_duration_minutes: Number(formData.get('session_duration_minutes') || 60) || 60,
-      meeting_url: String(formData.get('meeting_url') || '').trim() || null,
       intake_questions: String(formData.get('intake_questions') || '').split('\n').map(question => question.trim()).filter(Boolean),
+      timezone: String(formData.get('timezone') || 'America/Sao_Paulo'),
+      booking_min_notice_hours: Math.max(0, Number(formData.get('booking_min_notice_hours') || 2)),
+      cancellation_notice_hours: Math.max(0, Number(formData.get('cancellation_notice_hours') || 24)),
+      max_reschedules: Math.max(0, Number(formData.get('max_reschedules') || 2)),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'product_id' })
+
+    await supabase.from('mentorship_program_private').upsert({
+      product_id: id,
+      default_meeting_url: String(formData.get('meeting_url') || '').trim() || null,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'product_id' })
 
@@ -110,6 +129,16 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
     revalidatePath(`/dashboard/products/${id}/journey`)
   }
 
+  async function editSession(formData: FormData) {
+    'use server'
+    const supabase = await createClient()
+    const sessionId = String(formData.get('session_id') || '')
+    const title = String(formData.get('title') || '').trim()
+    if (!sessionId || !title) return
+    await supabase.from('mentorship_sessions').update({ title, description: String(formData.get('description') || '').trim() || null, sort_order: Math.max(0, Number(formData.get('sort_order') || 0)), updated_at: new Date().toISOString() }).eq('id', sessionId).eq('product_id', id).is('student_id', null)
+    revalidatePath(`/dashboard/products/${id}/journey`)
+  }
+
   async function createSlot(formData: FormData) {
     'use server'
     const supabase = await createClient()
@@ -118,13 +147,70 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
     if (!startsAt) return
 
     const startDate = new Date(startsAt)
-    await supabase.from('mentorship_availability_slots').insert({
+    const { data: slot } = await supabase.from('mentorship_availability_slots').insert({
       product_id: id,
       starts_at: startDate.toISOString(),
       ends_at: new Date(startDate.getTime() + duration * 60 * 1000).toISOString(),
-      meeting_url: String(formData.get('meeting_url') || '').trim() || null,
-    })
+    }).select('id').single()
 
+    if (slot) await supabase.from('mentorship_slot_private').insert({ slot_id: slot.id, meeting_url: String(formData.get('meeting_url') || '').trim() || null })
+
+    revalidatePath(`/dashboard/products/${id}/journey`)
+  }
+
+  async function deleteSlot(formData: FormData) {
+    'use server'
+    const supabase = await createClient()
+    const slotId = String(formData.get('slot_id') || '')
+    if (!slotId) return
+    await supabase.from('mentorship_availability_slots').delete().eq('id', slotId).eq('product_id', id).is('booked_by', null)
+    revalidatePath(`/dashboard/products/${id}/journey`)
+  }
+
+  async function updateStudentSession(formData: FormData) {
+    'use server'
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const sessionId = String(formData.get('session_id') || '')
+    const status = String(formData.get('status') || '')
+    if (!user || !sessionId || !['scheduled', 'done', 'missed', 'cancelled'].includes(status)) return
+    const admin = createAdminClient()
+    const { data: session } = await admin.from('mentorship_sessions').select('student_id, scheduled_at').eq('id', sessionId).eq('product_id', id).maybeSingle()
+    const { data: ownedProduct } = await admin.from('products').select('name').eq('id', id).eq('owner_id', user.id).maybeSingle()
+    if (!session?.student_id || !ownedProduct) return
+    await admin.from('mentorship_sessions').update({ status, cancelled_at: status === 'cancelled' ? new Date().toISOString() : null, cancellation_reason: status === 'cancelled' ? 'Cancelado pelo mentor' : null, updated_at: new Date().toISOString() }).eq('id', sessionId).eq('product_id', id)
+    if (status === 'cancelled') await admin.from('mentorship_availability_slots').update({ booked_by: null, booked_session_id: null, updated_at: new Date().toISOString() }).eq('booked_session_id', sessionId)
+    const [{ data: access }, resend] = await Promise.all([
+      admin.from('student_access').select('access_email').eq('product_id', id).eq('user_id', session.student_id).maybeSingle(),
+      Promise.resolve(getResendClient()),
+    ])
+    if (access?.access_email && resend) {
+      const labels: Record<string, string> = { scheduled: 'agendada', done: 'marcada como realizada', missed: 'marcada como falta', cancelled: 'cancelada' }
+      const { error } = await resend.emails.send({ from: 'Flowyn <noreply@flowyn.com.br>', to: access.access_email, subject: `Sessão ${labels[status]} em "${ownedProduct.name}"`, html: learningNotificationEmail({ title: `Sessão ${labels[status]}`, message: session.scheduled_at ? `Atualização da sessão de ${new Date(session.scheduled_at).toLocaleString('pt-BR')}.` : 'O status de uma sessão da sua mentoria foi atualizado.', actionLabel: 'Ver jornada', actionUrl: `${getAppUrl()}/learn/${id}` }) })
+      await admin.from('notification_events').insert({ user_id: session.student_id, product_id: id, recipient_email: access.access_email, event_type: `mentorship_session_${status}_by_mentor`, status: error ? 'failed' : 'sent', sent_at: error ? null : new Date().toISOString(), metadata: { session_id: sessionId } })
+    }
+    revalidatePath(`/dashboard/products/${id}/journey`)
+  }
+
+  async function addPrivateNote(formData: FormData) {
+    'use server'
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const studentId = String(formData.get('student_id') || '')
+    const body = String(formData.get('body') || '').trim().slice(0, 10000)
+    if (!user || !studentId || !body) return
+    const { data: access } = await supabase.from('student_access').select('id').eq('product_id', id).eq('user_id', studentId).maybeSingle()
+    if (!access) return
+    await supabase.from('mentorship_private_notes').insert({ product_id: id, student_id: studentId, author_id: user.id, body })
+    revalidatePath(`/dashboard/products/${id}/journey`)
+  }
+
+  async function deletePrivateNote(formData: FormData) {
+    'use server'
+    const supabase = await createClient()
+    const noteId = String(formData.get('note_id') || '')
+    if (!noteId) return
+    await supabase.from('mentorship_private_notes').delete().eq('id', noteId).eq('product_id', id)
     revalidatePath(`/dashboard/products/${id}/journey`)
   }
 
@@ -182,6 +268,9 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
   const studentRows = ((students ?? []) as unknown as StudentRow[]).filter(row => Boolean(row.user_id))
   const slotRows = (slots ?? []) as SlotRow[]
   const intakeRows = (intakeResponses ?? []) as unknown as IntakeRow[]
+  const studentSessionRows = (studentSessions ?? []) as StudentSessionRow[]
+  const studentTaskRows = (studentTasks ?? []) as StudentTaskRow[]
+  const noteRows = (privateNotes ?? []) as PrivateNoteRow[]
   const intakeQuestions = Array.isArray(program?.intake_questions) ? program.intake_questions.join('\n') : ''
 
   return (
@@ -223,9 +312,13 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
             <RowTitle title="Programa" description="Promessa, formato e diagnostico." />
             <form action={saveProgram} className="grid gap-5 py-6 md:pl-8 lg:grid-cols-2">
               <Field label="Headline da jornada"><Input name="headline" defaultValue={program?.headline || ''} placeholder={product.name} /></Field>
-              <Field label="Link padrao Zoom/Meet"><Input name="meeting_url" defaultValue={program?.meeting_url || ''} placeholder="https://..." /></Field>
+              <Field label="Link padrão Zoom/Meet" hint="Privado. Só é liberado ao aluno que reservar uma sessão."><Input name="meeting_url" defaultValue={privateProgram?.default_meeting_url || ''} placeholder="https://..." /></Field>
               <Field label="Sessoes"><Input name="session_count" type="number" defaultValue={String(program?.session_count || 4)} placeholder="4" /></Field>
               <Field label="Duracao por sessao"><Input name="session_duration_minutes" type="number" defaultValue={String(program?.session_duration_minutes || 60)} placeholder="60" /></Field>
+              <Field label="Fuso horário"><Input name="timezone" defaultValue={program?.timezone || 'America/Sao_Paulo'} placeholder="America/Sao_Paulo" /></Field>
+              <Field label="Antecedência para reservar (horas)"><Input name="booking_min_notice_hours" type="number" defaultValue={String(program?.booking_min_notice_hours ?? 2)} placeholder="2" /></Field>
+              <Field label="Antecedência para cancelar (horas)"><Input name="cancellation_notice_hours" type="number" defaultValue={String(program?.cancellation_notice_hours ?? 24)} placeholder="24" /></Field>
+              <Field label="Máximo de reagendamentos"><Input name="max_reschedules" type="number" defaultValue={String(program?.max_reschedules ?? 2)} placeholder="2" /></Field>
               <div className="lg:col-span-2">
                 <Field label="Promessa e resultado esperado">
                   <textarea name="promise" defaultValue={program?.promise || ''} className={textareaClass} placeholder="O que o aluno deve conquistar ao final da jornada?" />
@@ -270,26 +363,28 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
               ) : (
                 <div className="overflow-hidden rounded-lg border border-slate-200">
                   {sessionRows.map((session, index) => (
-                    <div key={session.id} className="flex items-start justify-between gap-4 border-b border-slate-100 p-5 last:border-b-0">
-                      <div className="flex gap-4">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 font-semibold text-orange-600">{index + 1}</div>
-                        <div>
-                          <h3 className="font-semibold text-slate-950">{session.title}</h3>
-                          {session.description && <p className="mt-1 text-sm text-slate-400">{session.description}</p>}
-                          {session.meeting_url && (
-                            <a href={session.meeting_url} target="_blank" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-orange-600">
-                              Link da sessao <ExternalLink className="h-3 w-3" />
-                            </a>
-                          )}
+                    <details key={session.id} className="group border-b border-slate-100 p-5 last:border-b-0">
+                      <summary className="flex cursor-pointer list-none items-start justify-between gap-4 [&::-webkit-details-marker]:hidden">
+                        <div className="flex gap-4">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 font-semibold text-orange-600">{index + 1}</div>
+                          <div><h3 className="font-semibold text-slate-950">{session.title}</h3>{session.description && <p className="mt-1 text-sm text-slate-400">{session.description}</p>}</div>
                         </div>
-                      </div>
-                      <form action={deleteSession}>
+                        <Pencil className="h-4 w-4 text-slate-300 transition group-open:text-orange-500" />
+                      </summary>
+                      <form action={editSession} className="mt-5 grid gap-3 rounded-xl bg-slate-50 p-4 md:grid-cols-2">
                         <input type="hidden" name="session_id" value={session.id} />
-                        <button className="rounded-xl p-2 text-slate-300 transition hover:bg-red-50 hover:text-red-600">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <Input name="title" defaultValue={session.title} placeholder="Título" required />
+                        <Input name="sort_order" type="number" defaultValue={String(session.sort_order ?? index)} placeholder="Ordem" />
+                        <div className="md:col-span-2"><textarea name="description" defaultValue={session.description || ''} className={textareaClass} placeholder="Objetivo da etapa" /></div>
+                        <div className="flex gap-2 md:col-span-2">
+                          <button className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white">Salvar etapa</button>
+                        </div>
                       </form>
-                    </div>
+                      <form action={deleteSession} className="mt-2">
+                        <input type="hidden" name="session_id" value={session.id} />
+                        <button className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" />Excluir etapa modelo</button>
+                      </form>
+                    </details>
                   ))}
                 </div>
               )}
@@ -302,7 +397,7 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
               <form action={createSlot} className="grid gap-5 lg:grid-cols-[1fr_160px_1fr_auto] lg:items-end">
                 <Field label="Inicio" required><Input name="starts_at" type="datetime-local" placeholder="Inicio" required /></Field>
                 <Field label="Duracao"><Input name="duration_minutes" type="number" placeholder="60" defaultValue={String(program?.session_duration_minutes || 60)} /></Field>
-                <Field label="Link da sala"><Input name="meeting_url" placeholder="https://..." defaultValue={program?.meeting_url || ''} /></Field>
+                <Field label="Link da sala"><Input name="meeting_url" placeholder="https://..." defaultValue={privateProgram?.default_meeting_url || ''} /></Field>
                 <button className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-5 text-sm font-semibold text-orange-600 transition hover:bg-orange-100">
                   <Plus className="h-4 w-4" />
                   Abrir horario
@@ -311,11 +406,12 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
               {slotRows.length > 0 && (
                 <div className="overflow-hidden rounded-lg border border-slate-200">
                   {slotRows.slice(0, 8).map(slot => (
-                    <div key={slot.id} className="flex items-center justify-between border-b border-slate-100 px-4 py-3 text-sm last:border-b-0">
-                      <span className="text-slate-700">{new Date(slot.starts_at).toLocaleString('pt-BR')}</span>
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${slot.booked_by ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                        {slot.booked_by ? 'Reservado' : 'Livre'}
-                      </span>
+                    <div key={slot.id} className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-sm last:border-b-0">
+                      <span className="text-slate-700">{new Date(slot.starts_at).toLocaleString('pt-BR')} até {new Date(slot.ends_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${slot.booked_by ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>{slot.booked_by ? 'Reservado' : 'Livre'}</span>
+                        {!slot.booked_by && <form action={deleteSlot}><input type="hidden" name="slot_id" value={slot.id} /><button className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500"><Trash2 className="h-4 w-4" /></button></form>}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -348,6 +444,54 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
                 </button>
               </div>
             </form>
+          </div>
+
+          <div className="grid border-b border-slate-200 md:grid-cols-[240px_1fr]">
+            <RowTitle title="Mentorados" description="Acompanhamento individual e notas privadas." />
+            <div className="space-y-4 py-6 md:pl-8">
+              {studentRows.length === 0 ? <p className="text-sm text-slate-400">Nenhum mentorado com acesso ainda.</p> : studentRows.map(student => {
+                const sessionsForStudent = studentSessionRows.filter(session => session.student_id === student.user_id)
+                const tasksForStudent = studentTaskRows.filter(task => task.student_id === student.user_id)
+                const intakeForStudent = intakeRows.find(intake => intake.student_id === student.user_id)
+                const notesForStudent = noteRows.filter(note => note.student_id === student.user_id)
+                const completedTasks = tasksForStudent.filter(task => task.completed_at).length
+                return (
+                  <details key={student.user_id} className="group overflow-hidden rounded-xl border border-slate-200 bg-white">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 [&::-webkit-details-marker]:hidden">
+                      <div><p className="font-semibold text-slate-950">{student.profile?.full_name || student.access_email || 'Aluno'}</p><p className="mt-1 text-xs text-slate-400">{sessionsForStudent.length} sessões · {completedTasks}/{tasksForStudent.length} tarefas · {intakeForStudent ? 'diagnóstico enviado' : 'diagnóstico pendente'}</p></div>
+                      <Users className="h-5 w-5 text-slate-300 transition group-open:text-orange-500" />
+                    </summary>
+                    <div className="grid gap-5 border-t border-slate-100 bg-slate-50/60 p-5 lg:grid-cols-2">
+                      <section className="rounded-xl bg-white p-4 ring-1 ring-slate-100">
+                        <h4 className="flex items-center gap-2 text-sm font-semibold text-slate-900"><CalendarClock className="h-4 w-4 text-orange-500" />Sessões</h4>
+                        <div className="mt-3 space-y-2">
+                          {sessionsForStudent.length === 0 ? <p className="text-xs text-slate-400">Nenhuma sessão individual.</p> : sessionsForStudent.map(session => (
+                            <form key={session.id} action={updateStudentSession} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 p-3">
+                              <input type="hidden" name="session_id" value={session.id} />
+                              <div><p className="text-sm font-medium text-slate-800">{session.title}</p><p className="text-xs text-slate-400">{session.scheduled_at ? new Date(session.scheduled_at).toLocaleString('pt-BR') : 'Sem data'} · {session.reschedule_count || 0} reagendamentos</p></div>
+                              <select name="status" defaultValue={session.status} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs">
+                                <option value="scheduled">Agendada</option><option value="done">Realizada</option><option value="missed">Falta</option><option value="cancelled">Cancelada</option>
+                              </select>
+                              <button className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white">Salvar</button>
+                            </form>
+                          ))}
+                        </div>
+                      </section>
+                      <section className="rounded-xl bg-white p-4 ring-1 ring-slate-100">
+                        <h4 className="flex items-center gap-2 text-sm font-semibold text-slate-900"><CheckCircle2 className="h-4 w-4 text-emerald-500" />Tarefas</h4>
+                        <div className="mt-3 space-y-2">{tasksForStudent.length === 0 ? <p className="text-xs text-slate-400">Nenhuma tarefa.</p> : tasksForStudent.map(task => <div key={task.id} className="rounded-lg border border-slate-100 p-3"><p className="text-sm font-medium text-slate-800">{task.title}</p><p className="mt-1 text-xs text-slate-400">{task.completed_at ? 'Concluída' : task.due_at ? `Prazo: ${new Date(task.due_at).toLocaleString('pt-BR')}` : 'Pendente'}</p></div>)}</div>
+                      </section>
+                      <section className="rounded-xl bg-white p-4 ring-1 ring-slate-100 lg:col-span-2">
+                        <h4 className="flex items-center gap-2 text-sm font-semibold text-slate-900"><FileLock2 className="h-4 w-4 text-violet-500" />Notas privadas do mentor</h4>
+                        <p className="mt-1 text-xs text-slate-400">Visíveis somente para o proprietário desta mentoria.</p>
+                        <form action={addPrivateNote} className="mt-3 flex flex-col gap-2 sm:flex-row"><input type="hidden" name="student_id" value={student.user_id} /><textarea name="body" required maxLength={10000} className={`${textareaClass} min-h-20 flex-1`} placeholder="Registre contexto, decisões e próximos passos..." /><button className="h-11 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white">Adicionar nota</button></form>
+                        <div className="mt-3 space-y-2">{notesForStudent.map(note => <div key={note.id} className="flex items-start justify-between gap-3 rounded-lg bg-violet-50/60 p-3"><div><p className="whitespace-pre-wrap text-sm text-slate-700">{note.body}</p><p className="mt-1 text-[10px] text-slate-400">{new Date(note.created_at).toLocaleString('pt-BR')}</p></div><form action={deletePrivateNote}><input type="hidden" name="note_id" value={note.id} /><button className="p-1 text-slate-300 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button></form></div>)}</div>
+                      </section>
+                    </div>
+                  </details>
+                )
+              })}
+            </div>
           </div>
 
           <div className="grid border-b border-slate-200 md:grid-cols-[240px_1fr]">

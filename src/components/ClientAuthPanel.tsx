@@ -12,9 +12,10 @@ interface ClientAuthPanelProps {
   initialError?: string
   initialType?: string
   initialSuccess?: string
+  redirectTo?: string
 }
 
-export function ClientAuthPanel({ initialError, initialType, initialSuccess }: ClientAuthPanelProps) {
+export function ClientAuthPanel({ initialError, initialType, initialSuccess, redirectTo = '/dashboard' }: ClientAuthPanelProps) {
   const router = useRouter()
   const [isLogin, setIsLogin] = useState(initialType !== 'register')
   const [error, setError] = useState(initialError || '')
@@ -47,7 +48,7 @@ export function ClientAuthPanel({ initialError, initialType, initialSuccess }: C
     }
 
     router.refresh()
-    router.push('/dashboard')
+    router.push(redirectTo)
   }
 
   async function handleSignup(event: FormEvent<HTMLFormElement>) {

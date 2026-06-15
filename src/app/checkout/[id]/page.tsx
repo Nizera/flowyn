@@ -98,7 +98,7 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
     .eq('plan_id', plan.id)
 
   const producerPixels = (planPixelRows ?? [])
-    .map((r: { pixel: { platform: any; pixel_id: any; is_active: any }[] }) => r.pixel?.[0])
+    .map((r: { pixel: { platform: string; pixel_id: string; is_active: boolean }[] }) => r.pixel?.[0])
     .filter((p): p is { platform: string; pixel_id: string; is_active: boolean } => Boolean(p?.is_active))
     .map(p => ({ platform: p.platform, pixel_id: p.pixel_id }))
 

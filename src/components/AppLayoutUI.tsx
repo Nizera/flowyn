@@ -150,6 +150,7 @@ export function AppLayoutUI({ children, profile, user, totalSales, subscription,
   const notifRef = useRef<HTMLDivElement>(null)
   const unreadCount = notifications.filter(n => !n.read).length
   const page = pageTitles.find(item => pathname === item.match || pathname.startsWith(`${item.match}/`)) || pageTitles[pageTitles.length - 1]
+  const isLearningExperience = pathname === '/learn' || pathname.startsWith('/learn/')
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -158,6 +159,14 @@ export function AppLayoutUI({ children, profile, user, totalSales, subscription,
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
+
+  if (isLearningExperience) {
+    return (
+      <main className="min-h-screen overflow-x-hidden bg-[#070809] text-white">
+        {children}
+      </main>
+    )
+  }
 
   return (
     <div className="relative flex min-h-screen flex-col bg-[#f6f7f9] text-slate-950 md:flex-row">

@@ -128,12 +128,12 @@ export function OrderBumpManager({ bumps, productId, userId, createOrderBump, up
 
       {bumps.length === 0 && !showForm && (
         <div className="rounded-2xl border border-slate-200 bg-[#fafafa] px-8 py-12 text-center">
-          <p className="text-sm text-slate-400">Nenhum order bump cadastrado. Clique em "Adicionar" para criar o primeiro.</p>
+          <p className="text-sm text-slate-400">Nenhum order bump cadastrado. Clique em &quot;Adicionar&quot; para criar o primeiro.</p>
         </div>
       )}
 
       <div className="space-y-4">
-        {bumps.map((bump, i) => (
+        {bumps.map((bump) => (
           <div key={bump.id} className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mt-1 text-slate-300">
               <GripVertical className="h-5 w-5" />

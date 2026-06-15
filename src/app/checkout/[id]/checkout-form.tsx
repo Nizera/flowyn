@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, CreditCard, Loader2, Lock, Mail, MapPin, Phone, ShieldCheck, User as UserIcon, QrCode } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowRight, CreditCard, Loader2, Lock, Mail, MapPin, Phone, Search, ShieldCheck, User as UserIcon, QrCode } from 'lucide-react'
+import { formatCardNumber, formatCpfCnpj, formatPhone, formatPostalCode, lookupPostalCode, type CepAddress } from '@/lib/brazil-fields'
 
 interface OrderBumpData {
   active: boolean
@@ -46,6 +47,9 @@ export function CheckoutForm({
   const [pixKey, setPixKey] = useState<string | null>(null)
   const [pixPaymentId, setPixPaymentId] = useState<string | null>(null)
   const [pixInvoiceUrl, setPixInvoiceUrl] = useState<string | null>(null)
+  const [checkingPayment, setCheckingPayment] = useState(false)
+  const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null)
+  const statusCheckInFlight = useRef(false)
 
   const [customerName, setCustomerName] = useState('')
   const [customerEmail, setCustomerEmail] = useState('')
@@ -60,6 +64,27 @@ export function CheckoutForm({
   const [postalCode, setPostalCode] = useState('')
   const [addressNumber, setAddressNumber] = useState('')
   const [addressComplement, setAddressComplement] = useState('')
+  const [postalCodeAddress, setPostalCodeAddress] = useState<CepAddress | null>(null)
+  const [postalCodeError, setPostalCodeError] = useState<string | null>(null)
+  const [searchingPostalCode, setSearchingPostalCode] = useState(false)
+
+  async function searchPostalCode() {
+    if (digits(postalCode).length !== 8) {
+      setPostalCodeAddress(null)
+      setPostalCodeError('Digite os 8 números do CEP.')
+      return
+    }
+    setSearchingPostalCode(true)
+    setPostalCodeError(null)
+    try {
+      setPostalCodeAddress(await lookupPostalCode(postalCode))
+    } catch (lookupError) {
+      setPostalCodeAddress(null)
+      setPostalCodeError(lookupError instanceof Error ? lookupError.message : 'CEP não encontrado.')
+    } finally {
+      setSearchingPostalCode(false)
+    }
+  }
 
   const bumpPrice = useMemo(() => {
     if (!addOrderBump || !orderBump.price) return 0
@@ -72,6 +97,53 @@ export function CheckoutForm({
     const el = document.getElementById('checkout-total-amount')
     if (el) el.innerText = `R$ ${money(totalAmount)}`
   }, [totalAmount])
+
+  const checkPixPayment = useCallback(async (showPendingMessage = false) => {
+    if (!pixPaymentId || statusCheckInFlight.current) return
+
+    statusCheckInFlight.current = true
+    setCheckingPayment(true)
+
+    try {
+      const response = await fetch(`/api/checkout/status?order_id=${encodeURIComponent(pixPaymentId)}`, {
+        cache: 'no-store',
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (showPendingMessage) setPaymentStatusMessage(data.error || 'Nao foi possivel verificar o pagamento agora.')
+        return
+      }
+
+      if (data.paid) {
+        setPaymentStatusMessage('Pagamento confirmado! Redirecionando...')
+        window.location.href = `/checkout/success?order_id=${pixPaymentId}`
+        return
+      }
+
+      if (data.failed) {
+        setPaymentStatusMessage('O pagamento nao foi concluido. Gere uma nova cobranca ou escolha outra forma de pagamento.')
+      } else if (showPendingMessage) {
+        setPaymentStatusMessage('Pagamento ainda aguardando confirmacao do Asaas.')
+      }
+    } catch {
+      if (showPendingMessage) setPaymentStatusMessage('Falha ao consultar o pagamento. Tente novamente em instantes.')
+    } finally {
+      statusCheckInFlight.current = false
+      setCheckingPayment(false)
+    }
+  }, [pixPaymentId])
+
+  useEffect(() => {
+    if (!pixPaymentId) return
+
+    const initialCheck = window.setTimeout(() => void checkPixPayment(), 0)
+    const interval = window.setInterval(() => void checkPixPayment(), 4000)
+    return () => {
+      window.clearTimeout(initialCheck)
+      window.clearInterval(interval)
+    }
+  }, [checkPixPayment, pixPaymentId])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -126,10 +198,16 @@ export function CheckoutForm({
       }
 
       if (paymentMethod === 'pix') {
-        setPixQrCode(data.pixQrCode || null)
+        const qrCode = data.pixQrCode || null
+        const invoiceUrl = data.invoice_url || null
+
+        setPixQrCode(qrCode)
         setPixKey(data.pixKey || null)
         setPixPaymentId(data.order_id || null)
-        setPixInvoiceUrl(data.invoice_url || null)
+        setPixInvoiceUrl(invoiceUrl)
+        if (!qrCode && !invoiceUrl) {
+          setError('A cobranca Pix foi criada, mas o QR Code ainda nao ficou disponivel. Tente novamente em instantes.')
+        }
         setLoading(false)
         return
       }
@@ -143,7 +221,11 @@ export function CheckoutForm({
     } catch {
       setError('Erro de conexao. Verifique sua internet e tente novamente.')
     } finally {
-      if (paymentMethod !== 'pix') {
+      if (paymentMethod === 'credit_card') {
+        setCardNumber('')
+        setExpiryMonth('')
+        setExpiryYear('')
+        setCcv('')
         setLoading(false)
       }
     }
@@ -192,14 +274,22 @@ export function CheckoutForm({
           Apos o pagamento, a confirmacao pode levar alguns segundos.
         </p>
 
-        <a
-          href={`/checkout/success?order_id=${pixPaymentId}`}
+        {paymentStatusMessage && (
+          <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+            {paymentStatusMessage}
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={() => void checkPixPayment(true)}
+          disabled={checkingPayment}
           className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white transition"
           style={{ backgroundColor: primaryColor }}
         >
-          Ja paguei
-          <ArrowRight className="h-4 w-4" />
-        </a>
+          {checkingPayment ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+          {checkingPayment ? 'Verificando...' : 'Ja paguei'}
+        </button>
       </div>
     )
   }
@@ -215,22 +305,28 @@ export function CheckoutForm({
           <p className="mt-1 text-sm text-slate-500">Pedido criado com sucesso! Finalize o pagamento no ambiente do Asaas.</p>
         </div>
 
-        <a
-          href={pixInvoiceUrl || '#'}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white transition"
-          style={{ backgroundColor: primaryColor }}
-        >
-          Pagar no Asaas
-          <ArrowRight className="h-4 w-4" />
-        </a>
+        {pixInvoiceUrl ? (
+          <a
+            href={pixInvoiceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white transition"
+            style={{ backgroundColor: primaryColor }}
+          >
+            Pagar no Asaas
+            <ArrowRight className="h-4 w-4" />
+          </a>
+        ) : (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+            O QR Code ainda nao ficou disponivel. Aguarde alguns instantes antes de tentar novamente.
+          </p>
+        )}
       </div>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} autoComplete="off" className="space-y-6">
       {/* Payment method toggle */}
       <div className="flex gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-1.5">
         <button
@@ -307,8 +403,10 @@ export function CheckoutForm({
                 id="customer_document"
                 required
                 value={customerDocument}
-                onChange={e => setCustomerDocument(digits(e.target.value))}
-                placeholder="Somente numeros"
+                onChange={e => setCustomerDocument(formatCpfCnpj(e.target.value))}
+                inputMode="numeric"
+                maxLength={18}
+                placeholder="000.000.000-00"
                 className={inputClass}
                 style={focusStyle}
               />
@@ -325,8 +423,10 @@ export function CheckoutForm({
                 id="customer_phone"
                 required
                 value={customerPhone}
-                onChange={e => setCustomerPhone(digits(e.target.value))}
-                placeholder="DDD + numero"
+                onChange={e => setCustomerPhone(formatPhone(e.target.value))}
+                inputMode="tel"
+                maxLength={15}
+                placeholder="(11) 99999-9999"
                 className={inputClass}
                 style={focusStyle}
               />
@@ -403,9 +503,10 @@ export function CheckoutForm({
               id="card_number"
               required
               inputMode="numeric"
-              autoComplete="cc-number"
+              autoComplete="off"
               value={cardNumber}
-              onChange={e => setCardNumber(digits(e.target.value).slice(0, 19))}
+              onChange={e => setCardNumber(formatCardNumber(e.target.value))}
+              maxLength={23}
               placeholder="0000 0000 0000 0000"
               className={plainInputClass}
               style={focusStyle}
@@ -413,9 +514,9 @@ export function CheckoutForm({
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            <input required inputMode="numeric" autoComplete="cc-exp-month" value={expiryMonth} onChange={e => setExpiryMonth(digits(e.target.value).slice(0, 2))} placeholder="MM" className={plainInputClass} style={focusStyle} />
-            <input required inputMode="numeric" autoComplete="cc-exp-year" value={expiryYear} onChange={e => setExpiryYear(digits(e.target.value).slice(0, 4))} placeholder="AAAA" className={plainInputClass} style={focusStyle} />
-            <input required inputMode="numeric" autoComplete="cc-csc" value={ccv} onChange={e => setCcv(digits(e.target.value).slice(0, 4))} placeholder="CVV" className={plainInputClass} style={focusStyle} />
+            <input required inputMode="numeric" autoComplete="off" value={expiryMonth} onChange={e => setExpiryMonth(digits(e.target.value).slice(0, 2))} placeholder="MM" className={plainInputClass} style={focusStyle} />
+            <input required inputMode="numeric" autoComplete="off" value={expiryYear} onChange={e => setExpiryYear(digits(e.target.value).slice(0, 4))} placeholder="AAAA" className={plainInputClass} style={focusStyle} />
+            <input required inputMode="numeric" autoComplete="off" value={ccv} onChange={e => setCcv(digits(e.target.value).slice(0, 4))} placeholder="CVV" className={plainInputClass} style={focusStyle} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -425,16 +526,46 @@ export function CheckoutForm({
               </label>
               <div className="relative">
                 <MapPin className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-                <input id="postal_code" value={postalCode} onChange={e => setPostalCode(digits(e.target.value).slice(0, 8))} placeholder="00000000" className={inputClass} style={focusStyle} />
+                <input
+                  id="postal_code"
+                  required
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  minLength={9}
+                  maxLength={9}
+                  value={postalCode}
+                  onChange={e => {
+                    setPostalCode(formatPostalCode(e.target.value))
+                    setPostalCodeAddress(null)
+                    setPostalCodeError(null)
+                  }}
+                  onBlur={() => {
+                    if (digits(postalCode).length === 8 && !postalCodeAddress) void searchPostalCode()
+                  }}
+                  placeholder="00000-000"
+                  className={`${inputClass} pr-12`}
+                  style={focusStyle}
+                />
+                <button type="button" aria-label="Buscar CEP" onClick={() => void searchPostalCode()} disabled={searchingPostalCode || digits(postalCode).length !== 8} className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40">
+                  {searchingPostalCode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </button>
               </div>
+              {postalCodeError && <p className="mt-2 text-xs font-medium text-red-600">{postalCodeError}</p>}
             </div>
             <div>
               <label htmlFor="address_number" className="mb-2 block text-sm font-semibold text-slate-700">
                 Numero
               </label>
-              <input id="address_number" value={addressNumber} onChange={e => setAddressNumber(e.target.value)} placeholder="123" className={plainInputClass} style={focusStyle} />
+              <input id="address_number" required inputMode="numeric" maxLength={10} value={addressNumber} onChange={e => setAddressNumber(digits(e.target.value).slice(0, 10))} placeholder="123" className={plainInputClass} style={focusStyle} />
             </div>
           </div>
+
+          {postalCodeAddress && (
+            <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{[postalCodeAddress.street, postalCodeAddress.neighborhood, `${postalCodeAddress.city} - ${postalCodeAddress.state}`].filter(Boolean).join(', ')}</span>
+            </div>
+          )}
 
           <input value={addressComplement} onChange={e => setAddressComplement(e.target.value)} placeholder="Complemento (opcional)" className={plainInputClass} style={focusStyle} />
         </div>

@@ -3,7 +3,7 @@ import { createCreditCardPayment, createCustomer, createPixPayment, getPixQrCode
 import { fulfillPaidOrder } from '@/lib/order-fulfillment'
 import { getPlatformAccess } from '@/lib/platform-access'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { isValidCardNumber, isValidCpfCnpj, isValidEmail, isValidPhone, isValidCvv } from '@/lib/validation'
+import { isValidCardExpiry, isValidCardNumber, isValidCpfCnpj, isValidEmail, isValidPhone, isValidCvv, isValidPostalCode } from '@/lib/validation'
 import { hashIdentifier } from '@/lib/hash'
 
 type PlanProduct = {
@@ -49,6 +49,11 @@ function sameWallet(left?: string | null, right?: string | null) {
 }
 
 export async function POST(req: NextRequest) {
+  const contentLength = Number(req.headers.get('content-length') || 0)
+  if (contentLength > 16_384) {
+    return NextResponse.json({ error: 'Requisição inválida.' }, { status: 413 })
+  }
+
   const supabase = createAdminClient()
   let step = 'init'
 
@@ -102,8 +107,12 @@ export async function POST(req: NextRequest) {
     const holderAddressNumber = String((body.holder as Record<string, unknown> | undefined)?.addressNumber || '').trim()
 
     if (billingType === 'CREDIT_CARD') {
-      if (!isValidCardNumber(cardNumber) || !isValidCvv(cardCcv) || !cardHolderName || !/^[0-9]{2}$/.test(cardExpiryMonth) || !/^[0-9]{2,4}$/.test(cardExpiryYear)) {
+      if (!isValidCardNumber(cardNumber) || !isValidCvv(cardCcv) || !isValidCardExpiry(cardExpiryMonth, cardExpiryYear) || !cardHolderName) {
         return NextResponse.json({ error: 'Confira os dados do cartão.' }, { status: 400 })
+      }
+
+      if (!isValidPostalCode(holderPostalCode) || !holderAddressNumber) {
+        return NextResponse.json({ error: 'Informe o CEP e o número do endereço do titular do cartão.' }, { status: 400 })
       }
     }
 
@@ -295,8 +304,8 @@ export async function POST(req: NextRequest) {
         name: String((body.holder as Record<string, unknown> | undefined)?.name || customerName).trim(),
         email: String((body.holder as Record<string, unknown> | undefined)?.email || customerEmail).trim(),
         cpfCnpj: onlyDigits(String((body.holder as Record<string, unknown> | undefined)?.cpfCnpj || customerDocument)),
-        postalCode: holderPostalCode || '00000000',
-        addressNumber: holderAddressNumber || '0',
+        postalCode: holderPostalCode,
+        addressNumber: holderAddressNumber,
         addressComplement: String((body.holder as Record<string, unknown> | undefined)?.addressComplement || '').trim() || null,
         mobilePhone: onlyDigits(String((body.holder as Record<string, unknown> | undefined)?.mobilePhone || customerPhone)),
       },
@@ -322,24 +331,14 @@ export async function POST(req: NextRequest) {
       payment_id: payment.id,
       status: payment.status,
       invoice_url: payment.invoiceUrl,
-    })
+    }, { headers: { 'Cache-Control': 'no-store, private', Pragma: 'no-cache' } })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     const errName = err instanceof Error ? err.name : typeof err
-    const stack = err instanceof Error ? err.stack?.split('\n').slice(0, 3).join(' ') : ''
-
-    // Try to extract Asaas API error details if the message is JSON
-    let asaasDetail = ''
-    try {
-      const parsed = JSON.parse(message)
-      if (parsed.errors?.[0]?.description) asaasDetail = parsed.errors[0].description
-    } catch {}
-
     console.error('[Asaas Checkout] Error:', {
       step,
       message,
       errName,
-      asaasDetail,
       hasAsaasKey: Boolean(process.env.ASAAS_API_KEY),
       asaasUrl: process.env.ASAAS_API_URL || '(default sandbox)',
       hasMainWallet: Boolean(process.env.ASAAS_MAIN_WALLET_ID),
@@ -357,8 +356,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Configuração de pagamento do produtor inválida. Ele precisa revisar a conta Asaas.' }, { status: 502 })
     }
 
-    if (asaasDetail) {
-      return NextResponse.json({ error: `Pagamento recusado: ${asaasDetail}` }, { status: 502 })
+    if (step === 'credit_card_payment') {
+      return NextResponse.json({ error: `Pagamento não aprovado: ${message}` }, { status: 422 })
+    }
+
+    if (step === 'pix_payment' || step === 'pix_qrcode_fallback') {
+      return NextResponse.json({ error: `Não foi possível gerar o Pix: ${message}` }, { status: 502 })
     }
 
     return NextResponse.json({

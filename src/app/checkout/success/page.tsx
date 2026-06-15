@@ -1,85 +1,185 @@
-'use client'
-
-import { useSearchParams } from 'next/navigation'
-import { ShieldCheck, ArrowRight, Mail } from 'lucide-react'
 import Link from 'next/link'
-import { Suspense } from 'react'
+import { ArrowRight, BookOpen, CheckCircle2, Mail, ShieldCheck } from 'lucide-react'
+import { ResendDeliveryButton } from './ResendDeliveryButton'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { findAuthUserIdByEmail } from '@/lib/student-password-link'
 
-function SuccessContent() {
-  const searchParams = useSearchParams()
-  const orderId = searchParams.get('order_id')
-  const redirectStatus = searchParams.get('redirect_status')
+type Product = {
+  id: string
+  name: string
+  product_type?: string | null
+  delivery_type?: string | null
+}
 
-  // If payment failed (e.g. 3D Secure cancelled)
-  if (redirectStatus && redirectStatus !== 'succeeded') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-100 p-8 text-center">
-          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <span className="text-4xl">❌</span>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-3">Pagamento não concluído</h1>
-          <p className="text-slate-500 mb-6">
-            O pagamento foi cancelado ou não pôde ser processado. Nenhuma cobrança foi realizada.
-          </p>
-          <Link href="/" className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 px-6 rounded-xl transition-all">
-            Voltar ao Início <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      </div>
-    )
-  }
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
 
+function maskEmail(email: string) {
+  const [local, domain] = email.split('@')
+  if (!local || !domain) return 'seu e-mail'
+  const visible = local.slice(0, Math.min(2, local.length))
+  return `${visible}${'*'.repeat(Math.max(3, local.length - visible.length))}@${domain}`
+}
+
+function productTypeLabel(productType?: string | null) {
+  if (productType === 'course') return 'curso'
+  if (productType === 'mentoria') return 'mentoria'
+  return 'produto'
+}
+
+function UnavailableState({ title, message }: { title: string; message: string }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-orange-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-100 p-8 text-center">
-        <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
-          <ShieldCheck className="w-10 h-10 text-emerald-600" />
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-white to-orange-50 p-4">
+      <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-amber-100">
+          <ShieldCheck className="h-10 w-10 text-amber-600" />
         </div>
-
-        <h1 className="text-3xl font-bold text-slate-900 mb-3">
-          Compra Confirmada! 🎉
-        </h1>
-
-        <p className="text-slate-500 mb-6 leading-relaxed">
-          Seu pagamento foi processado com sucesso pela Asaas. Você receberá os dados de acesso no seu e-mail em instantes.
-        </p>
-
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6">
-          <div className="flex items-center gap-3 text-emerald-700">
-            <Mail className="w-5 h-5 flex-shrink-0" />
-            <p className="text-sm font-medium text-left">
-              Verifique sua caixa de entrada (e spam) para as instruções de acesso à plataforma.
-            </p>
-          </div>
-        </div>
-
-        {orderId && (
-          <p className="text-xs text-slate-400 mb-6">
-            ID do pedido: <span className="font-mono">{orderId.slice(0, 8)}...</span>
-          </p>
-        )}
-
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 px-6 rounded-xl transition-all"
-        >
-          Voltar ao Início
-          <ArrowRight className="w-4 h-4" />
-        </Link>
-      </div>
-    </div>
+        <h1 className="text-2xl font-black text-slate-950">{title}</h1>
+        <p className="mt-3 leading-7 text-slate-500">{message}</p>
+      </section>
+    </main>
   )
 }
 
-export default function CheckoutSuccessPage() {
+export default async function CheckoutSuccessPage(props: {
+  searchParams: Promise<{ order_id?: string; redirect_status?: string }>
+}) {
+  const searchParams = await props.searchParams
+  const orderId = searchParams.order_id || ''
+
+  if (searchParams.redirect_status && searchParams.redirect_status !== 'succeeded') {
+    return <UnavailableState title="Pagamento não concluído" message="O pagamento foi cancelado ou não pôde ser processado." />
+  }
+
+  if (!isUuid(orderId)) {
+    return <UnavailableState title="Pedido não encontrado" message="Não foi possível localizar os dados desta compra." />
+  }
+
+  const supabase = createAdminClient()
+  const { data: order } = await supabase
+    .from('orders')
+    .select('id, status, product:products(id, name, product_type, delivery_type)')
+    .eq('id', orderId)
+    .maybeSingle()
+
+  if (!order || order.status !== 'paid') {
+    return <UnavailableState title="Pagamento em processamento" message="A confirmação ainda não chegou. Aguarde alguns segundos e atualize esta página." />
+  }
+
+  const product = order.product as unknown as Product | null
+  const { data: customer } = await supabase
+    .from('order_customer_private')
+    .select('customer_email')
+    .eq('order_id', orderId)
+    .maybeSingle()
+
+  if (!product || !customer?.customer_email) {
+    return <UnavailableState title="Compra confirmada" message="Seu pedido foi pago, mas não foi possível carregar os detalhes da entrega." />
+  }
+
+  const isPlatformProduct = product.delivery_type === 'platform'
+  const typeLabel = productTypeLabel(product.product_type)
+  const maskedEmail = maskEmail(customer.customer_email)
+  let needsPasswordSetup = false
+
+  if (isPlatformProduct) {
+    const { data: orderAccess } = await supabase
+      .from('student_access')
+      .select('user_id')
+      .eq('order_id', orderId)
+      .maybeSingle()
+
+    let access = orderAccess
+    if (!access) {
+      const { data: emailAccess } = await supabase
+        .from('student_access')
+        .select('user_id')
+        .eq('product_id', product.id)
+        .ilike('access_email', customer.customer_email)
+        .maybeSingle()
+      access = emailAccess
+    }
+
+    if (!access) {
+      const userId = await findAuthUserIdByEmail(supabase, customer.customer_email)
+      if (userId) access = { user_id: userId }
+    }
+
+    if (access?.user_id) {
+      const { data: setupEvent } = await supabase
+        .from('notification_events')
+        .select('id')
+        .eq('user_id', access.user_id)
+        .eq('product_id', product.id)
+        .eq('event_type', 'student_password_setup')
+        .limit(1)
+        .maybeSingle()
+
+      needsPasswordSetup = Boolean(setupEvent)
+    }
+  }
+
+  const accessPath = `/learn/${product.id}`
+  const loginUrl = `/login?redirect=${encodeURIComponent(accessPath)}`
+
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full" />
-      </div>
-    }>
-      <SuccessContent />
-    </Suspense>
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-orange-50 p-4">
+      <section className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl sm:p-10">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
+          <CheckCircle2 className="h-10 w-10 text-emerald-600" />
+        </div>
+
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">Pagamento aprovado</p>
+        <h1 className="mt-2 text-3xl font-black text-slate-950">Compra confirmada!</h1>
+        <p className="mt-3 text-lg font-bold text-slate-800">{product.name}</p>
+
+        {isPlatformProduct ? (
+          <>
+            <div className="mt-7 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-left">
+              <div className="flex gap-3 text-emerald-800">
+                <BookOpen className="mt-0.5 h-5 w-5 shrink-0" />
+                <div>
+                  <p className="font-bold">Seu acesso à {typeLabel} foi liberado.</p>
+                  <p className="mt-1 text-sm leading-6">
+                    {needsPasswordSetup
+                      ? `Enviamos para ${maskedEmail} um link para você definir sua senha e entrar.`
+                      : `Use sua conta da Flowyn para acessar o conteúdo. A confirmação também foi enviada para ${maskedEmail}.`}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href={loginUrl}
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-slate-800"
+            >
+              {needsPasswordSetup ? 'Já defini minha senha' : 'Acessar área do aluno'}
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </>
+        ) : (
+          <div className="mt-7 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-left">
+            <div className="flex gap-3 text-emerald-800">
+              <Mail className="mt-0.5 h-5 w-5 shrink-0" />
+              <div>
+                <p className="font-bold">Seu produto foi enviado por e-mail.</p>
+                <p className="mt-1 text-sm leading-6">
+                  Confira a caixa de entrada e o spam de {maskedEmail}. Links de arquivos podem expirar por segurança.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-6">
+          <ResendDeliveryButton orderId={orderId} />
+        </div>
+
+        <p className="mt-7 text-xs text-slate-400">
+          Pedido <span className="font-mono">{orderId.slice(0, 8)}...</span>
+        </p>
+      </section>
+    </main>
   )
 }

@@ -2,6 +2,10 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { AppLayoutUI } from '@/components/AppLayoutUI'
 
+function getSevenDaysAgoIso() {
+  return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+}
+
 type ProductRow = {
   id: string
   name: string
@@ -60,7 +64,7 @@ export default async function AppLayout({
   const notifications: Notification[] = []
 
   if (productIds.length > 0) {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    const sevenDaysAgo = getSevenDaysAgoIso()
 
     const { data: recentOrders } = await supabase
       .from('orders')

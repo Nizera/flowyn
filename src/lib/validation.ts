@@ -49,17 +49,46 @@ function isValidCnpj(cnpj: string) {
 
 export function isValidPhone(value: string) {
   const digits = String(value || '').replace(/\D/g, '')
-  return digits.length >= 10 && digits.length <= 15
+  return digits.length === 10 || digits.length === 11
 }
 
 export function isValidCardNumber(value: string) {
   const digits = String(value || '').replace(/\D/g, '')
-  return digits.length >= 13 && digits.length <= 19
+  if (digits.length < 13 || digits.length > 19 || /^(\d)\1+$/.test(digits)) return false
+
+  let sum = 0
+  let doubleDigit = false
+  for (let index = digits.length - 1; index >= 0; index--) {
+    let digit = Number(digits[index])
+    if (doubleDigit) {
+      digit *= 2
+      if (digit > 9) digit -= 9
+    }
+    sum += digit
+    doubleDigit = !doubleDigit
+  }
+  return sum % 10 === 0
 }
 
 export function isValidCvv(value: string) {
   const digits = String(value || '').replace(/\D/g, '')
   return digits.length >= 3 && digits.length <= 4
+}
+
+export function isValidPostalCode(value: string) {
+  return /^\d{8}$/.test(String(value || '').replace(/\D/g, ''))
+}
+
+export function isValidCardExpiry(monthValue: string, yearValue: string) {
+  const month = Number(String(monthValue || '').replace(/\D/g, ''))
+  const rawYear = String(yearValue || '').replace(/\D/g, '')
+  const year = Number(rawYear.length === 2 ? `20${rawYear}` : rawYear)
+  if (month < 1 || month > 12 || year < 2000 || rawYear.length !== 4) return false
+
+  const now = new Date()
+  const currentMonth = now.getMonth() + 1
+  const currentYear = now.getFullYear()
+  return year > currentYear || (year === currentYear && month >= currentMonth)
 }
 
 export function isSafeRedirectPath(value: string | null | undefined) {

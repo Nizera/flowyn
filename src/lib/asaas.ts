@@ -92,16 +92,21 @@ export async function asaasRequest<T>(path: string, options: RequestOptions = {}
   })
 
   const text = await response.text()
-  const data = text ? JSON.parse(text) : null
+  let data: unknown = null
+
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    data = { message: text || `Resposta invalida da Asaas (${response.status}).` }
+  }
 
   if (!response.ok) {
-    console.error('[Asaas API Error]', JSON.stringify({
+    console.error('[Asaas API Error]', {
       url,
       method,
       status: response.status,
-      requestBody: options.body,
-      responseBody: data,
-    }, null, 2))
+      requestId: response.headers.get('request-id') || response.headers.get('x-request-id') || null,
+    })
     throw new Error(normalizeAsaasError(data))
   }
 

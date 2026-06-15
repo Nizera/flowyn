@@ -7,7 +7,7 @@ import {
   createCustomer,
   onlyDigits,
 } from '@/lib/asaas'
-import { isValidCpfCnpj, isValidEmail, isValidPhone, isValidCardNumber, isValidCvv } from '@/lib/validation'
+import { isValidCardExpiry, isValidCpfCnpj, isValidEmail, isValidPhone, isValidCardNumber, isValidCvv, isValidPostalCode } from '@/lib/validation'
 import { hashIdentifier } from '@/lib/hash'
 
 const FLOWYN_PRO_PRICE = 49
@@ -60,6 +60,16 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const origin = req.headers.get('origin')
+  if (origin && origin !== req.nextUrl.origin) {
+    return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 })
+  }
+
+  const contentLength = Number(req.headers.get('content-length') || 0)
+  if (contentLength > 16_384) {
+    return NextResponse.json({ error: 'Requisição inválida.' }, { status: 413 })
+  }
+
   const userId = await getCurrentUserId()
   if (!userId) {
     return NextResponse.json({ error: 'Nao autenticado.' }, { status: 401 })
@@ -91,6 +101,8 @@ export async function POST(req: NextRequest) {
   const addressNumber = String(body.addressNumber || '').trim()
   const cardNumber = onlyDigits(body.card?.number)
   const cardCcv = onlyDigits(body.card?.ccv)
+  const cardExpiryMonth = String(body.card?.expiryMonth || '').padStart(2, '0')
+  const cardExpiryYear = String(body.card?.expiryYear || '')
 
   if (!name || !email || !cpfCnpj || !phone || !postalCode || !addressNumber) {
     return NextResponse.json({ error: 'Preencha todos os dados obrigatórios.' }, { status: 400 })
@@ -100,7 +112,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Informe e-mail, CPF/CNPJ e telefone válidos.' }, { status: 400 })
   }
 
-  if (!isValidCardNumber(cardNumber) || !isValidCvv(cardCcv)) {
+  if (!isValidPostalCode(postalCode)) {
+    return NextResponse.json({ error: 'Informe um CEP válido com 8 dígitos.' }, { status: 400 })
+  }
+
+  if (!isValidCardNumber(cardNumber) || !isValidCvv(cardCcv) || !isValidCardExpiry(cardExpiryMonth, cardExpiryYear)) {
     return NextResponse.json({ error: 'Confira os dados do cartão.' }, { status: 400 })
   }
 
@@ -130,7 +146,8 @@ export async function POST(req: NextRequest) {
 
   const apiKey = process.env.ASAAS_API_KEY
   if (!apiKey) {
-    return NextResponse.json({ error: 'ASAAS_API_KEY nao configurada.' }, { status: 503 })
+    console.error('[Platform Subscription] Payment provider is not configured.')
+    return NextResponse.json({ error: 'Pagamento temporariamente indisponível.' }, { status: 503 })
   }
 
   const customer = await createCustomer({
@@ -155,8 +172,8 @@ export async function POST(req: NextRequest) {
     creditCard: {
       holderName: String(body.card?.holderName || name).trim(),
       number: cardNumber,
-      expiryMonth: String(body.card?.expiryMonth || '').padStart(2, '0'),
-      expiryYear: String(body.card?.expiryYear || ''),
+      expiryMonth: cardExpiryMonth,
+      expiryYear: cardExpiryYear,
       ccv: cardCcv,
     },
     creditCardHolderInfo: {
@@ -197,7 +214,10 @@ export async function POST(req: NextRequest) {
     metadata: { asaas_subscription_id: asaasSubscription.id, next_due_date: nextDueDate },
   })
 
-  return NextResponse.json({ success: true, subscription: updatedSubscription })
+  return NextResponse.json(
+    { success: true, subscription: updatedSubscription },
+    { headers: { 'Cache-Control': 'no-store, private', Pragma: 'no-cache' } },
+  )
 }
 
 export async function DELETE() {
