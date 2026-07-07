@@ -12,6 +12,7 @@ interface FileUploadProps {
   mode: UploadMode
   label: string
   hint?: string
+  dimensionsHint?: string
   accept?: string
   currentUrl?: string
   currentUrls?: string[]
@@ -26,6 +27,7 @@ export function FileUpload({
   mode,
   label,
   hint,
+  dimensionsHint,
   accept,
   currentUrl,
   currentUrls,
@@ -265,6 +267,7 @@ export function FileUpload({
               </p>
               <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>
                 {hint || (mode === 'image' ? 'JPG, PNG ou WebP — máx. 5MB' : mode === 'video' ? 'MP4, WebM ou MOV — máx. 500MB' : 'PDF, ZIP ou EPUB — máx. 100MB')}
+                {dimensionsHint && <span style={{ display: 'block', marginTop: 4, color: '#ea580c' }}>{dimensionsHint}</span>}
               </p>
             </>
           )}

@@ -340,7 +340,7 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     const errName = err instanceof Error ? err.name : typeof err
-    console.error('[Asaas Checkout] Error:', { step, errName })
+    console.error('[Asaas Checkout] Error:', { step, errName, message: message.slice(0, 200) })
 
     if (message.includes('ASAAS_API_KEY') || message.includes('api_key') || message.toLowerCase().includes('unauthorized') || message.toLowerCase().includes('invalid_api') || message.toLowerCase().includes('invalid api')) {
       return NextResponse.json({ error: 'Pagamento indisponível no momento. Tente novamente mais tarde.' }, { status: 503 })
@@ -360,7 +360,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (step === 'pix_payment' || step === 'pix_qrcode_fallback') {
-      console.error('[Asaas Checkout] PIX error at step:', step)
+      console.error('[Asaas Checkout] PIX error at step:', step, '| message:', message)
       return NextResponse.json({ error: 'Não foi possível gerar o Pix. Tente novamente em instantes.' }, { status: 502 })
     }
 

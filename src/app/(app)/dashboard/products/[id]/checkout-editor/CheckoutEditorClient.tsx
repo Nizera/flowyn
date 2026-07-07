@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState, useTransition } from 'react'
-import { AlertCircle, Check, ExternalLink, Eye, Loader2, Monitor, RefreshCw, Save, Smartphone } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import { AlertCircle, Check, ExternalLink, Eye, Loader2, Monitor, RefreshCw, Save, Smartphone, Trash2, Plus } from 'lucide-react'
 import { FileUpload } from '@/components/FileUpload'
 import type { CheckoutCustomizationConfig } from '@/lib/checkout-customization'
 import { publishCheckout, saveCheckoutDraft } from './actions'
@@ -30,8 +30,11 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
   const [previewFrameWidth, setPreviewFrameWidth] = useState(0)
   const [previewLoading, setPreviewLoading] = useState(Boolean(plans[0]?.id))
   const [previewError, setPreviewError] = useState(false)
+  const [autoSaved, setAutoSaved] = useState(false)
   const previewFrameRef = useRef<HTMLDivElement | null>(null)
   const previewTimeoutRef = useRef<number | null>(null)
+  const autoSaveTimerRef = useRef<number | null>(null)
+  const latestConfigRef = useRef(config)
   const [isPending, startTransition] = useTransition()
   const plan = plans[0]
   const orderBumpEnabled = Boolean(product.order_bump_price)
@@ -40,6 +43,13 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
   const intrinsicPreviewHeight = viewport === 'mobile' ? 1900 : 2200
   const previewScale = previewFrameWidth ? Math.min(1, previewFrameWidth / intrinsicPreviewWidth) : 1
   const previewHeight = Math.ceil(intrinsicPreviewHeight * previewScale)
+
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current)
+      if (previewTimeoutRef.current) window.clearTimeout(previewTimeoutRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     if (!previewUrl) return
@@ -66,12 +76,36 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
     return () => observer.disconnect()
   }, [viewport])
 
+  const scheduleAutoSave = useCallback(() => {
+    setAutoSaved(false)
+    if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current)
+    autoSaveTimerRef.current = window.setTimeout(async () => {
+      try {
+        await saveCheckoutDraft(productId, latestConfigRef.current)
+        setPreviewKey(c => c + 1)
+        setAutoSaved(true)
+      } catch {
+        // Error logged server-side by saveCheckoutDraft
+      }
+    }, 1500)
+  }, [productId])
+
   function update<K extends keyof CheckoutCustomizationConfig>(key: K, value: CheckoutCustomizationConfig[K]) {
-    setConfig(current => ({ ...current, [key]: value }))
+    setConfig(current => {
+      const next = { ...current, [key]: value }
+      latestConfigRef.current = next
+      return next
+    })
+    scheduleAutoSave()
   }
 
   function updateBlock(key: keyof CheckoutCustomizationConfig['blocks'], value: boolean) {
-    setConfig(current => ({ ...current, blocks: { ...current.blocks, [key]: value } }))
+    setConfig(current => {
+      const next = { ...current, blocks: { ...current.blocks, [key]: value } }
+      latestConfigRef.current = next
+      return next
+    })
+    scheduleAutoSave()
   }
 
   function updateList(key: 'benefits', value: string) {
@@ -79,9 +113,11 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
   }
 
   function handleSaveDraft() {
+    if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current)
     startTransition(async () => {
       await saveCheckoutDraft(productId, config)
       setPreviewKey(current => current + 1)
+      setAutoSaved(true)
     })
   }
 
@@ -90,6 +126,7 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
   }
 
   function handlePublish() {
+    if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current)
     startTransition(async () => {
       await publishCheckout(productId, config)
       setPreviewKey(current => current + 1)
@@ -128,12 +165,12 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
       </div>
 
       <div className="grid gap-8 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="space-y-6">
+        <aside className="space-y-6 overflow-y-auto pr-2 xl:max-h-[calc(100vh-12rem)]">
           <Panel title="Imagens">
-            <FileUpload mode="image" label="Banner do checkout" hint="Imagem horizontal para o topo do checkout" userId={userId} folder="checkout-assets" currentUrl={config.bannerImageUrl} onUpload={(url) => update('bannerImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('bannerImageUrl', '')} />
-            <FileUpload mode="image" label="Mockup do produto" hint="Arraste ou anexe uma imagem do produto" userId={userId} folder="checkout-assets" currentUrl={config.mockupImageUrl} onUpload={(url) => update('mockupImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('mockupImageUrl', '')} />
+            <FileUpload mode="image" label="Banner do checkout" hint="Imagem horizontal para o topo do checkout" dimensionsHint="Recomendado: 1280 × 320px" userId={userId} folder="checkout-assets" currentUrl={config.bannerImageUrl} onUpload={(url) => update('bannerImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('bannerImageUrl', '')} />
+            <FileUpload mode="image" label="Mockup do produto" hint="Arraste ou anexe uma imagem do produto" dimensionsHint="Recomendado: 400 × 400px (quadrado)" userId={userId} folder="checkout-assets" currentUrl={config.mockupImageUrl} onUpload={(url) => update('mockupImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('mockupImageUrl', '')} />
             {orderBumpEnabled && (
-              <FileUpload mode="image" label="Imagem do order bump" hint="Imagem usada na oferta extra" userId={userId} folder="checkout-assets" currentUrl={config.orderBumpImageUrl} onUpload={(url) => update('orderBumpImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('orderBumpImageUrl', '')} />
+              <FileUpload mode="image" label="Imagem do order bump" hint="Imagem usada na oferta extra" dimensionsHint="Recomendado: 200 × 200px (quadrado)" userId={userId} folder="checkout-assets" currentUrl={config.orderBumpImageUrl} onUpload={(url) => update('orderBumpImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('orderBumpImageUrl', '')} />
             )}
           </Panel>
 
@@ -162,6 +199,20 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
               </label>
             ))}
             <Field label="Beneficios, um por linha" value={config.benefits.join('\n')} onChange={(value) => updateList('benefits', value)} textarea />
+
+            {config.blocks.testimonials && (
+              <div className="mt-2 space-y-2">
+                <p className="text-xs font-semibold text-slate-500">Depoimentos ({config.testimonials.length} de 6)</p>
+                <TestimonialList items={config.testimonials} onChange={(items) => update('testimonials', items)} />
+              </div>
+            )}
+
+            {config.blocks.faq && (
+              <div className="mt-2 space-y-2">
+                <p className="text-xs font-semibold text-slate-500">FAQ ({config.faq.length} de 8)</p>
+                <FaqList items={config.faq} onChange={(items) => update('faq', items)} />
+              </div>
+            )}
           </Panel>
         </aside>
 
@@ -170,6 +221,12 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
               <Eye className="h-4 w-4 text-orange-600" />
               Preview do checkout
+              {autoSaved && (
+                <span className="ml-2 inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700">
+                  <Check className="h-3 w-3" />
+                  Salvo
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               {previewUrl && (
@@ -184,7 +241,6 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
                   </a>
                 </>
               )}
-              <span className="text-xs font-semibold uppercase text-slate-400">{viewport}</span>
             </div>
           </div>
 
@@ -229,6 +285,92 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
           )}
         </section>
       </div>
+    </div>
+  )
+}
+
+function TestimonialList({ items, onChange }: { items: Array<{ name: string; text: string }>; onChange: (items: Array<{ name: string; text: string }>) => void }) {
+  function update(index: number, field: 'name' | 'text', value: string) {
+    onChange(items.map((item, i) => i === index ? { ...item, [field]: value } : item))
+  }
+  function add() {
+    if (items.length >= 6) return
+    onChange([...items, { name: '', text: '' }])
+  }
+  function remove(index: number) {
+    onChange(items.filter((_, i) => i !== index))
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((item, i) => (
+        <div key={i} className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-400">#{i + 1}</span>
+            <button type="button" onClick={() => remove(i)} className="inline-flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-700 transition">
+              <Trash2 className="h-3 w-3" />
+              Remover
+            </button>
+          </div>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-slate-500">Nome</span>
+            <input value={item.name} onChange={(e) => update(i, 'name', e.target.value)} maxLength={100} className="h-10 w-full rounded-lg border-0 bg-[#f4f4f6] px-3 text-sm font-medium text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-orange-500/20" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-slate-500">Depoimento</span>
+            <textarea value={item.text} onChange={(e) => update(i, 'text', e.target.value)} maxLength={500} className="min-h-16 w-full rounded-lg border-0 bg-[#f4f4f6] px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-orange-500/20" />
+          </label>
+        </div>
+      ))}
+      {items.length < 6 && (
+        <button type="button" onClick={add} className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 py-2.5 text-xs font-semibold text-slate-500 transition hover:border-orange-400 hover:text-orange-600">
+          <Plus className="h-3.5 w-3.5" />
+          Adicionar depoimento
+        </button>
+      )}
+    </div>
+  )
+}
+
+function FaqList({ items, onChange }: { items: Array<{ question: string; answer: string }>; onChange: (items: Array<{ question: string; answer: string }>) => void }) {
+  function update(index: number, field: 'question' | 'answer', value: string) {
+    onChange(items.map((item, i) => i === index ? { ...item, [field]: value } : item))
+  }
+  function add() {
+    if (items.length >= 8) return
+    onChange([...items, { question: '', answer: '' }])
+  }
+  function remove(index: number) {
+    onChange(items.filter((_, i) => i !== index))
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((item, i) => (
+        <div key={i} className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-400">#{i + 1}</span>
+            <button type="button" onClick={() => remove(i)} className="inline-flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-700 transition">
+              <Trash2 className="h-3 w-3" />
+              Remover
+            </button>
+          </div>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-slate-500">Pergunta</span>
+            <input value={item.question} onChange={(e) => update(i, 'question', e.target.value)} maxLength={200} className="h-10 w-full rounded-lg border-0 bg-[#f4f4f6] px-3 text-sm font-medium text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-orange-500/20" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-slate-500">Resposta</span>
+            <textarea value={item.answer} onChange={(e) => update(i, 'answer', e.target.value)} maxLength={500} className="min-h-16 w-full rounded-lg border-0 bg-[#f4f4f6] px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-orange-500/20" />
+          </label>
+        </div>
+      ))}
+      {items.length < 8 && (
+        <button type="button" onClick={add} className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 py-2.5 text-xs font-semibold text-slate-500 transition hover:border-orange-400 hover:text-orange-600">
+          <Plus className="h-3.5 w-3.5" />
+          Adicionar pergunta
+        </button>
+      )}
     </div>
   )
 }
