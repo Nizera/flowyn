@@ -248,12 +248,6 @@ export async function POST(request: NextRequest) {
     if (documentType === 'CPF') {
       const existingAccounts = await listSubaccounts({ cpfCnpj: payload.cpfCnpj })
       account = existingAccounts.data?.find(item => onlyDigits(item.cpfCnpj) === payload.cpfCnpj) || null
-
-      if (!account) {
-        return NextResponse.json({
-          error: 'Nao encontramos uma subconta Pessoa Fisica com esse CPF no Asaas. Crie a subconta no painel Asaas primeiro e tente novamente.',
-        }, { status: 404 })
-      }
     }
 
     if (!account) {
