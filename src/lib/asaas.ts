@@ -49,7 +49,21 @@ type RequestOptions = {
 }
 
 function getBaseUrl() {
-  return (process.env.ASAAS_API_URL || DEFAULT_ASAAS_API_URL).replace(/\/$/, '')
+  const url = process.env.ASAAS_API_URL
+  if (!url) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('ASAAS_API_URL is not defined')
+    }
+    return DEFAULT_ASAAS_API_URL
+  }
+
+  const clean = url.replace(/\/$/, '')
+
+  if (process.env.NODE_ENV === 'production' && clean.includes('sandbox')) {
+    throw new Error('ASAAS_API_URL aponta para o ambiente de sandbox em produção.')
+  }
+
+  return clean
 }
 
 function getApiKey(apiKey?: string) {

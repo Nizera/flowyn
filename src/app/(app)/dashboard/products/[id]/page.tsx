@@ -26,7 +26,7 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
 
   const { data: product } = await supabase
     .from('products')
-    .select('*')
+    .select('id, name, description, logo_url, cover_url, checkout_banner_url, checkout_video_url, category, product_type, delivery_type, delivery_url, image_url, price, currency, is_public, is_published, checkout_mode, created_at, owner_id')
     .eq('id', id)
     .eq('owner_id', user.id)
     .single()
@@ -55,6 +55,8 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
+    const isPublic = formData.get('is_public') === 'on'
+
     await supabase
       .from('products')
       .update({
@@ -68,7 +70,7 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
         category: formData.get('category') as string || 'Outros',
         product_type: formData.get('product_type') as string || 'outros',
         commission_rate: 0,
-        is_public: false,
+        is_public: isPublic,
         delivery_type: formData.get('delivery_type') as string || 'external',
         delivery_url: formData.get('delivery_url') as string || null,
         updated_at: new Date().toISOString(),
@@ -102,6 +104,17 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
       <ProductTabs productId={id} active="details" />
 
       <form id="product-details-form" action={updateProduct} className="mt-10 max-w-6xl">
+        <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-[#f8fafc] px-5 py-4 mb-6">
+          <label className="relative inline-flex cursor-pointer items-center">
+            <input type="checkbox" name="is_public" defaultChecked={product.is_public} className="peer sr-only" />
+            <div className="h-6 w-11 rounded-full bg-slate-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-orange-500 peer-checked:after:translate-x-full" />
+          </label>
+          <div>
+            <span className="text-sm font-semibold text-slate-800">{product.is_public ? 'Publicado' : 'Rascunho'}</span>
+            <p className="text-xs text-slate-400">Quando publicado, o checkout fica acessivel para compradores.</p>
+          </div>
+        </div>
+
         <div className="grid border-y border-slate-200 md:grid-cols-[240px_1fr]">
           <RowTitle title="Informacoes" description="Nome, tipo, categoria e descricao." />
           <div className="space-y-5 py-6 md:pl-8">

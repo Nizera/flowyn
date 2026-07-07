@@ -13,4 +13,5 @@ export async function claimPendingStudentAccess(userId: string, email: string | 
     })
     .is('user_id', null)
     .ilike('access_email', email)
+    .is('revoked_at', null)
 }

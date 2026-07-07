@@ -13,10 +13,10 @@ export default async function CheckoutEditorPage(props: { params: Promise<{ id: 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: product } = await supabase.from('products').select('*').eq('id', id).eq('owner_id', user.id).single()
+  const { data: product } = await supabase.from('products').select('id, name, description, image_url, price, currency, is_public, is_published, checkout_mode, created_at, owner_id').eq('id', id).eq('owner_id', user.id).single()
   if (!product) redirect('/dashboard/products')
 
-  const { data: plans } = await supabase.from('plans').select('*').eq('product_id', id).order('created_at', { ascending: true })
+  const { data: plans } = await supabase.from('plans').select('id, product_id, name, description, price, currency, billing_type, plan_identifier, interval, interval_count, trial_days, sort_order, asaas_plan_id, created_at').eq('product_id', id).order('created_at', { ascending: true })
   const { data: customization } = await supabase.from('checkout_customizations').select('draft_config, published_config, published_at').eq('product_id', id).maybeSingle()
 
   const initialConfig = normalizeCheckoutConfig(

@@ -1,5 +1,13 @@
+-- ============================================================================
+-- ATTENTION: Este arquivo é um snapshot histórico e está DESATUALIZADO.
+-- O estado real do banco é determinado pela sequência de migrations:
+--   migration_v1_*.sql → migration_v24_*.sql
+-- Nunca aplique este arquivo diretamente em um banco novo.
+-- Para provisionar, aplique todas as migrations em ordem.
+-- ============================================================================
+
 -- Setup basic types for our platform
-CREATE TYPE user_role AS ENUM ('affiliate', 'producer');
+CREATE TYPE user_role AS ENUM ('affiliate', 'producer', 'customer');
 
 -- Create Profiles Table (extends Auth.Users)
 CREATE TABLE public.profiles (
@@ -8,7 +16,6 @@ CREATE TABLE public.profiles (
   full_name TEXT,
   document_number TEXT, -- CPF/CNPJ
   phone TEXT,
-  stripe_account_id TEXT, -- For Stripe Connect
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -67,7 +74,6 @@ CREATE TABLE public.plans (
   product_id UUID REFERENCES public.products(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
   price NUMERIC NOT NULL,
-  stripe_price_id TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -143,7 +149,6 @@ CREATE TABLE public.orders (
   commission_rate NUMERIC NOT NULL DEFAULT 0,
   commission_amount NUMERIC NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'pending', -- pending, paid, refunded
-  stripe_payment_id TEXT,
   tracking_id TEXT,
   is_sandbox BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -160,11 +165,7 @@ ON public.orders FOR SELECT USING (
 CREATE POLICY "Affiliates can view their commissioned orders"
 ON public.orders FOR SELECT USING (auth.uid() = affiliate_id);
 
-CREATE POLICY "Anyone can create orders via checkout"
-ON public.orders FOR INSERT WITH CHECK (true);
-
-CREATE POLICY "System can update orders"
-ON public.orders FOR UPDATE USING (true);
+-- Orders are written only by the service role (checkout/webhooks); no anon/authenticated UPDATE/INSERT.
 
 -- Webhook tracking columns on orders
 -- ALTER TABLE public.orders ADD COLUMN webhook_status TEXT NOT NULL DEFAULT 'pending';

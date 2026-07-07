@@ -6,7 +6,15 @@ import { getAppUrl } from '@/lib/app-url'
 export async function findAuthUserIdByEmail(supabase: SupabaseClient, email: string) {
   const targetEmail = email.trim().toLowerCase()
 
-  for (let page = 1; page <= 10; page += 1) {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id')
+    .ilike('email', targetEmail)
+    .maybeSingle()
+
+  if (profile?.id) return profile.id
+
+  for (let page = 1; page <= 5; page += 1) {
     const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 })
     if (error) return null
 

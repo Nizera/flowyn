@@ -66,7 +66,15 @@ export async function GET(req: NextRequest) {
     }
 
     if (PAID_STATUSES.has(payment.status)) {
-      await fulfillPaidOrder(supabase, orderId, payment.status)
+      if (order.status !== 'paid') {
+        await supabase
+          .from('orders')
+          .update({
+            asaas_status: payment.status,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', orderId)
+      }
       return NextResponse.json({ paid: true, status: payment.status })
     }
 

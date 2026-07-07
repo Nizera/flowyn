@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { ArrowRight, BookOpen, CheckCircle2, Mail, ShieldCheck } from 'lucide-react'
 import { ResendDeliveryButton } from './ResendDeliveryButton'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { findAuthUserIdByEmail } from '@/lib/student-password-link'
 
 type Product = {
   id: string
@@ -81,44 +80,6 @@ export default async function CheckoutSuccessPage(props: {
   const isPlatformProduct = product.delivery_type === 'platform'
   const typeLabel = productTypeLabel(product.product_type)
   const maskedEmail = maskEmail(customer.customer_email)
-  let needsPasswordSetup = false
-
-  if (isPlatformProduct) {
-    const { data: orderAccess } = await supabase
-      .from('student_access')
-      .select('user_id')
-      .eq('order_id', orderId)
-      .maybeSingle()
-
-    let access = orderAccess
-    if (!access) {
-      const { data: emailAccess } = await supabase
-        .from('student_access')
-        .select('user_id')
-        .eq('product_id', product.id)
-        .ilike('access_email', customer.customer_email)
-        .maybeSingle()
-      access = emailAccess
-    }
-
-    if (!access) {
-      const userId = await findAuthUserIdByEmail(supabase, customer.customer_email)
-      if (userId) access = { user_id: userId }
-    }
-
-    if (access?.user_id) {
-      const { data: setupEvent } = await supabase
-        .from('notification_events')
-        .select('id')
-        .eq('user_id', access.user_id)
-        .eq('product_id', product.id)
-        .eq('event_type', 'student_password_setup')
-        .limit(1)
-        .maybeSingle()
-
-      needsPasswordSetup = Boolean(setupEvent)
-    }
-  }
 
   const accessPath = `/learn/${product.id}`
   const loginUrl = `/login?redirect=${encodeURIComponent(accessPath)}`
@@ -142,9 +103,7 @@ export default async function CheckoutSuccessPage(props: {
                 <div>
                   <p className="font-bold">Seu acesso à {typeLabel} foi liberado.</p>
                   <p className="mt-1 text-sm leading-6">
-                    {needsPasswordSetup
-                      ? `Enviamos para ${maskedEmail} um link para você definir sua senha e entrar.`
-                      : `Use sua conta da Flowyn para acessar o conteúdo. A confirmação também foi enviada para ${maskedEmail}.`}
+                    Enviamos um link de acesso para <strong>{maskedEmail}</strong>. Defina sua senha pelo link ou acesse diretamente abaixo.
                   </p>
                 </div>
               </div>
@@ -154,7 +113,7 @@ export default async function CheckoutSuccessPage(props: {
               href={loginUrl}
               className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-slate-800"
             >
-              {needsPasswordSetup ? 'Já defini minha senha' : 'Acessar área do aluno'}
+              Acessar área do aluno
               <ArrowRight className="h-4 w-4" />
             </Link>
           </>

@@ -62,10 +62,10 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
 
   if (!product) redirect('/dashboard/products')
 
-  const { data: program } = await supabase.from('mentorship_programs').select('*').eq('product_id', id).maybeSingle()
-  const { data: sessions } = await supabase.from('mentorship_sessions').select('*').eq('product_id', id).is('student_id', null).order('sort_order', { ascending: true })
+  const { data: program } = await supabase.from('mentorship_programs').select('id, headline, promise, session_duration_minutes, intake_questions, timezone, session_count, booking_min_notice_hours, cancellation_notice_hours, max_reschedules').eq('product_id', id).maybeSingle()
+  const { data: sessions } = await supabase.from('mentorship_sessions').select('id, title, description, status, scheduled_at, ends_at, meeting_url, sort_order, reschedule_count').eq('product_id', id).is('student_id', null).order('sort_order', { ascending: true })
   const { data: students } = await supabase.from('student_access').select('user_id, access_email, granted_at, profile:profiles(full_name)').eq('product_id', id).order('granted_at', { ascending: false })
-  const { data: slots } = await supabase.from('mentorship_availability_slots').select('*').eq('product_id', id).gte('starts_at', getRecentStartDateIso()).order('starts_at', { ascending: true })
+  const { data: slots } = await supabase.from('mentorship_availability_slots').select('id, starts_at, ends_at').eq('product_id', id).gte('starts_at', getRecentStartDateIso()).order('starts_at', { ascending: true })
   const { data: intakeResponses } = await supabase.from('mentorship_intake_responses').select('student_id, answers, submitted_at, profile:profiles(full_name)').eq('product_id', id).order('submitted_at', { ascending: false })
   const { data: privateProgram } = await supabase.from('mentorship_program_private').select('default_meeting_url').eq('product_id', id).maybeSingle()
   const { data: studentSessions } = await supabase.from('mentorship_sessions').select('id, student_id, title, scheduled_at, status, reschedule_count, meeting_url').eq('product_id', id).not('student_id', 'is', null).order('scheduled_at', { ascending: false })

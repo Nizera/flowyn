@@ -33,7 +33,7 @@ export default async function SalesPage() {
   if (productIds.length > 0) {
     const { data } = await supabase
       .from('orders')
-      .select('*, product:products(name), plan:plans(name)')
+      .select('id, amount, status, customer_name, customer_email, created_at, product:products(name), plan:plans(name)')
       .in('product_id', productIds)
       .order('created_at', { ascending: false })
 

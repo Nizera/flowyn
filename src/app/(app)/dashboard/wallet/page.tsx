@@ -40,7 +40,7 @@ export default function WalletPage() {
 
   function handleOpenDashboard() {
     setDashboardLoading(true)
-    window.open('https://sandbox.asaas.com', '_blank')
+    window.open('https://www.asaas.com', '_blank')
     setDashboardLoading(false)
   }
 

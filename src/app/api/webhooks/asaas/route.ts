@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fulfillPaidOrder } from '@/lib/order-fulfillment'
+import { timingSafeEqual } from 'node:crypto'
+import { fulfillPaidOrder, revokePaidOrder } from '@/lib/order-fulfillment'
 import { processPlatformSubscriptionPayment } from '@/lib/platform-subscription'
 import { createAdminClient } from '@/utils/supabase/admin'
+
+function safeTokenEqual(a: string, b: string) {
+  const bufA = Buffer.from(a)
+  const bufB = Buffer.from(b)
+  if (bufA.length !== bufB.length) return false
+  return timingSafeEqual(bufA, bufB)
+}
 
 const PAID_EVENTS = new Set(['PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED', 'PAYMENT_RECEIVED_IN_CASH'])
 const FAILED_EVENTS = new Set([
@@ -86,7 +94,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Webhook is not configured' }, { status: 503 })
   }
 
-  if (receivedToken !== expectedToken) {
+  if (!receivedToken || !safeTokenEqual(receivedToken, expectedToken)) {
     return NextResponse.json({ error: 'Invalid webhook token' }, { status: 401 })
   }
 
@@ -120,7 +128,19 @@ export async function POST(req: NextRequest) {
       status: 'pending',
     })
 
-  if (insertError && insertError.code !== '23505') {
+  if (insertError) {
+    if (insertError.code === '23505') {
+      const { data: existing } = await supabase
+        .from('asaas_webhook_events')
+        .select('event_id, status')
+        .eq('event_id', eventId)
+        .maybeSingle()
+
+      if (existing) {
+        return NextResponse.json({ received: true, duplicate: true, status: existing.status })
+      }
+    }
+
     console.error('[Asaas Webhook] Could not persist event.')
     return NextResponse.json({ error: 'Could not persist webhook event' }, { status: 500 })
   }
@@ -167,7 +187,25 @@ export async function POST(req: NextRequest) {
     }
 
     if (!platformSubscriptionHandled && orderId && PAID_EVENTS.has(eventType)) {
-      await fulfillPaidOrder(supabase, orderId, payment.status ? String(payment.status) : eventType)
+      const { data: orderAmountRow } = await supabase
+        .from('orders')
+        .select('amount')
+        .eq('id', orderId)
+        .maybeSingle()
+
+      const expectedAmount = orderAmountRow ? Number(orderAmountRow.amount) : null
+      const paidAmount = typeof payment.value === 'number' ? payment.value : null
+
+      if (expectedAmount === null || paidAmount === null || Math.abs(expectedAmount - paidAmount) > 0.01) {
+        await supabase.from('security_audit_log').insert({
+          action: 'PAYMENT_VALUE_MISMATCH',
+          entity_type: 'order',
+          entity_id: orderId,
+          metadata: { payment_id: paymentId, expected_amount: expectedAmount, paid_amount: paidAmount },
+        })
+      } else {
+        await fulfillPaidOrder(supabase, orderId, payment.status ? String(payment.status) : eventType)
+      }
     }
 
     await supabase
@@ -180,11 +218,12 @@ export async function POST(req: NextRequest) {
       .eq('event_id', eventId)
 
     if (!platformSubscriptionHandled && orderId && (REFUND_EVENTS.has(eventType) || CHARGEBACK_EVENTS.has(eventType) || SPLIT_EVENTS.has(eventType))) {
+      const revokeResult = await revokePaidOrder(supabase, orderId, eventType)
       await supabase.from('security_audit_log').insert({
         action: eventType,
         entity_type: 'order',
         entity_id: orderId,
-        metadata: { payment_id: paymentId },
+        metadata: { payment_id: paymentId, access_revoked: !revokeResult.skipped },
       })
     }
 

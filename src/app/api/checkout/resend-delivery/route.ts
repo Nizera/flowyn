@@ -15,15 +15,21 @@ function getClientIp(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   let orderId = ''
+  let customerEmail = ''
   try {
     const body = await req.json()
     orderId = String(body.order_id || '')
+    customerEmail = String(body.customer_email || '').trim().toLowerCase()
   } catch {
     return NextResponse.json({ error: 'Requisicao invalida.' }, { status: 400 })
   }
 
   if (!isUuid(orderId)) {
     return NextResponse.json({ error: 'Pedido invalido.' }, { status: 400 })
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+    return NextResponse.json({ error: 'Informe o e-mail usado na compra.' }, { status: 400 })
   }
 
   const supabase = createAdminClient()
@@ -36,6 +42,16 @@ export async function POST(req: NextRequest) {
 
   if (rateLimitError || !withinRateLimit) {
     return NextResponse.json({ error: 'Aguarde alguns minutos antes de reenviar novamente.' }, { status: 429 })
+  }
+
+  const { data: customer } = await supabase
+    .from('order_customer_private')
+    .select('customer_email')
+    .eq('order_id', orderId)
+    .maybeSingle()
+
+  if (!customer?.customer_email || customer.customer_email.trim().toLowerCase() !== customerEmail) {
+    return NextResponse.json({ error: 'Nao encontramos esse e-mail para este pedido.' }, { status: 403 })
   }
 
   const result = await resendOrderDelivery(supabase, orderId)

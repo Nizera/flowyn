@@ -18,7 +18,7 @@ export function deliveryEmail(opts: {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Seu acesso a ${productName}</title>
+  <title>Seu acesso a ${safeProduct}</title>
 </head>
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:'Segoe UI',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 0;">
@@ -61,10 +61,10 @@ export function deliveryEmail(opts: {
               ${accessLinks.length > 0 ? 
                 accessLinks.map(link => `
                   <div style="margin-bottom: 12px;">
-                    <a href="${link.url}"
+                    <a href="${escapeHtml(link.url)}"
                        style="display:inline-block;background:${G};color:#0a0a0a;font-weight:800;font-size:16px;
                               padding:16px 40px;border-radius:14px;text-decoration:none;letter-spacing:-0.02em;">
-                      ${link.label}
+                      ${escapeHtml(link.label)}
                     </a>
                   </div>
                 `).join('')
@@ -133,11 +133,11 @@ export function studentPasswordEmail(opts: {
           <p style="color:rgba(255,255,255,0.58);font-size:15px;line-height:1.65;margin:0 0 24px;">
             Olá, <strong style="color:#fff;">${safeCustomer}</strong>. Criamos sua área do aluno para acessar <strong style="color:#fff;">${safeProduct}</strong>.
           </p>
-          <a href="${opts.setupUrl}" style="display:inline-block;background:${G};color:#0a0a0a;font-weight:800;font-size:16px;padding:16px 34px;border-radius:14px;text-decoration:none;">
+          <a href="${escapeHtml(opts.setupUrl)}" style="display:inline-block;background:${G};color:#0a0a0a;font-weight:800;font-size:16px;padding:16px 34px;border-radius:14px;text-decoration:none;">
             Definir senha e entrar
           </a>
           <p style="color:rgba(255,255,255,0.35);font-size:12px;line-height:1.6;margin:22px 0 0;">
-            Se você já definiu sua senha, acesse: <a href="${opts.learnUrl}" style="color:${G};">minha área do aluno</a>.
+            Se você já definiu sua senha, acesse: <a href="${escapeHtml(opts.learnUrl)}" style="color:${G};">minha área do aluno</a>.
           </p>
         </td></tr>
       </table>
@@ -169,7 +169,7 @@ export function learningNotificationEmail(opts: {
         <tr><td style="padding:36px 40px;text-align:center;">
           <h1 style="color:#fff;font-size:24px;margin:0 0 12px;">${safeTitle}</h1>
           <p style="color:rgba(255,255,255,0.58);font-size:15px;line-height:1.65;margin:0 0 24px;">${safeMessage}</p>
-          <a href="${opts.actionUrl}" style="display:inline-block;background:${G};color:#0a0a0a;font-weight:800;font-size:15px;padding:14px 30px;border-radius:14px;text-decoration:none;">
+          <a href="${escapeHtml(opts.actionUrl)}" style="display:inline-block;background:${G};color:#0a0a0a;font-weight:800;font-size:15px;padding:14px 30px;border-radius:14px;text-decoration:none;">
             ${safeLabel}
           </a>
         </td></tr>

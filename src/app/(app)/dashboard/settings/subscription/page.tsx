@@ -39,7 +39,7 @@ export default async function SubscriptionPage() {
 
   const { data: subscription } = await admin
     .from('platform_subscriptions')
-    .select('*')
+    .select('id, status, trial_ends_at, grace_period_ends_at, current_period_ends_at, last_payment_status, created_at, updated_at')
     .eq('user_id', user.id)
     .maybeSingle()
 

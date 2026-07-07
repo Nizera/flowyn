@@ -9,7 +9,15 @@ import { publishCheckout, saveCheckoutDraft } from './actions'
 type CheckoutEditorClientProps = {
   productId: string
   userId: string
-  product: { order_bump_price?: string | number | null }
+  product: {
+    order_bump_price?: string | number | null
+    name?: string | null
+    short_description?: string | null
+    description?: string | null
+    checkout_banner_url?: string | null
+    logo_url?: string | null
+    order_bump_image_url?: string | null
+  }
   plans: Array<{ id?: string }>
   initialConfig: CheckoutCustomizationConfig
   publishedAt: string | null

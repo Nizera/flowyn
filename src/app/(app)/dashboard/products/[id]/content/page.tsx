@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, BookOpen, Building2, CheckCircle2, Clapperboard, ChevronLeft, ChevronRight, CreditCard, GripVertical, Palette, ShoppingBag, Trash2, Users } from 'lucide-react'
+import { ArrowLeft, BookOpen, Building2, CheckCircle2, Clapperboard, ChevronLeft, ChevronRight, CreditCard, Palette, ShoppingBag, Trash2, Users } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { getResendClient } from '@/lib/resend'
@@ -192,6 +192,8 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
   async function deleteModule(formData: FormData) {
     'use server'
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Não autenticado')
     const moduleId = String(formData.get('module_id') || '')
     if (!moduleId) return
     await supabase.from('course_modules').delete().eq('id', moduleId).eq('product_id', id)
@@ -201,6 +203,8 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
   async function deleteLesson(formData: FormData) {
     'use server'
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Não autenticado')
     const lessonId = String(formData.get('lesson_id') || '')
     if (!lessonId) return
     await supabase.from('course_lessons').delete().eq('id', lessonId).eq('product_id', id)

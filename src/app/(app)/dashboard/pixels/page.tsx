@@ -11,7 +11,7 @@ export default async function PixelsPage() {
 
   const { data: pixels } = await supabase
     .from('pixels')
-    .select('*')
+    .select('id, name, platform, pixel_id, is_active, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 

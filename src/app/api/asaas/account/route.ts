@@ -290,8 +290,7 @@ export async function POST(request: NextRequest) {
       walletId: account.walletId,
     })
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error('[Asaas Account] Error:', message)
-    return NextResponse.json({ error: message || 'Erro ao criar subconta Asaas' }, { status: 500 })
+    console.error('[Asaas Account] Error:', err instanceof Error ? err.message : 'Unknown error')
+    return NextResponse.json({ error: 'Erro ao configurar conta de pagamento. Tente novamente.' }, { status: 500 })
   }
 }

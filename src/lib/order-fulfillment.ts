@@ -230,3 +230,59 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
 
   return { skipped: false }
 }
+
+export async function revokePaidOrder(supabase: SupabaseAdmin, orderId: string, reason: string) {
+  const { data: existingOrder } = await supabase
+    .from('orders')
+    .select('id, status, amount')
+    .eq('id', orderId)
+    .single()
+
+  if (!existingOrder || existingOrder.status !== 'paid') {
+    return { skipped: true }
+  }
+
+  const { data: orderData, error: orderError } = await supabase
+    .from('orders')
+    .update({
+      asaas_status: reason,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', orderId)
+    .select('*, product:products(id, delivery_type)')
+    .single()
+
+  if (orderError || !orderData) {
+    return { skipped: true, error: orderError?.message }
+  }
+
+  const product = orderData.product as Product | null
+
+  if (product?.delivery_type === 'platform') {
+    const { data: privateCustomer } = await supabase
+      .from('order_customer_private')
+      .select('customer_email')
+      .eq('order_id', orderId)
+      .single()
+
+    const email = privateCustomer?.customer_email || orderData.customer_email
+    if (email) {
+      const { data: student } = await supabase
+        .from('student_access')
+        .select('user_id')
+        .eq('access_email', email)
+        .eq('product_id', product.id)
+        .maybeSingle()
+
+      if (student?.user_id) {
+        await supabase
+          .from('student_access')
+          .update({ revoked_at: new Date().toISOString(), revoked_reason: reason })
+          .eq('user_id', student.user_id)
+          .eq('product_id', product.id)
+      }
+    }
+  }
+
+  return { skipped: false }
+}

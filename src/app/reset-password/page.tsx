@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { resetPassword } from '@/app/auth/actions'
+import { isSafeRedirectPath } from '@/lib/validation'
 import { AlertCircle, CheckCircle2, ArrowLeft, ArrowRight, Lock } from 'lucide-react'
 
 export default async function ResetPasswordPage(props: {
@@ -97,7 +98,7 @@ export default async function ResetPasswordPage(props: {
           <div className="mt-6 text-center">
             {searchParams.success === 'password_reset' ? (
               <Link
-                href={searchParams.next?.startsWith('/') ? searchParams.next : '/login'}
+                href={isSafeRedirectPath(searchParams.next) ? searchParams.next! : '/login'}
                 className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#f97316] hover:text-[#f97316]/80 transition-colors"
               >
                 Ir para o login

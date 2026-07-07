@@ -2,9 +2,12 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { getAppUrl } from '@/lib/app-url'
-import { isSafeRedirectPath, isValidEmail, isValidFullName, isValidPassword } from '@/lib/validation'
+import { isSafeRedirectPath, isValidCpfCnpj, isValidEmail, isValidFullName, isValidPassword, isValidPhone } from '@/lib/validation'
+import { hashIdentifier } from '@/lib/hash'
 
 function redirectWithParams(path: string, params: Record<string, string>) {
   const query = new URLSearchParams(params)
@@ -21,6 +24,19 @@ export async function login(formData: FormData) {
 
   if (!isValidEmail(data.email) || !isValidPassword(data.password)) {
     redirectWithParams('/login', { error: 'E-mail ou senha inválidos' })
+  }
+
+  const headerStore = await headers()
+  const ip = headerStore.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const admin = createAdminClient()
+  const { data: allowed } = await admin.rpc('consume_rate_limit', {
+    requested_bucket: 'login',
+    requested_identifier_hash: await hashIdentifier(`${ip}:${data.email}`),
+    max_requests: 8,
+    window_seconds: 300,
+  })
+  if (allowed === false) {
+    redirectWithParams('/login', { error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' })
   }
 
   const { error } = await supabase.auth.signInWithPassword(data)
@@ -51,6 +67,20 @@ export async function signup(formData: FormData) {
     redirectWithParams('/register', { error: 'Preencha nome, e-mail e senha válidos.' })
   }
 
+  const headerStore = await headers()
+  const ip = headerStore.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const admin = createAdminClient()
+
+  const { data: signupAllowed } = await admin.rpc('consume_rate_limit', {
+    requested_bucket: 'signup',
+    requested_identifier_hash: await hashIdentifier(ip),
+    max_requests: 3,
+    window_seconds: 600,
+  })
+  if (signupAllowed === false) {
+    redirectWithParams('/register', { error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' })
+  }
+
   const { data: signUpData, error } = await supabase.auth.signUp(data)
 
   if (error || !signUpData.user) {
@@ -73,6 +103,19 @@ export async function forgotPassword(formData: FormData) {
 
   if (!isValidEmail(email)) {
     redirectWithParams('/forgot-password', { error: 'E-mail inválido. Verifique e tente novamente.' })
+  }
+
+  const headerStore = await headers()
+  const ip = headerStore.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const admin = createAdminClient()
+  const { data: allowed } = await admin.rpc('consume_rate_limit', {
+    requested_bucket: 'forgot_password',
+    requested_identifier_hash: await hashIdentifier(`${ip}:${email}`),
+    max_requests: 3,
+    window_seconds: 300,
+  })
+  if (allowed === false) {
+    redirectWithParams('/forgot-password', { error: 'Aguarde antes de solicitar outro link.' })
   }
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -125,6 +168,16 @@ export async function updateProfile(formData: FormData) {
   const full_name = String(formData.get('full_name') || '').trim()
   const document_number = String(formData.get('document_number') || '').trim()
   const phone = String(formData.get('phone') || '').trim()
+
+  if (full_name && !isValidFullName(full_name)) {
+    redirectWithParams('/dashboard/settings/profile', { error: 'Nome inválido.' })
+  }
+  if (document_number && !isValidCpfCnpj(document_number)) {
+    redirectWithParams('/dashboard/settings/profile', { error: 'CPF/CNPJ inválido.' })
+  }
+  if (phone && !isValidPhone(phone)) {
+    redirectWithParams('/dashboard/settings/profile', { error: 'Telefone inválido.' })
+  }
 
   const { error } = await supabase
     .from('profiles')

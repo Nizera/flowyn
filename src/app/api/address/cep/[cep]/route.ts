@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { hashIdentifier } from '@/lib/hash'
 
 type ViaCepResponse = {
   erro?: boolean
@@ -9,12 +11,30 @@ type ViaCepResponse = {
   uf?: string
 }
 
-export async function GET(_request: Request, context: { params: Promise<{ cep: string }> }) {
+function getClientIp(req: Request) {
+  const forwardedFor = req.headers.get('x-forwarded-for')
+  if (forwardedFor) return forwardedFor.split(',')[0].trim()
+  return req.headers.get('x-real-ip') || '127.0.0.1'
+}
+
+export async function GET(request: Request, context: { params: Promise<{ cep: string }> }) {
   const { cep: rawCep } = await context.params
   const cep = rawCep.replace(/\D/g, '')
 
   if (!/^\d{8}$/.test(cep)) {
     return NextResponse.json({ error: 'Informe um CEP com 8 dígitos.' }, { status: 400 })
+  }
+
+  const supabase = createAdminClient()
+  const ip = getClientIp(request)
+  const { data: allowed } = await supabase.rpc('consume_rate_limit', {
+    requested_bucket: 'cep_lookup',
+    requested_identifier_hash: await hashIdentifier(ip),
+    max_requests: 30,
+    window_seconds: 60,
+  })
+  if (allowed === false) {
+    return NextResponse.json({ error: 'Aguarde antes de consultar novamente.' }, { status: 429 })
   }
 
   try {

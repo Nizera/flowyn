@@ -22,12 +22,6 @@ type PixelRow = {
   pixel_id: string
 }
 
-type PlanPixelRow = {
-  id: string
-  plan_id: string
-  pixel: PixelRow | null
-}
-
 export default async function PlansPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params
   const productId = params.id
@@ -38,7 +32,7 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
 
   const { data: product } = await supabase
     .from('products')
-    .select('*')
+    .select('id, name, description, image_url, price, currency, is_public, is_published, checkout_mode, created_at, owner_id')
     .eq('id', productId)
     .single()
 
@@ -48,7 +42,7 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
 
   const { data: plans } = await supabase
     .from('plans')
-    .select('*')
+    .select('id, product_id, name, description, price, currency, billing_type, plan_identifier, interval, interval_count, trial_days, sort_order, asaas_plan_id, created_at')
     .eq('product_id', productId)
     .order('created_at', { ascending: true })
 
@@ -76,6 +70,9 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
 
     if (!name || !price) return
 
+    const priceNum = parseFloat(price)
+    if (isNaN(priceNum) || priceNum <= 0) return
+
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -87,7 +84,7 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
       .insert({
         product_id: productId,
         name,
-        price: parseFloat(price),
+        price: priceNum,
         billing_type: billingType === 'recurring' ? 'recurring' : 'one_time',
       })
 

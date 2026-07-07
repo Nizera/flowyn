@@ -3,7 +3,8 @@ export function isValidEmail(value: string) {
 }
 
 export function isValidPassword(value: string) {
-  return String(value || '').trim().length >= 6
+  const v = String(value || '').trim()
+  return v.length >= 8 && /[A-Z]/.test(v) && /[a-z]/.test(v) && /[0-9]/.test(v)
 }
 
 export function isValidFullName(value: string) {

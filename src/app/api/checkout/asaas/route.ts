@@ -10,6 +10,7 @@ type PlanProduct = {
   id: string
   name: string
   owner_id: string
+  is_public: boolean
 }
 
 type PlanRow = {
@@ -121,7 +122,7 @@ export async function POST(req: NextRequest) {
       .select(`
         *,
         product:products(
-          id, name, owner_id
+          id, name, owner_id, is_public
         )
       `)
       .eq('id', planId)
@@ -132,6 +133,10 @@ export async function POST(req: NextRequest) {
     }
 
     const product = plan.product
+    if (!product.is_public) {
+      return NextResponse.json({ error: 'Checkout indisponivel.' }, { status: 404 })
+    }
+
     const producerAccess = await getPlatformAccess(product.owner_id)
     if (!producerAccess.allowed) {
       return NextResponse.json({ error: 'Checkout indisponivel. Produtor precisa regularizar a assinatura Flowyn Pro.' }, { status: 402 })
@@ -258,8 +263,8 @@ export async function POST(req: NextRequest) {
           const pixData = await getPixQrCode(payment.id, process.env.ASAAS_API_KEY!)
           pixQrCode = pixData.encodedImage
           pixKey = pixData.payload
-        } catch (pixErr) {
-          console.error('[Asaas Checkout] PIX QR fallback also failed:', pixErr)
+        } catch {
+          console.error('[Asaas Checkout] PIX QR fallback also failed')
         }
       }
 
@@ -335,14 +340,7 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     const errName = err instanceof Error ? err.name : typeof err
-    console.error('[Asaas Checkout] Error:', {
-      step,
-      message,
-      errName,
-      hasAsaasKey: Boolean(process.env.ASAAS_API_KEY),
-      asaasUrl: process.env.ASAAS_API_URL || '(default sandbox)',
-      hasMainWallet: Boolean(process.env.ASAAS_MAIN_WALLET_ID),
-    })
+    console.error('[Asaas Checkout] Error:', { step, errName })
 
     if (message.includes('ASAAS_API_KEY') || message.includes('api_key') || message.toLowerCase().includes('unauthorized') || message.toLowerCase().includes('invalid_api') || message.toLowerCase().includes('invalid api')) {
       return NextResponse.json({ error: 'Pagamento indisponível no momento. Tente novamente mais tarde.' }, { status: 503 })
@@ -357,16 +355,17 @@ export async function POST(req: NextRequest) {
     }
 
     if (step === 'credit_card_payment') {
-      return NextResponse.json({ error: `Pagamento não aprovado: ${message}` }, { status: 422 })
+      console.error('[Asaas Checkout] CC payment error at step:', step)
+      return NextResponse.json({ error: 'Pagamento não aprovado. Verifique os dados do cartão e tente novamente.' }, { status: 422 })
     }
 
     if (step === 'pix_payment' || step === 'pix_qrcode_fallback') {
-      return NextResponse.json({ error: `Não foi possível gerar o Pix: ${message}` }, { status: 502 })
+      console.error('[Asaas Checkout] PIX error at step:', step)
+      return NextResponse.json({ error: 'Não foi possível gerar o Pix. Tente novamente em instantes.' }, { status: 502 })
     }
 
     return NextResponse.json({
       error: 'Erro ao processar pagamento. Entre em contato com o suporte informando o horário exato.',
-      _step: step,
     }, { status: 500 })
   }
 }

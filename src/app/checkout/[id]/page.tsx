@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { CheckoutForm } from './checkout-form'
 import { PixelScripts } from '@/components/PixelScripts'
 import { getPlatformAccess } from '@/lib/platform-access'
@@ -20,6 +21,7 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
   const { id } = params
   const { preview, draft } = searchParams
   const supabase = await createClient()
+  const admin = createAdminClient()
   const isPreviewMode = preview === '1'
   const wantsDraftPreview = isPreviewMode && draft === '1'
 
@@ -28,14 +30,6 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
     .select('*, product:products(*, owner:profiles(full_name))')
     .eq('id', id)
     .single()
-
-  const { data: orderBumps } = await supabase
-    .from('product_order_bumps')
-    .select('title, description, price, original_price, image_url')
-    .eq('product_id', plan?.product_id ?? '')
-    .order('sort_order', { ascending: true })
-    .order('created_at', { ascending: true })
-    .limit(1)
 
   if (planError || !plan) {
     return (
@@ -59,20 +53,39 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
     owner?: { full_name?: string | null }
   }
 
-  const firstBump = orderBumps && orderBumps.length > 0 ? orderBumps[0] : null
-
   const product = plan.product as Product
-  const { data: customization } = await supabase
-    .from('checkout_customizations')
-    .select('draft_config, published_config')
-    .eq('product_id', product.id)
-    .maybeSingle()
-
   let canPreviewDraft = false
   if (wantsDraftPreview) {
     const { data: { user } } = await supabase.auth.getUser()
     canPreviewDraft = user?.id === product.owner_id
   }
+
+  let customization: { draft_config?: unknown; published_config?: unknown } | null = null
+  if (canPreviewDraft) {
+    const { data } = await admin
+      .from('checkout_customizations')
+      .select('draft_config, published_config')
+      .eq('product_id', product.id)
+      .maybeSingle()
+    customization = data
+  } else {
+    const { data } = await admin
+      .from('checkout_customizations')
+      .select('published_config')
+      .eq('product_id', product.id)
+      .maybeSingle()
+    customization = data
+  }
+
+  const { data: orderBumps } = await admin
+    .from('product_order_bumps')
+    .select('title, description, price, original_price, image_url')
+    .eq('product_id', product.id)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+    .limit(1)
+
+  const firstBump = orderBumps && orderBumps.length > 0 ? orderBumps[0] : null
 
   const checkoutConfig = normalizeCheckoutConfig(
     canPreviewDraft ? customization?.draft_config : customization?.published_config,
@@ -156,6 +169,22 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
               )}
             </div>
 
+            {checkoutConfig.blocks.testimonials && checkoutConfig.testimonials.length > 0 && (
+              <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Depoimentos</p>
+                <h2 className="mt-2 text-2xl font-black text-slate-950">O que nossos alunos dizem</h2>
+                <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                  {checkoutConfig.testimonials.map((testimonial, index) => (
+                    <div key={index} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                      <div className="mb-3 text-2xl leading-none" style={{ color: checkoutConfig.primaryColor }}>&ldquo;</div>
+                      <p className="text-sm leading-6 text-slate-700">{testimonial.text}</p>
+                      <p className="mt-4 text-xs font-black text-slate-500">— {testimonial.name}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
                 <div className="mb-6 border-b border-slate-100 pb-5">
                   <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Pagamento</p>
@@ -233,7 +262,7 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
 
               <div className="space-y-3 bg-slate-50 p-6">
                 <div className="rounded-2xl bg-white p-4 text-xs font-bold leading-5 text-slate-500">
-                  A Flowyn nao armazena os dados do cartao. Pagamento processado pela Asaas.
+                  {checkoutConfig.securityText}
                 </div>
                 {checkoutConfig.blocks.guarantee && (
                   <div className="rounded-2xl bg-white p-4 text-xs font-bold leading-5 text-slate-500">
@@ -245,6 +274,32 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
           </aside>
         </div>
       </main>
+
+      {checkoutConfig.blocks.faq && checkoutConfig.faq.length > 0 && (
+        <div className="mx-auto max-w-6xl px-4 pb-8 sm:px-6">
+          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Perguntas frequentes</p>
+            <h2 className="mt-2 text-2xl font-black text-slate-950">FAQ</h2>
+            <div className="mt-6 space-y-3">
+              {checkoutConfig.faq.map((item, index) => (
+                <details key={index} className="group rounded-2xl border border-slate-200 bg-slate-50" open={index === 0}>
+                  <summary className="flex cursor-pointer items-center justify-between px-5 py-4 text-sm font-bold text-slate-900 outline-none [&::-webkit-details-marker]:hidden">
+                    {item.question}
+                    <span className="ml-2 shrink-0 text-slate-400 transition-transform group-open:rotate-180">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                      </svg>
+                    </span>
+                  </summary>
+                  <div className="px-5 pb-4 text-sm leading-6 text-slate-600">
+                    {item.answer}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className="px-4 pb-10 text-center text-xs font-semibold text-slate-400">
         Powered by <span className="font-black" style={{ color: checkoutConfig.primaryColor }}>Flowyn</span>

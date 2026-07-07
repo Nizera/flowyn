@@ -48,6 +48,7 @@ export async function resendOrderDelivery(supabase: SupabaseClient, orderId: str
       .from('student_access')
       .select('user_id')
       .eq('order_id', orderId)
+      .is('revoked_at', null)
       .maybeSingle()
 
     let access = orderAccess
@@ -57,6 +58,7 @@ export async function resendOrderDelivery(supabase: SupabaseClient, orderId: str
         .select('user_id')
         .eq('product_id', product.id)
         .ilike('access_email', customer.customer_email)
+        .is('revoked_at', null)
         .maybeSingle()
       access = emailAccess
     }

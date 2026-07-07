@@ -24,5 +24,9 @@ export function getAppUrl() {
     return 'http://localhost:3000'
   }
 
+  if (!process.env.NEXT_PUBLIC_APP_URL) {
+    throw new Error('NEXT_PUBLIC_APP_URL não está configurado em produção.')
+  }
+
   return FALLBACK_PRODUCTION_URL
 }

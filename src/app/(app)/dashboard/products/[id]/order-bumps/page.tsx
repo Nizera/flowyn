@@ -20,13 +20,14 @@ export default async function OrderBumpsPage({ params }: Props) {
     .from('products')
     .select('id, name')
     .eq('id', productId)
+    .eq('owner_id', user.id)
     .single()
 
   if (!product) redirect('/dashboard/products')
 
   const { data: bumps } = await supabase
     .from('product_order_bumps')
-    .select('*')
+    .select('id, product_id, title, description, image_url, price, original_price, source_plan_id, target_product_id, discount_percent, discount_amount, sort_order, created_at')
     .eq('product_id', productId)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })

@@ -43,7 +43,7 @@ export async function GET() {
 
   const { data: subscription } = await supabase
     .from('platform_subscriptions')
-    .select('*')
+    .select('id, user_id, status, asaas_customer_id, asaas_subscription_id, trial_ends_at, current_period_end, last_payment_status')
     .eq('user_id', user.id)
     .maybeSingle()
 
@@ -61,7 +61,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const origin = req.headers.get('origin')
-  if (origin && origin !== req.nextUrl.origin) {
+  if (!origin || origin !== req.nextUrl.origin) {
     return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 })
   }
 
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   const clientIp = getClientIp(req)
   const { data: withinRateLimit, error: rateLimitError } = await admin.rpc('consume_rate_limit', {
     requested_bucket: 'platform-subscription',
-    requested_identifier_hash: hashIdentifier(clientIp),
+    requested_identifier_hash: await hashIdentifier(clientIp),
     max_requests: 5,
     window_seconds: 15 * 60,
   })
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
 
   let { data: localSubscription } = await admin
     .from('platform_subscriptions')
-    .select('*')
+    .select('id, user_id, status, asaas_customer_id, asaas_subscription_id, trial_ends_at, current_period_end, last_payment_status')
     .eq('user_id', userId)
     .maybeSingle()
 
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
     const { data: createdSubscription, error: createError } = await admin
       .from('platform_subscriptions')
       .insert({ user_id: userId })
-      .select('*')
+      .select('id, user_id, status, asaas_customer_id, asaas_subscription_id, trial_ends_at, current_period_end, last_payment_status')
       .single()
 
     if (createError || !createdSubscription) {
@@ -199,7 +199,7 @@ export async function POST(req: NextRequest) {
       updated_at: new Date().toISOString(),
     })
     .eq('id', localSubscription.id)
-    .select('*')
+    .select('id, user_id, status, asaas_customer_id, asaas_subscription_id, trial_ends_at, current_period_end, last_payment_status')
     .single()
 
   if (updateError || !updatedSubscription) {
@@ -229,7 +229,7 @@ export async function DELETE() {
   const admin = createAdminClient()
   const { data: subscription } = await admin
     .from('platform_subscriptions')
-    .select('*')
+    .select('id, user_id, status, asaas_customer_id, asaas_subscription_id')
     .eq('user_id', userId)
     .maybeSingle()
 

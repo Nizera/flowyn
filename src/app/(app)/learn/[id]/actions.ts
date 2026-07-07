@@ -7,10 +7,25 @@ import { getResendClient } from '@/lib/resend'
 import { learningNotificationEmail } from '@/lib/email-templates'
 import { getAppUrl } from '@/lib/app-url'
 
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+async function verifyStudentAccess(_supabase: SupabaseClient, userId: string, productId: string) {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('student_access')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('product_id', productId)
+    .is('revoked_at', null)
+    .maybeSingle()
+  return Boolean(data)
+}
+
 export async function toggleLessonProgress(productId: string, lessonId: string, completed: boolean) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
+  if (!(await verifyStudentAccess(supabase, user.id, productId))) return
   await supabase.from('lesson_progress').upsert({
     user_id: user.id,
     product_id: productId,
@@ -26,6 +41,7 @@ export async function toggleMentorshipTask(productId: string, taskId: string, co
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
+  if (!(await verifyStudentAccess(supabase, user.id, productId))) return
   const { data: task } = await supabase.from('mentorship_tasks').update({
     completed_at: completed ? new Date().toISOString() : null,
     updated_at: new Date().toISOString(),
@@ -41,6 +57,7 @@ export async function addLessonComment(productId: string, lessonId: string, form
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
+  if (!(await verifyStudentAccess(supabase, user.id, productId))) return
   const body = String(formData.get('body') || '').trim()
   if (!body) return
   await supabase.from('lesson_comments').insert({ product_id: productId, lesson_id: lessonId, user_id: user.id, body })
@@ -51,6 +68,7 @@ export async function saveIntakeResponses(productId: string, formData: FormData)
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
+  if (!(await verifyStudentAccess(supabase, user.id, productId))) return
   const answers: Record<string, string> = {}
   for (const [key, value] of formData.entries()) {
     if (key.startsWith('question_')) answers[key.replace('question_', '')] = String(value || '').trim().slice(0, 5000)
@@ -72,7 +90,7 @@ export async function saveIntakeResponses(productId: string, formData: FormData)
 async function getMentorshipContext(productId: string, userId: string) {
   const admin = createAdminClient()
   const [{ data: access }, { data: product }, { data: program }] = await Promise.all([
-    admin.from('student_access').select('id, access_email').eq('user_id', userId).eq('product_id', productId).maybeSingle(),
+    admin.from('student_access').select('id, access_email').eq('user_id', userId).eq('product_id', productId).is('revoked_at', null).maybeSingle(),
     admin.from('products').select('id, name, owner_id, owner:profiles(full_name, email)').eq('id', productId).eq('product_type', 'mentoria').maybeSingle(),
     admin.from('mentorship_programs').select('session_count, booking_min_notice_hours, cancellation_notice_hours, max_reschedules, timezone').eq('product_id', productId).maybeSingle(),
   ])
@@ -106,14 +124,15 @@ async function notify(options: { recipient?: string | null; userId?: string | nu
 export async function bookMentorshipSlot(productId: string, slotId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
+  if (!user) throw new Error('Faça login para reservar uma sessão.')
   const { admin, access, product, program } = await getMentorshipContext(productId, user.id)
-  if (!access || !product) return
+  if (!access || !product) throw new Error('Acesso não encontrado.')
 
   const { data: slot } = await admin.from('mentorship_availability_slots').select('id, starts_at, ends_at').eq('id', slotId).eq('product_id', productId).is('booked_by', null).maybeSingle()
-  if (!slot || new Date(slot.starts_at).getTime() < Date.now() + Number(program?.booking_min_notice_hours ?? 2) * 3600000) return
+  if (!slot) throw new Error('Este horário não está mais disponível.')
+  if (new Date(slot.starts_at).getTime() < Date.now() + Number(program?.booking_min_notice_hours ?? 2) * 3600000) throw new Error('Este horário é muito próximo. Escolha outro.')
   const { count } = await admin.from('mentorship_sessions').select('id', { count: 'exact', head: true }).eq('product_id', productId).eq('student_id', user.id).in('status', ['scheduled', 'done', 'missed'])
-  if (Number(count || 0) >= Number(program?.session_count || 4)) return
+  if (Number(count || 0) >= Number(program?.session_count || 4)) throw new Error('Você já atingiu o limite de sessões.')
   const { data: privateSlot } = await admin.from('mentorship_slot_private').select('meeting_url').eq('slot_id', slotId).maybeSingle()
 
   const { data: session } = await admin.from('mentorship_sessions').insert({
@@ -126,12 +145,12 @@ export async function bookMentorshipSlot(productId: string, slotId: string) {
     meeting_url: privateSlot?.meeting_url || null,
     status: 'scheduled',
   }).select('id').single()
-  if (!session) return
+  if (!session) throw new Error('Não foi possível agendar a sessão.')
 
   const { data: reserved } = await admin.from('mentorship_availability_slots').update({ booked_by: user.id, booked_session_id: session.id, updated_at: new Date().toISOString() }).eq('id', slotId).is('booked_by', null).select('id').maybeSingle()
   if (!reserved) {
     await admin.from('mentorship_sessions').delete().eq('id', session.id)
-    return
+    throw new Error('Este horário foi reservado por outro aluno. Tente outro.')
   }
 
   const time = new Date(slot.starts_at).toLocaleString('pt-BR', { timeZone: program?.timezone || 'America/Sao_Paulo' })
@@ -145,11 +164,12 @@ export async function bookMentorshipSlot(productId: string, slotId: string) {
 export async function cancelMentorshipSession(productId: string, sessionId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
+  if (!user) throw new Error('Faça login para cancelar.')
   const { admin, access, product, program } = await getMentorshipContext(productId, user.id)
-  if (!access || !product) return
+  if (!access || !product) throw new Error('Acesso não encontrado.')
   const { data: session } = await admin.from('mentorship_sessions').select('id, scheduled_at').eq('id', sessionId).eq('product_id', productId).eq('student_id', user.id).eq('status', 'scheduled').maybeSingle()
-  if (!session?.scheduled_at || new Date(session.scheduled_at).getTime() < Date.now() + Number(program?.cancellation_notice_hours ?? 24) * 3600000) return
+  if (!session) throw new Error('Sessão não encontrada.')
+  if (!session.scheduled_at || new Date(session.scheduled_at).getTime() < Date.now() + Number(program?.cancellation_notice_hours ?? 24) * 3600000) throw new Error('Prazo para cancelamento já passou.')
   const { data: slot } = await admin.from('mentorship_availability_slots').select('id').eq('booked_session_id', sessionId).eq('booked_by', user.id).maybeSingle()
   await admin.from('mentorship_sessions').update({ status: 'cancelled', cancelled_at: new Date().toISOString(), cancellation_reason: 'Cancelado pelo aluno', updated_at: new Date().toISOString() }).eq('id', sessionId).eq('student_id', user.id)
   if (slot) await admin.from('mentorship_availability_slots').update({ booked_by: null, booked_session_id: null, updated_at: new Date().toISOString() }).eq('id', slot.id).eq('booked_by', user.id)
@@ -165,23 +185,26 @@ export async function rescheduleMentorshipSession(productId: string, sessionId: 
   const newSlotId = String(formData.get('slot_id') || '')
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !newSlotId) return
+  if (!user) throw new Error('Faça login para reagendar.')
+  if (!newSlotId) throw new Error('Selecione um novo horário.')
   const { admin, access, product, program } = await getMentorshipContext(productId, user.id)
-  if (!access || !product) return
+  if (!access || !product) throw new Error('Acesso não encontrado.')
   const { data: session } = await admin.from('mentorship_sessions').select('id, scheduled_at, reschedule_count').eq('id', sessionId).eq('student_id', user.id).eq('product_id', productId).eq('status', 'scheduled').maybeSingle()
+  if (!session) throw new Error('Sessão não encontrada.')
   const { data: newSlot } = await admin.from('mentorship_availability_slots').select('id, starts_at, ends_at').eq('id', newSlotId).eq('product_id', productId).is('booked_by', null).maybeSingle()
-  if (!session || !newSlot || Number(session.reschedule_count || 0) >= Number(program?.max_reschedules ?? 2)) return
-  if (new Date(newSlot.starts_at).getTime() < Date.now() + Number(program?.booking_min_notice_hours ?? 2) * 3600000) return
-  if (session.scheduled_at && new Date(session.scheduled_at).getTime() < Date.now() + Number(program?.cancellation_notice_hours ?? 24) * 3600000) return
+  if (!newSlot) throw new Error('O novo horário não está mais disponível.')
+  if (Number(session.reschedule_count || 0) >= Number(program?.max_reschedules ?? 2)) throw new Error('Você já atingiu o limite de reagendamentos.')
+  if (new Date(newSlot.starts_at).getTime() < Date.now() + Number(program?.booking_min_notice_hours ?? 2) * 3600000) throw new Error('O novo horário é muito próximo. Escolha outro.')
+  if (session.scheduled_at && new Date(session.scheduled_at).getTime() < Date.now() + Number(program?.cancellation_notice_hours ?? 24) * 3600000) throw new Error('Prazo para reagendar já passou.')
 
   const { data: oldSlot } = await admin.from('mentorship_availability_slots').select('id').eq('booked_session_id', sessionId).eq('booked_by', user.id).maybeSingle()
   const { data: reserved } = await admin.from('mentorship_availability_slots').update({ booked_by: user.id, booked_session_id: sessionId, updated_at: new Date().toISOString() }).eq('id', newSlotId).is('booked_by', null).select('id').maybeSingle()
-  if (!reserved) return
+  if (!reserved) throw new Error('Este horário acabou de ser reservado. Tente outro.')
   const { data: privateSlot } = await admin.from('mentorship_slot_private').select('meeting_url').eq('slot_id', newSlotId).maybeSingle()
   const { error: updateError } = await admin.from('mentorship_sessions').update({ scheduled_at: newSlot.starts_at, ends_at: newSlot.ends_at, meeting_url: privateSlot?.meeting_url || null, reschedule_count: Number(session.reschedule_count || 0) + 1, updated_at: new Date().toISOString() }).eq('id', sessionId).eq('student_id', user.id)
   if (updateError) {
     await admin.from('mentorship_availability_slots').update({ booked_by: null, booked_session_id: null, updated_at: new Date().toISOString() }).eq('id', newSlotId).eq('booked_by', user.id)
-    return
+    throw new Error('Não foi possível reagendar a sessão.')
   }
   if (oldSlot) await admin.from('mentorship_availability_slots').update({ booked_by: null, booked_session_id: null, updated_at: new Date().toISOString() }).eq('id', oldSlot.id).eq('booked_by', user.id)
   const time = new Date(newSlot.starts_at).toLocaleString('pt-BR', { timeZone: program?.timezone || 'America/Sao_Paulo' })

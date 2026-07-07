@@ -3,7 +3,6 @@
 import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { Check, Sparkles } from 'lucide-react'
-import { WordsPullUp } from './animations'
 
 const FEATURES = [
   'Checkout ilimitado enquanto assinatura ativa',

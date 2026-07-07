@@ -26,11 +26,14 @@ export async function updatePlanAction(productId: string, planId: string, formDa
 
   if (!name || !price) return { success: false, error: 'Missing required fields' }
 
+  const priceNum = parseFloat(price)
+  if (isNaN(priceNum) || priceNum <= 0) return { success: false, error: 'O preço deve ser maior que zero.' }
+
   const { error } = await supabase
     .from('plans')
     .update({
       name,
-      price: parseFloat(price),
+      price: priceNum,
       plan_identifier: plan_identifier || null,
       billing_type: billing_type === 'recurring' ? 'recurring' : 'one_time',
     })

@@ -2,7 +2,7 @@
 
 import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
-import { ArrowRight, Check, Wallet, Zap, PlayCircle, Edit3 } from 'lucide-react'
+import { Check, Wallet, Zap, PlayCircle, Edit3 } from 'lucide-react'
 import { WordsPullUpMultiStyle, ScaleInView } from './animations'
 
 const FLOW_STEPS = [

@@ -42,6 +42,14 @@ export async function updateOrderBump(id: string, productId: string, data: Order
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Não autenticado')
 
+  const { data: product } = await supabase
+    .from('products')
+    .select('owner_id')
+    .eq('id', productId)
+    .single()
+
+  if (!product || product.owner_id !== user.id) throw new Error('Produto não encontrado')
+
   const { error } = await supabase
     .from('product_order_bumps')
     .update({
@@ -53,6 +61,7 @@ export async function updateOrderBump(id: string, productId: string, data: Order
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
+    .eq('product_id', productId)
 
   if (error) throw new Error(error.message)
   revalidatePath(`/dashboard/products/${productId}/order-bumps`)
@@ -63,10 +72,19 @@ export async function deleteOrderBump(id: string, productId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Não autenticado')
 
+  const { data: product } = await supabase
+    .from('products')
+    .select('owner_id')
+    .eq('id', productId)
+    .single()
+
+  if (!product || product.owner_id !== user.id) throw new Error('Produto não encontrado')
+
   const { error } = await supabase
     .from('product_order_bumps')
     .delete()
     .eq('id', id)
+    .eq('product_id', productId)
 
   if (error) throw new Error(error.message)
   revalidatePath(`/dashboard/products/${productId}/order-bumps`)

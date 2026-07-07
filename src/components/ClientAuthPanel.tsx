@@ -15,7 +15,7 @@ interface ClientAuthPanelProps {
   redirectTo?: string
 }
 
-export function ClientAuthPanel({ initialError, initialType, initialSuccess, redirectTo = '/dashboard' }: ClientAuthPanelProps) {
+export function ClientAuthPanel({ initialError, initialType, initialSuccess, redirectTo = '/learn' }: ClientAuthPanelProps) {
   const router = useRouter()
   const [isLogin, setIsLogin] = useState(initialType !== 'register')
   const [error, setError] = useState(initialError || '')

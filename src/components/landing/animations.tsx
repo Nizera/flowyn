@@ -67,7 +67,7 @@ export function WordsPullUpMultiStyle({
   })
 
   return (
-    <div ref={ref} className={`inline-flex flex-wrap justify-center ${containerClassName || ''}`}>
+    <div ref={ref} className={`inline-flex flex-wrap justify-center ${className || ''} ${containerClassName || ''}`}>
       {allWords.map((item, i) => (
         <span key={i} className="inline-block">
           <motion.span

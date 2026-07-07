@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
+import { GlobalPixels } from "@/components/GlobalPixels";
 import "./globals.css";
 
 const inter = Inter({
@@ -36,6 +37,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${inter.variable} ${playfair.variable} h-full antialiased`}>
       <body className="min-h-full" suppressHydrationWarning>
+        <GlobalPixels />
         {children}
       </body>
     </html>

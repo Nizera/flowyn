@@ -35,7 +35,7 @@ export function PlanPixelSection({ planId, planPixels, availablePixels }: Props)
   }
 
   function handleRemove(planPixelId: string) {
-    startTransition(() => removePlanPixel(planPixelId))
+    void removePlanPixel(planPixelId)
   }
 
   return (

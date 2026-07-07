@@ -10,7 +10,10 @@ type Session = { id: string; product_id: string; student_id: string; scheduled_a
 
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET
-  if (!secret) return NextResponse.json({ error: 'CRON_SECRET não configurado.' }, { status: 503 })
+  if (!secret) {
+    console.error('[Cron] CRON_SECRET não configurado — cron desabilitado')
+    return NextResponse.json({ error: 'CRON_SECRET não configurado.' }, { status: 503 })
+  }
   if (request.headers.get('authorization') !== `Bearer ${secret}`) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
 
   const admin = createAdminClient()
@@ -31,7 +34,7 @@ export async function GET(request: NextRequest) {
     if (prior) continue
 
     const [{ data: access }, { data: product }] = await Promise.all([
-      admin.from('student_access').select('access_email').eq('product_id', session.product_id).eq('user_id', session.student_id).maybeSingle(),
+      admin.from('student_access').select('access_email').eq('product_id', session.product_id).eq('user_id', session.student_id).is('revoked_at', null).maybeSingle(),
       admin.from('products').select('name').eq('id', session.product_id).maybeSingle(),
     ])
     if (!access?.access_email) continue

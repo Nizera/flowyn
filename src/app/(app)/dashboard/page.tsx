@@ -22,17 +22,18 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadData() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        setLoading(false)
-        return
-      }
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          setLoading(false)
+          return
+        }
 
-      const [{ data: orders }, { count: productCount }] = await Promise.all([
-        supabase
-          .from('orders')
-          .select('*, product:products!inner(name, owner_id)')
+        const [{ data: orders }, { count: productCount }] = await Promise.all([
+          supabase
+            .from('orders')
+          .select('id, amount, status, created_at, customer_name, product:products!inner(name, owner_id)')
           .eq('product.owner_id', user.id)
           .order('created_at', { ascending: false }),
         supabase
@@ -71,7 +72,11 @@ export default function DashboardPage() {
         })
       }
       setChartData(chart)
-      setLoading(false)
+      } catch (err) {
+        console.error('[Dashboard] loadData error:', err)
+      } finally {
+        setLoading(false)
+      }
     }
     loadData()
   }, [])

@@ -113,7 +113,7 @@ async function CourseExperience({ product, userId, selectedLessonId }: { product
   const admin = createAdminClient()
   const { data: modules } = await admin
     .from('course_modules')
-    .select('*, lessons:course_lessons(*)')
+    .select('id, title, sort_order, product_id, lessons:course_lessons(id, title, description, duration_minutes, sort_order, video_file_path, video_url, material_file_paths, content_url)')
     .eq('product_id', product.id)
     .order('sort_order', { ascending: true })
 
@@ -164,14 +164,13 @@ async function CourseExperience({ product, userId, selectedLessonId }: { product
     const { data } = await admin
       .from('course_certificates')
       .upsert({ product_id: product.id, user_id: userId }, { onConflict: 'product_id,user_id' })
-      .select('*')
+      .select('id, product_id, user_id, certificate_code, issued_at, created_at')
       .single()
     certificate = data
   } else {
     const { data } = await admin
       .from('course_certificates')
-      .select('*')
-      .eq('product_id', product.id)
+      .select('id, product_id, user_id, certificate_code, issued_at, created_at')
       .eq('user_id', userId)
       .maybeSingle()
     certificate = data
@@ -244,7 +243,7 @@ async function CourseExperience({ product, userId, selectedLessonId }: { product
               <div className="relative aspect-video overflow-hidden bg-black">
                 {signedVideoUrl ? (
                   <video controls playsInline preload="metadata" className="h-full w-full bg-black object-contain" src={signedVideoUrl} poster={product.cover_url || undefined} />
-                ) : activeLesson?.video_url ? (
+                ) : activeLesson?.video_url && activeLesson.video_url.startsWith('https://') ? (
                   <iframe
                     src={activeLesson.video_url}
                     title={activeLesson.title}
@@ -446,7 +445,7 @@ async function MentorshipExperience({ product, userId }: { product: Product; use
   const admin = createAdminClient()
   const { data: program } = await admin
     .from('mentorship_programs')
-    .select('*')
+    .select('id, headline, promise, session_duration_minutes, meeting_url, intake_questions, timezone, session_count, booking_min_notice_hours, cancellation_notice_hours, max_reschedules')
     .eq('product_id', product.id)
     .maybeSingle()
 
@@ -473,7 +472,7 @@ async function MentorshipExperience({ product, userId }: { product: Product; use
 
   const { data: intake } = await admin
     .from('mentorship_intake_responses')
-    .select('*')
+    .select('id, product_id, student_id, answers, submitted_at, created_at')
     .eq('product_id', product.id)
     .eq('student_id', userId)
     .maybeSingle()
