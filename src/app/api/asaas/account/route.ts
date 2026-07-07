@@ -185,10 +185,24 @@ export async function POST(request: NextRequest) {
     try {
       remoteAccount = await retrieveSubaccount(existingAccountId)
     } catch (err) {
-      console.warn('[Asaas Account] Existing subaccount lookup failed:', err)
+      console.warn('[Asaas Account] Existing subaccount lookup failed — account may be from sandbox:', err)
     }
 
-    const walletId = remoteAccount?.walletId || existingWalletId
+    if (!remoteAccount) {
+      await admin.from('payment_accounts').delete().eq('user_id', user.id).eq('provider', 'asaas')
+      await admin.from('profiles').update({
+        asaas_account_id: null,
+        asaas_wallet_id: null,
+        asaas_account_status: 'disconnected',
+      }).eq('id', user.id)
+
+      return NextResponse.json({
+        connected: false,
+        error: 'A subconta Asaas anterior nao foi encontrada no ambiente de producao. Reconecte a conta Asaas para gerar uma nova subconta.',
+      }, { status: 409 })
+    }
+
+    const walletId = remoteAccount.walletId
 
     await admin
       .from('profiles')
