@@ -3,7 +3,7 @@ import { isSafeRedirectPath } from '@/lib/validation'
 
 export default async function LoginPage(props: { searchParams: Promise<{ error?: string; success?: string; redirect?: string }> }) {
   const searchParams = await props.searchParams;
-  const redirectTo = isSafeRedirectPath(searchParams.redirect) ? searchParams.redirect! : '/learn'
+  const redirectTo = isSafeRedirectPath(searchParams.redirect) ? searchParams.redirect! : '/dashboard'
 
   return (
     <ClientAuthPanel
