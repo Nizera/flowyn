@@ -225,7 +225,7 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
         }
       }
     } else {
-      await supabase.from('student_access').insert(accessPayload)
+      console.warn(`[fulfillPaidOrder] Skipping student_access insert — no auth user found for email "${deliveryCustomerEmail}" (order ${orderId}). Order needs manual resolution.`)
     }
 
     const fileLinks = product ? await buildFileLinks(product, supabase) : []

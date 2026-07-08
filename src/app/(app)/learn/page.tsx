@@ -47,6 +47,7 @@ export default async function LearnLibraryPage() {
       .from('student_access')
       .select('granted_at, last_accessed_at, product:products(id, name, short_description, description, cover_url, logo_url, product_type, category)')
       .eq('user_id', user.id)
+      .is('revoked_at', null)
       .order('last_accessed_at', { ascending: false, nullsFirst: false })
       .order('granted_at', { ascending: false }),
     admin.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),

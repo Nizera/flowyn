@@ -57,6 +57,7 @@ export default async function LearnProductPage(props: {
     .select('id')
     .eq('user_id', user.id)
     .eq('product_id', id)
+    .is('revoked_at', null)
     .maybeSingle()
 
   if (!access) redirect('/learn')
