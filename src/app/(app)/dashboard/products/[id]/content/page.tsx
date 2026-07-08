@@ -127,7 +127,7 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
     if (resendClient) {
       const admin = createAdminClient()
       const { data: product } = await admin.from('products').select('name').eq('id', id).single()
-      const { data: accessRows } = await admin.from('student_access').select('user_id, access_email').eq('product_id', id)
+      const { data: accessRows } = await admin.from('student_access').select('user_id, access_email').eq('product_id', id).is('revoked_at', null)
       const appUrl = getAppUrl()
 
       for (const access of accessRows || []) {

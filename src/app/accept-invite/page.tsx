@@ -58,8 +58,8 @@ function AcceptInviteForm() {
     e.preventDefault()
     setError('')
 
-    if (password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres.')
+    if (password.length < 8) {
+      setError('A senha deve ter pelo menos 8 caracteres, incluindo maiuscula, minuscula e numero.')
       return
     }
 
@@ -171,7 +171,7 @@ function PasswordField({
           value={value}
           onChange={e => onChange(e.target.value)}
           className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-slate-900 outline-none transition focus:border-black focus:bg-white"
-          placeholder="Minimo 6 caracteres"
+          placeholder="Minimo 8 caracteres"
           required
         />
         <button type="button" onClick={onToggle} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">

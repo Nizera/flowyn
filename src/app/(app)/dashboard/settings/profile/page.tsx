@@ -95,10 +95,10 @@ export default async function ProfilePage(props: {
             <RowTitle title="Senha" description="Atualize sua senha de acesso." />
             <div className="grid gap-5 py-6 md:pl-8 lg:grid-cols-2">
               <Field label="Nova senha" required>
-                <input id="password" name="password" type="password" required minLength={6} className={inputClass} placeholder="Minimo 6 caracteres" />
+                <input id="password" name="password" type="password" required minLength={8} className={inputClass} placeholder="Minimo 8 caracteres" />
               </Field>
               <Field label="Confirmar nova senha" required>
-                <input id="confirm_password" name="confirm_password" type="password" required minLength={6} className={inputClass} placeholder="Repita a nova senha" />
+                <input id="confirm_password" name="confirm_password" type="password" required minLength={8} className={inputClass} placeholder="Repita a nova senha" />
               </Field>
             </div>
           </div>

@@ -141,7 +141,7 @@ export async function resetPassword(formData: FormData) {
   }
 
   if (!isValidPassword(password)) {
-    redirectWithParams('/reset-password', { error: 'A senha deve ter no mínimo 6 caracteres' })
+    redirectWithParams('/reset-password', { error: 'A senha deve ter no minimo 8 caracteres, incluindo maiuscula, minuscula e numero.' })
   }
 
   const { error } = await supabase.auth.updateUser({ password })
@@ -213,7 +213,7 @@ export async function changePassword(formData: FormData) {
   }
 
   if (!isValidPassword(password)) {
-    redirectWithParams('/dashboard/settings/profile', { error: 'A senha deve ter no mínimo 6 caracteres', tab: 'security' })
+    redirectWithParams('/dashboard/settings/profile', { error: 'A senha deve ter no minimo 8 caracteres, incluindo maiuscula, minuscula e numero.', tab: 'security' })
   }
 
   const { error } = await supabase.auth.updateUser({ password })

@@ -27,7 +27,7 @@ export default async function ResetPasswordPage(props: {
 
           <h1 className="text-2xl font-extrabold text-white mb-2">Nova senha</h1>
           <p className="text-sm text-white/50 mb-6">
-            Escolha uma senha forte com pelo menos 6 caracteres.
+            Escolha uma senha forte com pelo menos 8 caracteres, incluindo maiuscula, minuscula e numero.
           </p>
 
           {/* Banners */}
@@ -63,7 +63,7 @@ export default async function ResetPasswordPage(props: {
                   name="password"
                   type="password"
                   required
-                  minLength={6}
+                  minLength={8}
                   className="block w-full rounded-xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-white placeholder-white/30 focus:border-[#f97316] focus:outline-none focus:ring-1 focus:ring-[#f97316] transition-all font-medium"
                   placeholder="••••••••"
                 />
@@ -78,7 +78,7 @@ export default async function ResetPasswordPage(props: {
                   name="confirm_password"
                   type="password"
                   required
-                  minLength={6}
+                  minLength={8}
                   className="block w-full rounded-xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-white placeholder-white/30 focus:border-[#f97316] focus:outline-none focus:ring-1 focus:ring-[#f97316] transition-all font-medium"
                   placeholder="••••••••"
                 />

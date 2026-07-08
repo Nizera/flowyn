@@ -64,7 +64,7 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
 
   const { data: program } = await supabase.from('mentorship_programs').select('id, headline, promise, session_duration_minutes, intake_questions, timezone, session_count, booking_min_notice_hours, cancellation_notice_hours, max_reschedules').eq('product_id', id).maybeSingle()
   const { data: sessions } = await supabase.from('mentorship_sessions').select('id, title, description, status, scheduled_at, ends_at, meeting_url, sort_order, reschedule_count').eq('product_id', id).is('student_id', null).order('sort_order', { ascending: true })
-  const { data: students } = await supabase.from('student_access').select('user_id, access_email, granted_at, profile:profiles(full_name)').eq('product_id', id).order('granted_at', { ascending: false })
+  const { data: students } = await supabase.from('student_access').select('user_id, access_email, granted_at, profile:profiles(full_name)').eq('product_id', id).is('revoked_at', null).order('granted_at', { ascending: false })
   const { data: slots } = await supabase.from('mentorship_availability_slots').select('id, starts_at, ends_at').eq('product_id', id).gte('starts_at', getRecentStartDateIso()).order('starts_at', { ascending: true })
   const { data: intakeResponses } = await supabase.from('mentorship_intake_responses').select('student_id, answers, submitted_at, profile:profiles(full_name)').eq('product_id', id).order('submitted_at', { ascending: false })
   const { data: privateProgram } = await supabase.from('mentorship_program_private').select('default_meeting_url').eq('product_id', id).maybeSingle()
@@ -181,7 +181,7 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
     await admin.from('mentorship_sessions').update({ status, cancelled_at: status === 'cancelled' ? new Date().toISOString() : null, cancellation_reason: status === 'cancelled' ? 'Cancelado pelo mentor' : null, updated_at: new Date().toISOString() }).eq('id', sessionId).eq('product_id', id)
     if (status === 'cancelled') await admin.from('mentorship_availability_slots').update({ booked_by: null, booked_session_id: null, updated_at: new Date().toISOString() }).eq('booked_session_id', sessionId)
     const [{ data: access }, resend] = await Promise.all([
-      admin.from('student_access').select('access_email').eq('product_id', id).eq('user_id', session.student_id).maybeSingle(),
+      admin.from('student_access').select('access_email').eq('product_id', id).eq('user_id', session.student_id).is('revoked_at', null).maybeSingle(),
       Promise.resolve(getResendClient()),
     ])
     if (access?.access_email && resend) {
@@ -199,7 +199,7 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
     const studentId = String(formData.get('student_id') || '')
     const body = String(formData.get('body') || '').trim().slice(0, 10000)
     if (!user || !studentId || !body) return
-    const { data: access } = await supabase.from('student_access').select('id').eq('product_id', id).eq('user_id', studentId).maybeSingle()
+    const { data: access } = await supabase.from('student_access').select('id').eq('product_id', id).eq('user_id', studentId).is('revoked_at', null).maybeSingle()
     if (!access) return
     await supabase.from('mentorship_private_notes').insert({ product_id: id, student_id: studentId, author_id: user.id, body })
     revalidatePath(`/dashboard/products/${id}/journey`)
@@ -232,7 +232,7 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
     const resendClient = getResendClient()
     if (resendClient && task) {
       const admin = createAdminClient()
-      const { data: access } = await admin.from('student_access').select('access_email').eq('product_id', id).eq('user_id', studentId).maybeSingle()
+      const { data: access } = await admin.from('student_access').select('access_email').eq('product_id', id).eq('user_id', studentId).is('revoked_at', null).maybeSingle()
       const { data: product } = await admin.from('products').select('name').eq('id', id).single()
       const appUrl = getAppUrl()
 

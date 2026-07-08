@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const { origin, searchParams } = new URL(request.url)
   const tokenHash = searchParams.get('token_hash')
   const requestedNext = searchParams.get('next')
-  const next = requestedNext && isSafeRedirectPath(requestedNext) ? requestedNext : '/learn'
+  const next = requestedNext && isSafeRedirectPath(requestedNext) ? requestedNext : '/login'
 
   if (!tokenHash) {
     return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent('Link inválido ou expirado')}`)
