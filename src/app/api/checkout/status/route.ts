@@ -3,6 +3,7 @@ import { retrievePayment } from '@/lib/asaas'
 import { hashIdentifier } from '@/lib/hash'
 import { fulfillPaidOrder } from '@/lib/order-fulfillment'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { decryptApiKey } from '@/lib/encryption'
 
 const PAID_STATUSES = new Set(['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'])
 const FAILED_STATUSES = new Set(['REFUNDED', 'REFUND_REQUESTED', 'CHARGEBACK_REQUESTED', 'CHARGEBACK_DISPUTE'])
@@ -72,7 +73,7 @@ export async function GET(req: NextRequest) {
         .maybeSingle()
 
       if (producerAccount?.connection_mode === 'standalone' && producerAccount?.api_key) {
-        apiKey = producerAccount.api_key
+        apiKey = decryptApiKey(producerAccount.api_key)
       }
     }
   }

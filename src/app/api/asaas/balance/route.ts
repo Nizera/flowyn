@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { retrieveBalance } from '@/lib/asaas'
+import { decryptApiKey } from '@/lib/encryption'
 
 function getAdminClient() {
   return createAdminClient()
@@ -28,7 +29,7 @@ export async function GET() {
   }
 
   try {
-    const balance = await retrieveBalance(account.api_key)
+    const balance = await retrieveBalance(decryptApiKey(account.api_key))
     return NextResponse.json({
       available: Number(balance.balance || 0),
       pending: 0,

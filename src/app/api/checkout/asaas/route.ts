@@ -5,6 +5,7 @@ import { getPlatformAccess } from '@/lib/platform-access'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { isValidCardExpiry, isValidCardNumber, isValidCpfCnpj, isValidEmail, isValidPhone, isValidCvv, isValidPostalCode } from '@/lib/validation'
 import { hashIdentifier } from '@/lib/hash'
+import { decryptApiKey } from '@/lib/encryption'
 
 type PlanProduct = {
   id: string
@@ -192,7 +193,7 @@ export async function POST(req: NextRequest) {
       notificationDisabled: true,
     }
 
-    const asaasApiKey = isStandalone ? producerAccount!.api_key! : process.env.ASAAS_API_KEY
+    const asaasApiKey = isStandalone ? decryptApiKey(producerAccount!.api_key!) : process.env.ASAAS_API_KEY
     if (!asaasApiKey) {
       console.error('[Asaas Checkout] No API key available.')
       return NextResponse.json({ error: 'Pagamento indisponível no momento.' }, { status: 503 })

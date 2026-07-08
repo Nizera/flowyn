@@ -4,6 +4,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { createSubaccount, listSubaccounts, onlyDigits, retrieveSubaccount, retrieveAccountInfo } from '@/lib/asaas'
 import { isValidCpfCnpj, isValidEmail, isValidPhone } from '@/lib/validation'
 import { hashIdentifier } from '@/lib/hash'
+import { encryptApiKey } from '@/lib/encryption'
 
 type Profile = {
   asaas_account_id: string | null
@@ -154,7 +155,7 @@ export async function POST(request: NextRequest) {
         provider: 'asaas',
         provider_account_id: accountInfo.id || null,
         wallet_id: null,
-        api_key: apiKey,
+        api_key: encryptApiKey(apiKey),
         status: 'connected',
         connection_mode: 'standalone',
         updated_at: new Date().toISOString(),
