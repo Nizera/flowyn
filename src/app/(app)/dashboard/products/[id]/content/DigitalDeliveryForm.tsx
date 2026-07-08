@@ -27,6 +27,10 @@ export function DigitalDeliveryForm({ userId, product, updateDigitalDelivery }: 
     if (state.ok) formRef.current?.querySelector<HTMLInputElement>('input[name="delivery_url"]')?.blur()
   }, [state.ok, state.message])
 
+  const hasContent = deliveryType === 'external'
+    ? Boolean(product.delivery_url)
+    : filePaths.length > 0 || Boolean(product.delivery_url)
+
   return (
     <form ref={formRef} action={action} className="max-w-6xl">
       <input type="hidden" name="delivery_type" value={deliveryType} />
@@ -82,7 +86,7 @@ export function DigitalDeliveryForm({ userId, product, updateDigitalDelivery }: 
       <FormMessage state={state} />
 
       <div className="mt-8 flex justify-end">
-        <button disabled={pending} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-7 text-sm font-semibold text-white transition hover:from-orange-600 hover:to-amber-600 disabled:cursor-not-allowed disabled:opacity-60">
+        <button disabled={pending || !hasContent} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-7 text-sm font-semibold text-white transition hover:from-orange-600 hover:to-amber-600 disabled:cursor-not-allowed disabled:opacity-60">
           {pending ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <Save className="h-4 w-4" />}
           {pending ? 'Salvando...' : 'Salvar entrega'}
         </button>
