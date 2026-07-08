@@ -352,7 +352,7 @@ export async function POST(request: NextRequest) {
         provider: 'asaas',
         provider_account_id: account.id,
         wallet_id: account.walletId,
-        api_key: newSubaccountApiKey,
+        api_key: newSubaccountApiKey ? encryptApiKey(newSubaccountApiKey) : null,
         status: 'connected',
         connection_mode: 'subaccount',
         updated_at: new Date().toISOString(),

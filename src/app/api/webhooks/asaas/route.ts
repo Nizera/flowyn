@@ -208,15 +208,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    await supabase
-      .from('asaas_webhook_events')
-      .update({
-        status: 'done',
-        processed_at: new Date().toISOString(),
-        attempt_count: Number(claimedEvent.attempt_count || 0) + 1,
-      })
-      .eq('event_id', eventId)
-
     if (!platformSubscriptionHandled && orderId && (REFUND_EVENTS.has(eventType) || CHARGEBACK_EVENTS.has(eventType) || SPLIT_EVENTS.has(eventType))) {
       const revokeResult = await revokePaidOrder(supabase, orderId, eventType)
       await supabase.from('security_audit_log').insert({
@@ -226,6 +217,15 @@ export async function POST(req: NextRequest) {
         metadata: { payment_id: paymentId, access_revoked: !revokeResult.skipped },
       })
     }
+
+    await supabase
+      .from('asaas_webhook_events')
+      .update({
+        status: 'done',
+        processed_at: new Date().toISOString(),
+        attempt_count: Number(claimedEvent.attempt_count || 0) + 1,
+      })
+      .eq('event_id', eventId)
 
     return NextResponse.json({ received: true })
   } catch (error) {

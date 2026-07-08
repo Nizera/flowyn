@@ -43,7 +43,7 @@ export async function GET() {
 
   const { data: subscription } = await supabase
     .from('platform_subscriptions')
-    .select('id, user_id, status, asaas_customer_id, asaas_subscription_id, trial_ends_at, current_period_end, last_payment_status')
+    .select('id, user_id, status, asaas_customer_id, asaas_subscription_id, trial_ends_at, current_period_ends_at, last_payment_status')
     .eq('user_id', user.id)
     .maybeSingle()
 
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
 
   let { data: localSubscription } = await admin
     .from('platform_subscriptions')
-    .select('id, user_id, status, asaas_customer_id, asaas_subscription_id, trial_ends_at, current_period_end, last_payment_status')
+    .select('id, user_id, status, asaas_customer_id, asaas_subscription_id, trial_ends_at, current_period_ends_at, last_payment_status')
     .eq('user_id', userId)
     .maybeSingle()
 
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
     const { data: createdSubscription, error: createError } = await admin
       .from('platform_subscriptions')
       .insert({ user_id: userId })
-      .select('id, user_id, status, asaas_customer_id, asaas_subscription_id, trial_ends_at, current_period_end, last_payment_status')
+      .select('id, user_id, status, asaas_customer_id, asaas_subscription_id, trial_ends_at, current_period_ends_at, last_payment_status')
       .single()
 
     if (createError || !createdSubscription) {
@@ -199,7 +199,7 @@ export async function POST(req: NextRequest) {
       updated_at: new Date().toISOString(),
     })
     .eq('id', localSubscription.id)
-    .select('id, user_id, status, asaas_customer_id, asaas_subscription_id, trial_ends_at, current_period_end, last_payment_status')
+    .select('id, user_id, status, asaas_customer_id, asaas_subscription_id, trial_ends_at, current_period_ends_at, last_payment_status')
     .single()
 
   if (updateError || !updatedSubscription) {

@@ -226,8 +226,8 @@ export function CheckoutForm({
         setExpiryMonth('')
         setExpiryYear('')
         setCcv('')
-        setLoading(false)
       }
+      setLoading(false)
     }
   }
 
