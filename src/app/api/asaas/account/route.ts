@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { createSubaccount, listSubaccounts, onlyDigits, retrieveSubaccount } from '@/lib/asaas'
+import { createSubaccount, listSubaccounts, onlyDigits, retrieveSubaccount, retrieveAccountInfo } from '@/lib/asaas'
 import { isValidCpfCnpj, isValidEmail, isValidPhone } from '@/lib/validation'
 import { hashIdentifier } from '@/lib/hash'
 
@@ -62,27 +62,35 @@ export async function GET() {
   const admin = getAdminClient()
   const { data: paymentAccount } = await admin
     .from('payment_accounts')
-    .select('provider_account_id, wallet_id, status')
+    .select('provider_account_id, wallet_id, status, connection_mode')
     .eq('user_id', user.id)
     .eq('provider', 'asaas')
     .single()
 
+  const connectionMode = paymentAccount?.connection_mode || 'subaccount'
+  const isConnected = connectionMode === 'standalone'
+    ? Boolean(paymentAccount?.status === 'connected')
+    : Boolean(paymentAccount?.wallet_id || (profile as Profile).asaas_wallet_id)
+
   let remoteAccount = null
-  const accountId = paymentAccount?.provider_account_id || (profile as Profile).asaas_account_id
-  if (accountId) {
-    try {
-      remoteAccount = await retrieveSubaccount(accountId)
-    } catch (err) {
-      console.warn('[Asaas Account] Could not retrieve subaccount:', err)
+  if (connectionMode === 'subaccount') {
+    const accountId = paymentAccount?.provider_account_id || (profile as Profile).asaas_account_id
+    if (accountId) {
+      try {
+        remoteAccount = await retrieveSubaccount(accountId)
+      } catch (err) {
+        console.warn('[Asaas Account] Could not retrieve subaccount:', err)
+      }
     }
   }
 
   return NextResponse.json({
-    connected: Boolean(paymentAccount?.wallet_id || (profile as Profile).asaas_wallet_id),
+    connected: isConnected,
+    connectionMode,
     email: user.email,
     profile: {
       ...profile,
-      asaas_account_id: accountId || (profile as Profile).asaas_account_id,
+      asaas_account_id: paymentAccount?.provider_account_id || (profile as Profile).asaas_account_id,
       asaas_wallet_id: paymentAccount?.wallet_id || (profile as Profile).asaas_wallet_id,
       asaas_account_status: paymentAccount?.status || (profile as Profile).asaas_account_status,
     },
@@ -116,6 +124,58 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json()
+
+  // ── Standalone mode: producer provides their own Asaas API key ──
+  if (body.mode === 'standalone' && body.api_key) {
+    const apiKey = String(body.api_key).trim()
+    if (!apiKey || apiKey.length < 20 || apiKey.length > 200) {
+      return NextResponse.json({ error: 'Informe uma API key valida.' }, { status: 400 })
+    }
+
+    let accountInfo
+    try {
+      accountInfo = await retrieveAccountInfo(apiKey)
+    } catch {
+      return NextResponse.json({ error: 'API key invalida ou sem acesso. Verifique no painel Asaas.' }, { status: 400 })
+    }
+
+    await admin
+      .from('profiles')
+      .update({
+        asaas_account_status: 'connected',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id)
+
+    await admin
+      .from('payment_accounts')
+      .upsert({
+        user_id: user.id,
+        provider: 'asaas',
+        provider_account_id: accountInfo.id || null,
+        wallet_id: null,
+        api_key: apiKey,
+        status: 'connected',
+        connection_mode: 'standalone',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' })
+
+    await admin.from('security_audit_log').insert({
+      actor_user_id: user.id,
+      action: 'ASAAS_STANDALONE_CONNECTED',
+      entity_type: 'payment_account',
+      entity_id: user.id,
+      metadata: { provider: 'asaas' },
+    })
+
+    return NextResponse.json({
+      connected: true,
+      connectionMode: 'standalone',
+      message: 'Conta Asaas vinculada com sucesso.',
+    })
+  }
+
+  // ── Subaccount mode: create or link a subaccount under Flowyn ──
   const payload = {
     name: String(body.name || '').trim(),
     email: String(body.email || user.email || '').trim(),
@@ -157,7 +217,7 @@ export async function POST(request: NextRequest) {
 
   const { data: currentPaymentAccount } = await admin
     .from('payment_accounts')
-    .select('provider_account_id, wallet_id, api_key, status')
+    .select('provider_account_id, wallet_id, api_key, status, connection_mode')
     .eq('user_id', user.id)
     .eq('provider', 'asaas')
     .single()
@@ -180,7 +240,7 @@ export async function POST(request: NextRequest) {
   const existingAccountId = currentPaymentAccount?.provider_account_id || (currentProfile as Profile | null)?.asaas_account_id
   const existingWalletId = currentPaymentAccount?.wallet_id || (currentProfile as Profile | null)?.asaas_wallet_id
 
-  if (existingAccountId && existingWalletId) {
+  if (existingAccountId && existingWalletId && currentPaymentAccount?.connection_mode !== 'standalone') {
     let remoteAccount = null
     try {
       remoteAccount = await retrieveSubaccount(existingAccountId)
@@ -223,6 +283,7 @@ export async function POST(request: NextRequest) {
         wallet_id: walletId,
         api_key: currentPaymentAccount?.api_key || null,
         status: 'connected',
+        connection_mode: 'subaccount',
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' })
 
@@ -237,6 +298,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       connected: true,
       updated: true,
+      connectionMode: 'subaccount',
       walletId,
       message: 'Cadastro local atualizado. Wallet Asaas existente preservado.',
     })
@@ -257,8 +319,7 @@ export async function POST(request: NextRequest) {
       } catch (createErr: unknown) {
         const msg = String((createErr as Error)?.message || createErr || '')
         if (msg.includes('já está em uso') || msg.toLowerCase().includes('already in use')) {
-          const [localPart, domain] = payload.email.split('@')
-          const fallbackEmail = `flowyn+${payload.cpfCnpj}@${domain}`
+          const fallbackEmail = `flowyn+${payload.cpfCnpj}@${payload.email.split('@')[1]}`
           account = await createSubaccount({ ...subaccountPayload, email: fallbackEmail })
           newSubaccountApiKey = account.apiKey
         } else {
@@ -292,6 +353,7 @@ export async function POST(request: NextRequest) {
         wallet_id: account.walletId,
         api_key: newSubaccountApiKey,
         status: 'connected',
+        connection_mode: 'subaccount',
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' })
 
@@ -306,6 +368,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       connected: true,
       created: true,
+      connectionMode: 'subaccount',
       accountId: account.id,
       walletId: account.walletId,
     })

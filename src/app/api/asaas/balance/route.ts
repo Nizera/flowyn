@@ -23,7 +23,7 @@ export async function GET() {
     .eq('provider', 'asaas')
     .single()
 
-  if (error || !account?.api_key || !account?.wallet_id) {
+  if (error || !account?.api_key) {
     return NextResponse.json({ available: 0, pending: 0, currency: 'BRL', connected: false })
   }
 

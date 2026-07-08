@@ -144,13 +144,21 @@ export async function POST(req: NextRequest) {
 
     const { data: producerAccount } = await supabase
       .from('payment_accounts')
-      .select('wallet_id')
+      .select('wallet_id, api_key, connection_mode')
       .eq('user_id', product.owner_id)
       .eq('provider', 'asaas')
       .single()
 
-    if (!producerAccount?.wallet_id) {
-      return NextResponse.json({ error: 'Produtor ainda nao conectou a carteira Asaas.' }, { status: 409 })
+    const isStandalone = producerAccount?.connection_mode === 'standalone'
+
+    if (isStandalone) {
+      if (!producerAccount?.api_key) {
+        return NextResponse.json({ error: 'Produtor ainda nao conectou a conta Asaas.' }, { status: 409 })
+      }
+    } else {
+      if (!producerAccount?.wallet_id) {
+        return NextResponse.json({ error: 'Produtor ainda nao conectou a carteira Asaas.' }, { status: 409 })
+      }
     }
 
     let orderBumpAmount = 0
@@ -184,9 +192,9 @@ export async function POST(req: NextRequest) {
       notificationDisabled: true,
     }
 
-    const asaasApiKey = process.env.ASAAS_API_KEY
+    const asaasApiKey = isStandalone ? producerAccount!.api_key! : process.env.ASAAS_API_KEY
     if (!asaasApiKey) {
-      console.error('[Asaas Checkout] ASAAS_API_KEY is not configured.')
+      console.error('[Asaas Checkout] No API key available.')
       return NextResponse.json({ error: 'Pagamento indisponível no momento.' }, { status: 503 })
     }
 
@@ -235,10 +243,12 @@ export async function POST(req: NextRequest) {
     }
 
     const mainWalletId = process.env.ASAAS_MAIN_WALLET_ID?.trim()
-    const producerUsesMainWallet = !mainWalletId || sameWallet(producerAccount.wallet_id, mainWalletId)
-    const split = producerUsesMainWallet
+    const split = isStandalone
       ? []
-      : [{ walletId: producerAccount.wallet_id, percentualValue: 100 }]
+      : (() => {
+          const producerUsesMainWallet = !mainWalletId || sameWallet(producerAccount?.wallet_id, mainWalletId)
+          return producerUsesMainWallet ? [] : [{ walletId: producerAccount!.wallet_id!, percentualValue: 100 }]
+        })()
 
     step = 'pix_payment'
 
@@ -252,7 +262,7 @@ export async function POST(req: NextRequest) {
         externalReference: order.id,
         remoteIp: clientIp,
         ...(split.length > 0 ? { split } : {}),
-      }, process.env.ASAAS_API_KEY!)
+      }, asaasApiKey)
 
       let pixQrCode = payment.pixQrCode ?? null
       let pixKey = payment.pixKey ?? null
@@ -260,7 +270,7 @@ export async function POST(req: NextRequest) {
       if (!pixQrCode || !pixKey) {
         step = 'pix_qrcode_fallback'
         try {
-          const pixData = await getPixQrCode(payment.id, process.env.ASAAS_API_KEY!)
+          const pixData = await getPixQrCode(payment.id, asaasApiKey)
           pixQrCode = pixData.encodedImage
           pixKey = pixData.payload
         } catch {
@@ -315,7 +325,7 @@ export async function POST(req: NextRequest) {
         mobilePhone: onlyDigits(String((body.holder as Record<string, unknown> | undefined)?.mobilePhone || customerPhone)),
       },
       remoteIp: clientIp,
-    }, process.env.ASAAS_API_KEY!)
+    }, asaasApiKey)
 
     await supabase
       .from('orders')

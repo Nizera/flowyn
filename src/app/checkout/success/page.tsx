@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ArrowRight, BookOpen, CheckCircle2, Mail, ShieldCheck } from 'lucide-react'
 import { ResendDeliveryButton } from './ResendDeliveryButton'
+import { PaymentPolling } from './PaymentPolling'
 import { createAdminClient } from '@/utils/supabase/admin'
 
 type Product = {
@@ -63,7 +64,18 @@ export default async function CheckoutSuccessPage(props: {
     .maybeSingle()
 
   if (!order || order.status !== 'paid') {
-    return <UnavailableState title="Pagamento em processamento" message="A confirmação ainda não chegou. Aguarde alguns segundos e atualize esta página." />
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-white to-orange-50 p-4">
+        <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-amber-100">
+            <ShieldCheck className="h-10 w-10 text-amber-600" />
+          </div>
+          <h1 className="text-2xl font-black text-slate-950">Pagamento em processamento</h1>
+          <p className="mt-3 leading-7 text-slate-500">A confirmacao ainda nao chegou. Verificando automaticamente...</p>
+          <PaymentPolling orderId={orderId} />
+        </section>
+      </main>
+    )
   }
 
   const product = order.product as unknown as Product | null

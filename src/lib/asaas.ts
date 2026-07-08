@@ -283,3 +283,14 @@ export async function getPixQrCode(paymentId: string, apiKey: string) {
 export async function retrieveBalance(apiKey: string) {
   return asaasRequest<{ balance: number }>('/finance/balance', { apiKey })
 }
+
+export async function retrieveAccountInfo(apiKey: string) {
+  return asaasRequest<{
+    id: string
+    name: string
+    email: string
+    cpfCnpj?: string
+    walletId?: string
+    status?: string
+  }>('/accounts', { apiKey })
+}

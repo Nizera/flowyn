@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 
   const { data: order } = await supabase
     .from('orders')
-    .select('id, status, asaas_payment_id, asaas_status')
+    .select('id, status, asaas_payment_id, asaas_status, product_id')
     .eq('id', orderId)
     .maybeSingle()
 
@@ -54,7 +54,29 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ paid: false, status: order.status || 'PENDING' })
   }
 
-  const apiKey = process.env.ASAAS_API_KEY
+  let apiKey = process.env.ASAAS_API_KEY
+
+  if (order.product_id) {
+    const { data: product } = await supabase
+      .from('products')
+      .select('owner_id')
+      .eq('id', order.product_id)
+      .maybeSingle()
+
+    if (product?.owner_id) {
+      const { data: producerAccount } = await supabase
+        .from('payment_accounts')
+        .select('api_key, connection_mode')
+        .eq('user_id', product.owner_id)
+        .eq('provider', 'asaas')
+        .maybeSingle()
+
+      if (producerAccount?.connection_mode === 'standalone' && producerAccount?.api_key) {
+        apiKey = producerAccount.api_key
+      }
+    }
+  }
+
   if (!apiKey) {
     return NextResponse.json({ error: 'Consulta de pagamento indisponivel.' }, { status: 503 })
   }
@@ -74,6 +96,8 @@ export async function GET(req: NextRequest) {
             updated_at: new Date().toISOString(),
           })
           .eq('id', orderId)
+
+        await fulfillPaidOrder(supabase, orderId, payment.status)
       }
       return NextResponse.json({ paid: true, status: payment.status })
     }
