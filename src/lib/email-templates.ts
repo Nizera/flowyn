@@ -115,10 +115,12 @@ export function studentPasswordEmail(opts: {
   productName: string
   setupUrl: string
   learnUrl: string
+  accessLinks?: { label: string; url: string; isFile: boolean }[]
 }) {
   const G = '#f97316'
   const safeCustomer = escapeHtml(opts.customerName)
   const safeProduct = escapeHtml(opts.productName)
+  const hasLinks = opts.accessLinks && opts.accessLinks.length > 0
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:'Segoe UI',Arial,sans-serif;">
@@ -139,6 +141,21 @@ export function studentPasswordEmail(opts: {
           <p style="color:rgba(255,255,255,0.35);font-size:12px;line-height:1.6;margin:22px 0 0;">
             Se você já definiu sua senha, acesse: <a href="${escapeHtml(opts.learnUrl)}" style="color:${G};">minha área do aluno</a>.
           </p>
+          ${hasLinks ? `
+          <div style="margin-top:28px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.08);">
+            <p style="color:rgba(255,255,255,0.58);font-size:14px;margin:0 0 16px;">Também baixe seus arquivos:</p>
+            ${opts.accessLinks!.map(link => `
+              <div style="margin-bottom:10px;">
+                <a href="${escapeHtml(link.url)}" style="display:inline-block;background:rgba(255,255,255,0.08);color:#fff;font-weight:700;font-size:14px;padding:12px 28px;border-radius:10px;text-decoration:none;border:1px solid rgba(255,255,255,0.12);">
+                  ${escapeHtml(link.label)}
+                </a>
+              </div>
+            `).join('')}
+            <p style="color:rgba(255,255,255,0.3);font-size:11px;margin:16px 0 0;">
+              ⚠️ Links de arquivo expiram em 48 horas. Salve após o download.
+            </p>
+          </div>
+          ` : ''}
         </td></tr>
       </table>
     </td></tr>

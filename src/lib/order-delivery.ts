@@ -14,11 +14,68 @@ type Product = {
   deliverable_file_paths?: string[] | null
 }
 
+async function sendEmailSafe(params: { from: string; to: string; subject: string; html: string }) {
+  const resend = getResendClient()
+  if (!resend) return false
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const { error } = await resend.emails.send(params)
+      if (!error) return true
+      if (attempt === 0) await new Promise(r => setTimeout(r, 2000))
+    } catch {
+      if (attempt === 0) await new Promise(r => setTimeout(r, 2000))
+    }
+  }
+  console.error('[Delivery Resend] Email send failed:', params.to)
+  return false
+}
+
+async function buildFileLinks(product: Product, supabase: SupabaseClient) {
+  const links: { label: string; url: string; isFile: boolean }[] = []
+
+  if (Array.isArray(product.deliverable_file_paths)) {
+    for (const path of product.deliverable_file_paths) {
+      const { data: signed } = await supabase.storage.from('product-files').createSignedUrl(path, 60 * 60 * 48)
+      if (signed?.signedUrl) {
+        links.push({ label: path.split('/').pop() || 'Baixar arquivo', url: signed.signedUrl, isFile: true })
+      }
+    }
+  }
+
+  return links
+}
+
+async function buildBumpLinks(orderId: string, product: Product, supabase: SupabaseClient) {
+  const links: { label: string; url: string; isFile: boolean }[] = []
+
+  const { data: order } = await supabase.from('orders').select('includes_order_bump').eq('id', orderId).maybeSingle()
+  if (!order?.includes_order_bump) return links
+
+  const { data: bumps } = await supabase
+    .from('product_order_bumps')
+    .select('file_paths')
+    .eq('product_id', product.id)
+    .order('sort_order', { ascending: true })
+
+  for (const bump of bumps || []) {
+    const paths = bump.file_paths as string[] | null
+    for (const path of paths || []) {
+      const { data: signed } = await supabase.storage.from('product-files').createSignedUrl(path, 60 * 60 * 48)
+      if (signed?.signedUrl) {
+        links.push({ label: path.split('/').pop() || 'Baixar order bump', url: signed.signedUrl, isFile: true })
+      }
+    }
+  }
+
+  return links
+}
+
 export async function resendOrderDelivery(supabase: SupabaseClient, orderId: string) {
   const { data: order } = await supabase
     .from('orders')
     .select(`
-      id, status, includes_order_bump,
+      id, status,
       product:products(id, name, delivery_type, delivery_url, deliverable_file_paths)
     `)
     .eq('id', orderId)
@@ -37,8 +94,7 @@ export async function resendOrderDelivery(supabase: SupabaseClient, orderId: str
 
   if (!customer?.customer_email) return { sent: false, reason: 'not_found' as const }
 
-  const resend = getResendClient()
-  if (!resend) return { sent: false, reason: 'unavailable' as const }
+  if (!getResendClient()) return { sent: false, reason: 'unavailable' as const }
 
   const appUrl = getAppUrl()
 
@@ -94,6 +150,10 @@ export async function resendOrderDelivery(supabase: SupabaseClient, orderId: str
       access = { user_id: userId }
     }
 
+    const fileLinks = await buildFileLinks(product, supabase)
+    const bumpLinks = await buildBumpLinks(orderId, product, supabase)
+    const allFileLinks = [...fileLinks, ...bumpLinks]
+
     const productPath = `/learn/${product.id}`
     const learnUrl = `${appUrl}/login?redirect=${encodeURIComponent(productPath)}`
     const { data: setupEvent } = await supabase
@@ -109,7 +169,7 @@ export async function resendOrderDelivery(supabase: SupabaseClient, orderId: str
       const setupUrl = await createStudentPasswordSetupUrl(supabase, customer.customer_email, product.id)
       if (!setupUrl) return { sent: false, reason: 'unavailable' as const }
 
-      await resend.emails.send({
+      await sendEmailSafe({
         from: 'Flowyn <noreply@flowyn.com.br>',
         to: customer.customer_email,
         subject: `Defina sua senha para acessar "${product.name}"`,
@@ -118,6 +178,7 @@ export async function resendOrderDelivery(supabase: SupabaseClient, orderId: str
           productName: product.name,
           setupUrl,
           learnUrl,
+          accessLinks: allFileLinks.length > 0 ? allFileLinks : undefined,
         }),
       })
 
@@ -132,14 +193,15 @@ export async function resendOrderDelivery(supabase: SupabaseClient, orderId: str
         })
       }
     } else {
-      await resend.emails.send({
+      const accessLinks = [{ label: 'Acessar na Flowyn', url: learnUrl, isFile: false }, ...allFileLinks]
+      await sendEmailSafe({
         from: 'Flowyn <noreply@flowyn.com.br>',
         to: customer.customer_email,
         subject: `Seu acesso a "${product.name}" esta pronto!`,
         html: deliveryEmail({
           customerName: customer.customer_name,
           productName: product.name,
-          accessLinks: [{ label: 'Acessar na Flowyn', url: learnUrl, isFile: false }],
+          accessLinks,
         }),
       })
     }
@@ -147,39 +209,20 @@ export async function resendOrderDelivery(supabase: SupabaseClient, orderId: str
     return { sent: true }
   }
 
+  const hasContent = product.delivery_url || (Array.isArray(product.deliverable_file_paths) && product.deliverable_file_paths.length > 0)
+  if (!hasContent) return { sent: false, reason: 'no_content' as const }
+
   const accessLinks: { label: string; url: string; isFile: boolean }[] = []
   if (product.delivery_url) {
     accessLinks.push({ label: 'Acessar conteudo', url: product.delivery_url, isFile: false })
   }
 
-  if (Array.isArray(product.deliverable_file_paths)) {
-    for (const path of product.deliverable_file_paths) {
-      const { data: signed } = await supabase.storage.from('product-files').createSignedUrl(path, 60 * 60 * 48)
-      if (signed?.signedUrl) {
-        accessLinks.push({ label: path.split('/').pop() || 'Baixar arquivo', url: signed.signedUrl, isFile: true })
-      }
-    }
-  }
+  accessLinks.push(...await buildFileLinks(product, supabase))
+  accessLinks.push(...await buildBumpLinks(orderId, product, supabase))
 
-  if (order.includes_order_bump) {
-    const { data: bumps } = await supabase
-      .from('product_order_bumps')
-      .select('file_paths')
-      .eq('product_id', product.id)
-      .order('sort_order', { ascending: true })
+  if (accessLinks.length === 0) return { sent: false, reason: 'no_content' as const }
 
-    for (const bump of bumps || []) {
-      const paths = bump.file_paths as string[] | null
-      for (const path of paths || []) {
-        const { data: signed } = await supabase.storage.from('product-files').createSignedUrl(path, 60 * 60 * 48)
-        if (signed?.signedUrl) {
-          accessLinks.push({ label: path.split('/').pop() || 'Baixar order bump', url: signed.signedUrl, isFile: true })
-        }
-      }
-    }
-  }
-
-  await resend.emails.send({
+  await sendEmailSafe({
     from: 'Flowyn <noreply@flowyn.com.br>',
     to: customer.customer_email,
     subject: `Seu acesso a "${product.name}" esta pronto!`,
