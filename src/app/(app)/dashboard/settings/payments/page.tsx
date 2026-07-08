@@ -197,7 +197,7 @@ function PaymentsContent() {
             </div>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
               {isCpf
-                ? 'Para CPF, a Flowyn vincula uma subconta Pessoa Fisica ja existente no Asaas pelo documento informado.'
+                ? 'Para CPF, a Flowyn vincula ou cria uma subconta Pessoa Fisica no Asaas pelo documento informado.'
                 : 'Para CNPJ, a Flowyn cria ou atualiza uma subconta Pessoa Juridica via API.'}
             </p>
           </div>
@@ -208,7 +208,7 @@ function PaymentsContent() {
             <RowTitle title="Conta CPF" description="Criacao feita no Asaas." />
             <div className="flex flex-col gap-4 py-6 md:flex-row md:items-center md:justify-between">
               <p className="max-w-2xl text-sm leading-6 text-slate-500">
-                Ainda nao tem conta Pessoa Fisica no Asaas? Crie a conta no Asaas, depois volte aqui para vincular pelo CPF.
+                Ao clicar em Vincular, a Flowyn cria automaticamente uma subconta Pessoa Fisica no Asaas vinculada a sua conta.
               </p>
               <a href={asaasCpfSignupUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 text-sm font-semibold text-white transition hover:from-orange-600 hover:to-amber-600">
                 Criar conta CPF <ExternalLink className="h-4 w-4" />

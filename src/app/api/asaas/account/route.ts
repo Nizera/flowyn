@@ -251,8 +251,20 @@ export async function POST(request: NextRequest) {
     }
 
     if (!account) {
-      account = await createSubaccount(subaccountPayload)
-      newSubaccountApiKey = account.apiKey
+      try {
+        account = await createSubaccount(subaccountPayload)
+        newSubaccountApiKey = account.apiKey
+      } catch (createErr: unknown) {
+        const msg = String((createErr as Error)?.message || createErr || '')
+        if (msg.includes('já está em uso') || msg.toLowerCase().includes('already in use')) {
+          const [localPart, domain] = payload.email.split('@')
+          const fallbackEmail = `flowyn+${payload.cpfCnpj}@${domain}`
+          account = await createSubaccount({ ...subaccountPayload, email: fallbackEmail })
+          newSubaccountApiKey = account.apiKey
+        } else {
+          throw createErr
+        }
+      }
     }
 
     if (!account.walletId) {
