@@ -26,10 +26,18 @@ export function MetaAdTestingPanel() {
         
         Object.keys(data.results).forEach((key) => {
           const result = data.results[key]
-          if (result && !result.error) {
+          
+          // Verifica erro detalhado da API da Meta
+          const errorMessage = result?.error?.message || 
+                               result?.error || 
+                               (result && typeof result === 'object' && result.info ? result.info : JSON.stringify(result))
+          
+          if (result && !result.error && !result.info) {
             logs.push(`✅ Permissão '${key}' testada com sucesso.`)
+          } else if (result && result.info) {
+            logs.push(`⚠️ Permissão '${key}': ${result.info}`)
           } else {
-            logs.push(`❌ Permissão '${key}' falhou ou retornou erro: ${result?.error || 'Erro desconhecido'}`)
+            logs.push(`❌ Permissão '${key}' falhou: ${errorMessage}`)
           }
         })
 
