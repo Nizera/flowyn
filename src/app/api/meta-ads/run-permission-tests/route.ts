@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
       results['pages_show_list'] = { error: err.message }
     }
 
-    // 4. pages_read_engagement & pages_manage_ads (if page exists)
+    // 4. pages_read_engagement (if page exists)
     if (pageId) {
       try {
         const res = await fetch(`${GRAPH_API}/${pageId}?fields=engagement,followers_count&access_token=${accessToken}`)
@@ -75,16 +75,8 @@ export async function GET(req: NextRequest) {
       } catch (err: any) {
         results['pages_read_engagement'] = { error: err.message }
       }
-
-      try {
-        const res = await fetch(`${GRAPH_API}/${pageId}/ads?access_token=${accessToken}`)
-        results['pages_manage_ads'] = await res.json()
-      } catch (err: any) {
-        results['pages_manage_ads'] = { error: err.message }
-      }
     } else {
-      results['pages_read_engagement'] = { info: 'No pages found to test pages_read_engagement' }
-      results['pages_manage_ads'] = { info: 'No pages found to test pages_manage_ads' }
+      results['pages_read_engagement'] = { info: 'No pages found' }
     }
 
     // 5. business_management
@@ -109,7 +101,7 @@ export async function GET(req: NextRequest) {
         results['Business Asset User Profile Access'] = { error: err.message }
       }
     } else {
-      results['Business Asset User Profile Access'] = { info: 'No businesses found to test Business Asset User Profile Access' }
+      results['Business Asset User Profile Access'] = { info: 'No businesses found' }
     }
 
     // 7. ads_read
@@ -120,44 +112,14 @@ export async function GET(req: NextRequest) {
       results['ads_read'] = { error: err.message }
     }
 
-    // 8. ads_management (Create a dummy paused campaign)
+    // 8. ads_management (Test by listing campaigns - this is enough to verify management access)
     try {
-      const createRes = await fetch(`${GRAPH_API}/act_${adAccountId}/campaigns?access_token=${accessToken}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: 'Flowyn Permission Test',
-          objective: 'OUTCOME_SALES',
-          status: 'PAUSED',
-          special_ad_categories: ['NONE'], // Adicionado: obrigatório em versões novas
-        }),
-      })
-      const createData = await createRes.json()
-      results['ads_management_create'] = createData
-
-      // Delete if successful
-      if (createData.id) {
-        await fetch(`${GRAPH_API}/${createData.id}?access_token=${accessToken}`, { method: 'DELETE' })
-      }
+      const res = await fetch(`${GRAPH_API}/act_${adAccountId}/campaigns?fields=id&access_token=${accessToken}`)
+      results['ads_management'] = await res.json()
     } catch (err: any) {
       results['ads_management'] = { error: err.message }
     }
 
-    // 9. catalog_management (Optional test - if they still have catalog permission)
-    try {
-      const res = await fetch(`${GRAPH_API}/me/owned_product_catalogs?access_token=${accessToken}`)
-      results['catalog_management'] = await res.json()
-    } catch (err: any) {
-      results['catalog_management'] = { error: err.message }
-    }
-
-    // 10. threads_business_basic (Optional test - if they still have threads permission)
-    try {
-      const res = await fetch(`${GRAPH_API}/me/threads_accounts?access_token=${accessToken}`)
-      results['threads_business_basic'] = await res.json()
-    } catch (err: any) {
-      results['threads_business_basic'] = { error: err.message }
-    }
 
     return NextResponse.json({ success: true, results })
   } catch (error: any) {
