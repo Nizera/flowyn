@@ -32,6 +32,24 @@ const SPLIT_EVENTS = new Set([
   'PAYMENT_SPLIT_DIVERGENCE_BLOCK',
   'PAYMENT_SPLIT_DIVERGENCE_BLOCK_FINISHED',
 ])
+const PIX_AUTOMATIC_AUTH_ACTIVATED = new Set(['PIX_AUTOMATIC_RECURRING_AUTHORIZATION_ACTIVATED'])
+const PIX_AUTOMATIC_AUTH_CANCELLED = new Set(['PIX_AUTOMATIC_RECURRING_AUTHORIZATION_CANCELLED'])
+const PIX_AUTOMATIC_AUTH_EXPIRED = new Set(['PIX_AUTOMATIC_RECURRING_AUTHORIZATION_EXPIRED'])
+const PIX_AUTOMATIC_AUTH_REFUSED = new Set(['PIX_AUTOMATIC_RECURRING_AUTHORIZATION_REFUSED'])
+const PIX_AUTOMATIC_AUTH_TERMINATED = new Set(['PIX_AUTOMATIC_RECURRING_AUTHORIZATION_TERMINATED'])
+const PIX_AUTOMATIC_PAYMENT_FAILED = new Set([
+  'PIX_AUTOMATIC_RECURRING_PAYMENT_INSTRUCTION_REFUSED',
+  'PIX_AUTOMATIC_RECURRING_PAYMENT_FAILED',
+])
+const OVERDUE_EVENTS = new Set([
+  'PAYMENT_OVERDUE',
+  'PAYMENT_DUNNING_REQUESTED',
+])
+const SUBSCRIPTION_EVENTS_CANCELLED = new Set([
+  'SUBSCRIPTION_INACTIVATED',
+  'SUBSCRIPTION_DELETED',
+  'SUBSCRIPTION_EXPIRED',
+])
 
 type PaymentPayload = {
   id?: unknown
@@ -40,6 +58,9 @@ type PaymentPayload = {
   billingType?: unknown
   value?: unknown
   subscription?: unknown
+  authorizationId?: unknown
+  authorizationStatus?: unknown
+  customerId?: unknown
 }
 
 function safeErrorMessage(error: unknown) {
@@ -110,6 +131,7 @@ export async function POST(req: NextRequest) {
   const payment = payload.payment || {}
   const paymentId = payment.id ? String(payment.id) : null
   const orderId = getOrderId(payment.externalReference)
+  const authorizationId = payment.authorizationId ? String(payment.authorizationId) : null
 
   if (!eventId || !eventType) {
     return NextResponse.json({ error: 'Webhook event id and type are required' }, { status: 400 })
@@ -171,6 +193,53 @@ export async function POST(req: NextRequest) {
   try {
     const platformSubscriptionHandled = await processPlatformSubscriptionPayment(eventType, payment)
 
+    const isPixAuthEvent =
+      PIX_AUTOMATIC_AUTH_ACTIVATED.has(eventType) ||
+      PIX_AUTOMATIC_AUTH_CANCELLED.has(eventType) ||
+      PIX_AUTOMATIC_AUTH_EXPIRED.has(eventType) ||
+      PIX_AUTOMATIC_AUTH_REFUSED.has(eventType) ||
+      PIX_AUTOMATIC_AUTH_TERMINATED.has(eventType)
+
+    if (isPixAuthEvent && authorizationId) {
+      const authStatus =
+        PIX_AUTOMATIC_AUTH_ACTIVATED.has(eventType) ? 'ACTIVE' :
+        PIX_AUTOMATIC_AUTH_CANCELLED.has(eventType) ? 'CANCELLED' :
+        PIX_AUTOMATIC_AUTH_EXPIRED.has(eventType) ? 'EXPIRED' :
+        PIX_AUTOMATIC_AUTH_REFUSED.has(eventType) ? 'REFUSED' :
+        PIX_AUTOMATIC_AUTH_TERMINATED.has(eventType) ? 'TERMINATED' :
+        eventType
+
+      await supabase
+        .from('pix_automatic_authorizations')
+        .update({ status: authStatus, updated_at: new Date().toISOString() })
+        .eq('authorization_id', authorizationId)
+
+      const { data: auth } = await supabase
+        .from('pix_automatic_authorizations')
+        .select('order_id')
+        .eq('authorization_id', authorizationId)
+        .maybeSingle()
+
+      if (auth?.order_id) {
+        if (authStatus === 'ACTIVE') {
+          await fulfillPaidOrder(supabase, auth.order_id, eventType)
+        } else if (['CANCELLED', 'EXPIRED', 'REFUSED', 'TERMINATED'].includes(authStatus)) {
+          await revokePaidOrder(supabase, auth.order_id, eventType)
+        }
+      }
+
+      await supabase
+        .from('asaas_webhook_events')
+        .update({
+          status: 'done',
+          processed_at: new Date().toISOString(),
+          attempt_count: Number(claimedEvent.attempt_count || 0) + 1,
+        })
+        .eq('event_id', eventId)
+
+      return NextResponse.json({ received: true })
+    }
+
     if (!platformSubscriptionHandled && orderId && paymentId) {
       const orderUpdate: Record<string, string> = {
         asaas_payment_id: paymentId,
@@ -216,6 +285,79 @@ export async function POST(req: NextRequest) {
         entity_id: orderId,
         metadata: { payment_id: paymentId, access_revoked: !revokeResult.skipped },
       })
+    }
+
+    if (SUBSCRIPTION_EVENTS_CANCELLED.has(eventType) && payment.subscription) {
+      const subscriptionId = String(payment.subscription)
+      const { data: subscriptionOrders } = await supabase
+        .from('orders')
+        .select('id, product_id')
+        .eq('asaas_subscription_id', subscriptionId)
+        .eq('status', 'paid')
+        .limit(1)
+
+      if (subscriptionOrders && subscriptionOrders.length > 0) {
+        const subOrder = subscriptionOrders[0]
+        await revokePaidOrder(supabase, subOrder.id, eventType)
+        await supabase.from('security_audit_log').insert({
+          action: eventType,
+          entity_type: 'subscription',
+          entity_id: subscriptionId,
+          metadata: { order_id: subOrder.id, product_id: subOrder.product_id },
+        })
+      }
+    }
+
+    if (PIX_AUTOMATIC_PAYMENT_FAILED.has(eventType) || OVERDUE_EVENTS.has(eventType)) {
+      if (orderId) {
+        await supabase
+          .from('orders')
+          .update({
+            asaas_status: eventType,
+            status: 'failed',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', orderId)
+
+        const { data: failedOrder } = await supabase
+          .from('orders')
+          .select('product_id, pix_authorization_id')
+          .eq('id', orderId)
+          .maybeSingle()
+
+        if (failedOrder?.pix_authorization_id) {
+          const { data: recentFailures } = await supabase
+            .from('orders')
+            .select('id')
+            .eq('pix_authorization_id', failedOrder.pix_authorization_id)
+            .eq('status', 'failed')
+            .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+
+          const failureCount = recentFailures?.length || 0
+
+          if (failureCount >= 3) {
+            const { data: auth } = await supabase
+              .from('pix_automatic_authorizations')
+              .select('order_id')
+              .eq('authorization_id', failedOrder.pix_authorization_id)
+              .maybeSingle()
+
+            if (auth?.order_id) {
+              await revokePaidOrder(supabase, auth.order_id, eventType)
+              await supabase.from('security_audit_log').insert({
+                action: 'RECURRING_ACCESS_REVOKED',
+                entity_type: 'order',
+                entity_id: auth.order_id,
+                metadata: {
+                  authorization_id: failedOrder.pix_authorization_id,
+                  failure_count: failureCount,
+                  reason: eventType,
+                },
+              })
+            }
+          }
+        }
+      }
     }
 
     await supabase

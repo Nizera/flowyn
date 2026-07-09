@@ -294,3 +294,107 @@ export async function retrieveAccountInfo(apiKey: string) {
     status?: string
   }>('/accounts', { apiKey })
 }
+
+export type PixAutomaticFrequency = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUALLY' | 'ANNUALLY'
+
+export async function createPixAutomaticAuthorization(
+  payload: {
+    customerId: string
+    frequency: PixAutomaticFrequency
+    contractId: string
+    startDate: string
+    finishDate?: string
+    value?: number
+    description?: string
+    immediateQrCode?: {
+      minLimitValue?: number
+      paymentCreationMode?: 'MANUAL' | 'SUBSCRIPTION'
+      retryPolicy?: 'NOT_ALLOWED' | 'ALLOW_THREE_IN_SEVEN_DAYS'
+    }
+  },
+  apiKey?: string
+) {
+  return asaasRequest<{
+    id: string
+    customerId: string
+    frequency: string
+    value?: number
+    startDate: string
+    finishDate?: string
+    status: string
+    immediateQrCode?: {
+      encodedImage?: string
+      payload?: string
+      expirationDate?: string
+      conciliationIdentifier?: string
+    }
+  }>('/pix/automatic/authorizations', {
+    apiKey,
+    method: 'POST',
+    body: payload,
+  })
+}
+
+export async function listPixAutomaticAuthorizations(
+  params: {
+    offset?: number
+    limit?: number
+    status?: string
+    customerId?: string
+  },
+  apiKey?: string
+) {
+  const query = new URLSearchParams()
+  if (params.offset !== undefined) query.set('offset', String(params.offset))
+  if (params.limit !== undefined) query.set('limit', String(params.limit))
+  if (params.status) query.set('status', params.status)
+  if (params.customerId) query.set('customerId', params.customerId)
+
+  const qs = query.toString()
+  return asaasRequest<{
+    data: Array<{
+      id: string
+      customerId: string
+      frequency: string
+      value?: number
+      startDate: string
+      finishDate?: string
+      status: string
+    }>
+    totalCount: number
+  }>(`/pix/automatic/authorizations${qs ? `?${qs}` : ''}`, { apiKey })
+}
+
+export async function cancelPixAutomaticAuthorization(authorizationId: string, apiKey?: string) {
+  return asaasRequest<{ id: string; status: string }>(
+    `/pix/automatic/authorizations/${authorizationId}`,
+    { apiKey, method: 'DELETE' }
+  )
+}
+
+export async function createPixAutomaticCharge(
+  payload: {
+    pixAutomaticAuthorizationId: string
+    billingType: 'PIX'
+    value: number
+    dueDate: string
+    description?: string
+    externalReference?: string
+    status?: 'PENDING' | 'CONFIRMED' | 'RECEIVED'
+  },
+  apiKey?: string
+) {
+  return asaasRequest<{
+    id: string
+    status: string
+    value: number
+    pixQrCode?: string
+    pixKey?: string
+    invoiceUrl?: string
+    dueDate?: string
+  }>('/payments', {
+    apiKey,
+    method: 'POST',
+    body: payload,
+  })
+}

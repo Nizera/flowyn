@@ -245,7 +245,7 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
                 <div className="border-t border-slate-100 pt-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500">Subtotal</span>
-                    <span className="font-bold text-slate-900">R$ {money(plan.price)}</span>
+                    <span className="font-bold text-slate-900">R$ {money(plan.price)}{plan.billing_type === 'recurring' ? '/mês' : ''}</span>
                   </div>
                   <div className="mt-3 flex justify-between text-sm">
                     <span className="text-slate-500">Taxa Flowyn</span>
@@ -255,7 +255,7 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
                 <div className="flex items-end justify-between border-t border-slate-100 pt-5">
                   <span className="text-base font-black text-slate-950">Total</span>
                   <span id="checkout-total-amount" data-base-price={plan.price} data-bump-price={firstBump?.price || 0} className="text-3xl font-black text-slate-950">
-                    R$ {money(plan.price)}
+                    R$ {money(plan.price)}{plan.billing_type === 'recurring' ? '/mês' : ''}
                   </span>
                 </div>
               </div>

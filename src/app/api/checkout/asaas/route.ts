@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createCreditCardPayment, createCustomer, createPixPayment, getPixQrCode, onlyDigits } from '@/lib/asaas'
+import { createCreditCardPayment, createCreditCardSubscription, createCustomer, createPixAutomaticAuthorization, createPixPayment, getPixQrCode, onlyDigits } from '@/lib/asaas'
 import { fulfillPaidOrder } from '@/lib/order-fulfillment'
 import { getPlatformAccess } from '@/lib/platform-access'
 import { createAdminClient } from '@/utils/supabase/admin'
@@ -18,6 +18,7 @@ type PlanRow = {
   id: string
   name: string
   price: number
+  billing_type: string
   product: PlanProduct
 }
 
@@ -219,6 +220,7 @@ export async function POST(req: NextRequest) {
         tracking_id: null,
         includes_order_bump: orderBumpAmount > 0,
         order_bump_amount: orderBumpAmount,
+        billing_type: plan.billing_type === 'recurring' ? 'recurring' : 'one_time',
       })
       .select('id')
       .single()
@@ -254,6 +256,59 @@ export async function POST(req: NextRequest) {
     step = 'pix_payment'
 
     if (billingType === 'PIX') {
+      if (plan.billing_type === 'recurring') {
+        const authorization = await createPixAutomaticAuthorization({
+          customerId: asaasCustomer.id,
+          frequency: 'MONTHLY',
+          contractId: order.id,
+          startDate: today(),
+          value: totalAmount,
+          description: `${product.name} - ${plan.name}`,
+          immediateQrCode: {
+            paymentCreationMode: 'SUBSCRIPTION',
+            minLimitValue: totalAmount,
+          },
+        }, asaasApiKey)
+
+        const pixQrCode = authorization.immediateQrCode?.encodedImage ?? null
+        const pixKey = authorization.immediateQrCode?.payload ?? null
+
+        await supabase
+          .from('orders')
+          .update({
+            pix_authorization_id: authorization.id,
+            asaas_status: authorization.status,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', order.id)
+
+        await supabase
+          .from('pix_automatic_authorizations')
+          .insert({
+            authorization_id: authorization.id,
+            customer_id: authorization.customerId,
+            order_id: order.id,
+            product_id: product.id,
+            buyer_email: customerEmail,
+            buyer_name: customerName,
+            status: authorization.status,
+            frequency: 'MONTHLY',
+            value: totalAmount,
+            start_date: today(),
+          })
+
+        return NextResponse.json({
+          success: false,
+          order_id: order.id,
+          payment_id: authorization.id,
+          status: authorization.status,
+          pixQrCode,
+          pixKey,
+          recurring: true,
+          invoice_url: null,
+        })
+      }
+
       const payment = await createPixPayment({
         customer: asaasCustomer.id,
         billingType: 'PIX',
@@ -300,6 +355,57 @@ export async function POST(req: NextRequest) {
     }
 
     step = 'credit_card_payment'
+
+    if (plan.billing_type === 'recurring') {
+      const subscription = await createCreditCardSubscription({
+        customer: asaasCustomer.id,
+        billingType: 'CREDIT_CARD',
+        value: totalAmount,
+        nextDueDate: today(),
+        cycle: 'MONTHLY',
+        description: `${product.name} - ${plan.name}`,
+        externalReference: order.id,
+        creditCard: {
+          holderName: cardHolderName,
+          number: cardNumber,
+          expiryMonth: cardExpiryMonth,
+          expiryYear: cardExpiryYear,
+          ccv: cardCcv,
+        },
+        creditCardHolderInfo: {
+          name: String((body.holder as Record<string, unknown> | undefined)?.name || customerName).trim(),
+          email: String((body.holder as Record<string, unknown> | undefined)?.email || customerEmail).trim(),
+          cpfCnpj: onlyDigits(String((body.holder as Record<string, unknown> | undefined)?.cpfCnpj || customerDocument)),
+          postalCode: holderPostalCode,
+          addressNumber: holderAddressNumber,
+          addressComplement: String((body.holder as Record<string, unknown> | undefined)?.addressComplement || '').trim() || null,
+          mobilePhone: onlyDigits(String((body.holder as Record<string, unknown> | undefined)?.mobilePhone || customerPhone)),
+        },
+        remoteIp: clientIp,
+      }, asaasApiKey)
+
+      await supabase
+        .from('orders')
+        .update({
+          asaas_subscription_id: subscription.id,
+          asaas_status: subscription.status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', order.id)
+
+      if (subscription.status === 'ACTIVE') {
+        await fulfillPaidOrder(supabase, order.id, 'CONFIRMED')
+      }
+
+      return NextResponse.json({
+        success: subscription.status === 'ACTIVE',
+        order_id: order.id,
+        payment_id: subscription.id,
+        status: subscription.status,
+        recurring: true,
+        invoice_url: null,
+      }, { headers: { 'Cache-Control': 'no-store, private', Pragma: 'no-cache' } })
+    }
 
     const payment = await createCreditCardPayment({
       customer: asaasCustomer.id,
