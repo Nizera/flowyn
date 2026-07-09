@@ -120,26 +120,23 @@ export async function GET(req: NextRequest) {
       results['ads_read'] = { error: err.message }
     }
 
-    // 8. ads_management (Create a dummy paused campaign and delete it immediately)
+    // 8. ads_management (Create a dummy paused campaign)
     try {
       const createRes = await fetch(`${GRAPH_API}/act_${adAccountId}/campaigns?access_token=${accessToken}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: 'Flowyn Permission Test Campaign',
+          name: 'Flowyn Permission Test',
           objective: 'OUTCOME_SALES',
           status: 'PAUSED',
-          special_ad_categories: ['NONE'],
         }),
       })
       const createData = await createRes.json()
       results['ads_management_create'] = createData
 
+      // Delete if successful
       if (createData.id) {
-        const deleteRes = await fetch(`${GRAPH_API}/${createData.id}?access_token=${accessToken}`, {
-          method: 'DELETE',
-        })
-        results['ads_management_delete'] = await deleteRes.json()
+        await fetch(`${GRAPH_API}/${createData.id}?access_token=${accessToken}`, { method: 'DELETE' })
       }
     } catch (err: any) {
       results['ads_management'] = { error: err.message }
