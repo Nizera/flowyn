@@ -3,6 +3,7 @@ import { getResendClient } from '@/lib/resend'
 import { deliveryEmail, studentPasswordEmail } from '@/lib/email-templates'
 import { getAppUrl } from '@/lib/app-url'
 import { createStudentPasswordSetupUrl, findAuthUserIdByEmail } from '@/lib/student-password-link'
+import { sendCapiEvent } from '@/lib/meta-capi'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -148,9 +149,25 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
   const product = orderData.product as Product | null
   const { data: privateCustomer } = await supabase
     .from('order_customer_private')
-    .select('customer_name, customer_email')
+    .select('customer_name, customer_email, document_number, phone')
     .eq('order_id', orderId)
     .single()
+
+  // ── Meta CAPI (server-side) ──
+  sendCapiEvent({
+    orderId,
+    productId: orderData.product_id,
+    producerId: orderData.product?.owner_id || '',
+    amount: Number(orderData.amount) || 0,
+    customerEmail: privateCustomer?.customer_email || orderData.customer_email,
+    customerPhone: privateCustomer?.phone || '',
+    customerName: privateCustomer?.customer_name || orderData.customer_name,
+    customerDocument: privateCustomer?.document_number || '',
+    clientIp: '127.0.0.1',
+    userAgent: 'Flowyn/1.0',
+    eventSourceUrl: `${getAppUrl()}/checkout/${orderData.plan_id}`,
+    trackingParams: orderData.tracking_params as Record<string, string> | null | undefined,
+  })
 
   const deliveryCustomerName = privateCustomer?.customer_name || orderData.customer_name
   const deliveryCustomerEmail = privateCustomer?.customer_email || orderData.customer_email

@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
     const customerPhone = onlyDigits(String(body.customer_phone || ''))
     const addOrderBump = Boolean(body.add_order_bump)
     const billingType = String(body.billing_type || 'CREDIT_CARD')
+    const trackingParams = body.tracking_params as Record<string, string> | undefined
 
     if (billingType !== 'PIX' && billingType !== 'CREDIT_CARD') {
       return NextResponse.json({ error: 'Forma de pagamento invalida.' }, { status: 400 })
@@ -217,7 +218,7 @@ export async function POST(req: NextRequest) {
         status: 'pending',
         asaas_customer_id: asaasCustomer.id,
         payment_provider: 'asaas',
-        tracking_id: null,
+        tracking_params: trackingParams && Object.keys(trackingParams).length > 0 ? trackingParams : null,
         includes_order_bump: orderBumpAmount > 0,
         order_bump_amount: orderBumpAmount,
         billing_type: plan.billing_type === 'recurring' ? 'recurring' : 'one_time',

@@ -70,6 +70,27 @@ export function CheckoutForm({
   const [postalCodeError, setPostalCodeError] = useState<string | null>(null)
   const [searchingPostalCode, setSearchingPostalCode] = useState(false)
 
+  // Capture tracking params from URL on mount
+  const trackingParams = useMemo(() => {
+    const params = new URLSearchParams(window.location.search)
+    const result: Record<string, string> = {}
+    const knownParams = [
+      'utm_source', 'utm_campaign', 'utm_medium', 'utm_content', 'utm_term',
+      'src', 'sck', 'gclid', 'fbclid', 'ttclid',
+    ]
+    for (const key of knownParams) {
+      const val = params.get(key)
+      if (val) result[key] = val
+    }
+    // Capture fbp / fbc from cookies
+    const cookies = document.cookie.split('; ')
+    for (const c of cookies) {
+      const [k, v] = c.split('=', 2) as [string, string | undefined]
+      if ((k === '_fbp' || k === '_fbc') && v) result[k] = v
+    }
+    return Object.keys(result).length > 0 ? result : undefined
+  }, [])
+
   async function searchPostalCode() {
     if (digits(postalCode).length !== 8) {
       setPostalCodeAddress(null)
@@ -165,6 +186,7 @@ export function CheckoutForm({
         customer_phone: customerPhone,
         add_order_bump: addOrderBump,
         billing_type: paymentMethod === 'pix' ? 'PIX' : 'CREDIT_CARD',
+        tracking_params: trackingParams,
       }
 
       if (paymentMethod === 'credit_card') {

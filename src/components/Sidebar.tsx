@@ -9,6 +9,7 @@ import {
   CreditCard,
   LayoutDashboard,
   LogOut,
+  Megaphone,
   PlusCircle,
   ScanLine,
   Settings,
@@ -41,6 +42,7 @@ const sections: { label: string; items: NavItem[] }[] = [
       { href: '/dashboard/products/new', label: 'Criar Produto', icon: PlusCircle },
       { href: '/dashboard/products', label: 'Meus Produtos', icon: Box, exclude: '/dashboard/products/new' },
       { href: '/dashboard/sales', label: 'Minhas Vendas', icon: ShoppingBag },
+      { href: '/dashboard/ads', label: 'Meta Ads', icon: Megaphone },
     ],
   },
   {
