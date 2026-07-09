@@ -21,6 +21,7 @@ interface CheckoutFormProps {
   primaryColor?: string
   buttonText?: string
   previewMode?: boolean
+  recurring?: boolean
 }
 
 function money(value: number) {
@@ -38,8 +39,9 @@ export function CheckoutForm({
   primaryColor = '#059669',
   buttonText = 'Pagar',
   previewMode = false,
+  recurring = false,
 }: CheckoutFormProps) {
-  const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix'>('pix')
+  const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix'>(recurring ? 'credit_card' : 'pix')
   const [addOrderBump, setAddOrderBump] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -341,15 +343,22 @@ export function CheckoutForm({
         </button>
         <button
           type="button"
+          disabled={recurring}
           className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition ${
-            paymentMethod === 'pix' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            recurring ? 'cursor-not-allowed opacity-40' : paymentMethod === 'pix' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
           }`}
-          onClick={() => setPaymentMethod('pix')}
+          onClick={() => { if (!recurring) setPaymentMethod('pix') }}
         >
           <QrCode className="h-4 w-4" />
           PIX
         </button>
       </div>
+
+      {recurring && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-700">
+          Para assinaturas mensais, o pagamento via PIX requer o Pix Automatico, que ainda nao esta disponivel. Utilize cartao de credito para assinar.
+        </div>
+      )}
 
       <div className="space-y-4">
         <div>
