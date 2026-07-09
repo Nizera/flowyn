@@ -129,6 +129,7 @@ export async function GET(req: NextRequest) {
           name: 'Flowyn Permission Test',
           objective: 'OUTCOME_SALES',
           status: 'PAUSED',
+          special_ad_categories: ['NONE'], // Adicionado: obrigatório em versões novas
         }),
       })
       const createData = await createRes.json()
