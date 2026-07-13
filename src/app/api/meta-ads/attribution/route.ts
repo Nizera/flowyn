@@ -39,7 +39,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'ad_account_id, start_date, end_date required' }, { status: 400 })
   }
 
-  // 1. Fetch ad insights for the period
+  // 1. Verify user owns this ad account
+  const { data: accountOwner } = await supabase
+    .from('ad_accounts')
+    .select('user_id')
+    .eq('ad_account_id', ad_account_id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!accountOwner) {
+    return NextResponse.json({ error: 'Account not found or unauthorized' }, { status: 404 })
+  }
+
+  // 2. Fetch ad insights for the period
   const { data: insights, error: insightsError } = await supabase
     .from('ad_insights_cache')
     .select('*')
@@ -63,11 +75,12 @@ export async function POST(req: NextRequest) {
   const asaasPercentFee = costConfig?.asaas_percent_fee || 0
   const productCosts = costConfig?.product_costs || []
 
-  // 3. Fetch orders with tracking_params that have utm_campaign
+  // 3. Fetch orders with tracking_params that have utm_campaign (only user's orders)
   const { data: orders, error: ordersError } = await supabase
     .from('orders')
-    .select('*')
+    .select('*, product:products!inner(owner_id)')
     .eq('status', 'paid')
+    .eq('product.owner_id', user.id)
     .gte('created_at', start_date)
     .lte('created_at', end_date + 'T23:59:59')
 

@@ -25,20 +25,23 @@ async function recordUserUsage(supabase: any, userId: string, calls: number) {
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const bypassSecret = searchParams.get('bypass') === 'true'
   const accountId = searchParams.get('account_id') // Optional: sync single account
 
-  // Validate cron secret if not bypassed
-  if (!bypassSecret) {
-    const authHeader = req.headers.get('Authorization')
-    const cronSecret = process.env.CRON_SECRET
+  // Validate cron secret
+  const authHeader = req.headers.get('Authorization')
+  const cronSecret = process.env.CRON_SECRET
 
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const supabase = createAdminClient()
+
+  // Cleanup old API usage records (>24h)
+  await supabase
+    .from('meta_api_usage')
+    .delete()
+    .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
 
   // Build query - sync all enabled accounts or single account
   let query = supabase

@@ -19,5 +19,18 @@ COMMENT ON COLUMN public.cost_configurations.asaas_percent_fee IS 'Percentage fe
 COMMENT ON COLUMN public.cost_configurations.product_costs IS 'JSONB array of product costs [{name, cost}]';
 
 ALTER TABLE public.cost_configurations ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public.cost_configurations FROM anon, authenticated;
-GRANT ALL ON public.cost_configurations TO service_role;
+
+-- Users can read their own configurations
+CREATE POLICY "Users can view own cost configurations"
+  ON public.cost_configurations FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Users can insert their own configurations
+CREATE POLICY "Users can insert own cost configurations"
+  ON public.cost_configurations FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can update their own configurations
+CREATE POLICY "Users can update own cost configurations"
+  ON public.cost_configurations FOR UPDATE
+  USING (auth.uid() = user_id);

@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       tax_percentage: tax_percentage || 0,
       asaas_flat_fee: asaas_flat_fee || 0,
       asaas_percent_fee: asaas_percent_fee || 0,
-      product_costs: product_costs || '[]',
+      product_costs: product_costs || [],
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' })
     .select()
