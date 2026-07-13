@@ -1,7 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { MetaAdTestingPanel } from '@/components/MetaAdTestingPanel'
 
 export const metadata = {
   title: 'Meta Ads — Flowyn',
@@ -102,8 +101,6 @@ export default async function AdsPage() {
           </a>
         </div>
       )}
-
-      <MetaAdTestingPanel />
     </div>
   )
 }
