@@ -58,11 +58,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Account not found or unauthorized' }, { status: 404 })
   }
 
-  // 2. Fetch ad insights for the period
+  // 2. Fetch campaign-level ad insights for the period (NOT adset/ad to avoid double-counting)
   const { data: insights, error: insightsError } = await supabase
     .from('ad_insights_cache')
     .select('*')
     .eq('ad_account_id', ad_account_id)
+    .eq('insight_level', 'campaign')
     .gte('date', start_date)
     .lte('date', end_date)
 

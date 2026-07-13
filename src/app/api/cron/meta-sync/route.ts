@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { getDecryptedToken } from '@/lib/meta-oauth'
+import { syncAccountFull } from '@/lib/meta-sync'
 import {
   parseMetaRateLimitHeader,
   checkSyncBudget,
@@ -9,20 +10,12 @@ import {
   APP_LEVEL_CALLS_LIMIT_PER_HOUR,
 } from '@/lib/meta-rate-limit'
 
-const GRAPH_API = 'https://graph.facebook.com/v21.0'
-
-function delay(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const accountId = searchParams.get('account_id') // Optional: sync single account
+  const accountId = searchParams.get('account_id')
 
-  // Validate cron secret
   const authHeader = req.headers.get('Authorization')
   const cronSecret = process.env.CRON_SECRET
-
   if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -35,7 +28,6 @@ export async function GET(req: NextRequest) {
     .delete()
     .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
 
-  // Build query - sync all enabled accounts or single account
   let query = supabase
     .from('ad_accounts')
     .select('*')
@@ -57,10 +49,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ message: 'No enabled ad accounts to sync' })
   }
 
-  const results: any[] = []
-  let totalApiCalls = 0
-  const skippedUsers: string[] = []
-
   // Check app-wide safety limit before starting
   const { allowed: appAllowed, appUsage } = await checkAppLevelLimit(supabase)
   if (!appAllowed) {
@@ -71,6 +59,9 @@ export async function GET(req: NextRequest) {
     }, { status: 429 })
   }
 
+  const results: any[] = []
+  let totalApiCalls = 0
+
   for (const account of adAccounts) {
     const accessToken = await getDecryptedToken(account.ad_account_id, account.user_id)
     if (!accessToken) {
@@ -79,75 +70,12 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-      // Pace requests to avoid burst throttling
-      await delay(200)
+      const syncResult = await syncAccountFull(supabase, account.user_id, account.ad_account_id, accessToken)
+      totalApiCalls += syncResult.totalApiCalls
 
-      // 1 API call: Fetch campaign-level insights for the account
-      const insightsRes = await fetch(
-        `${GRAPH_API}/act_${account.ad_account_id}/insights?fields=campaign_id,campaign_name,impressions,clicks,spend,ctr,cpc,cpm,reach,actions,action_values&level=campaign&time_increment=1&time_range={'since':'2026-01-01','until':'2026-12-31'}&access_token=${accessToken}`
-      )
-      totalApiCalls++
-
-      // Read Meta's rate limit headers from response
-      const metaRateHeader = insightsRes.headers.get('x-business-use-case-usage')
-        || insightsRes.headers.get('x-ad-account-usage')
-        || insightsRes.headers.get('x-fb-ads-insights-throttle')
-      const metaRateLimitInfo = parseMetaRateLimitHeader(metaRateHeader)
-
-      // Check Meta's actual rate limit budget before continuing with next account
-      const budget = checkSyncBudget(metaRateLimitInfo)
-      if (!budget.allowed) {
-        results.push({
-          account_id: account.ad_account_id,
-          error: 'Meta API rate limit exceeded',
-          tier: budget.tier,
-          throttle_percentage: budget.throttlePercentage,
-          retry_after_seconds: budget.retryAfterSeconds,
-        })
-        // Record usage even on rate limit to track
-        await trackAdAccountUsage(account.user_id, account.ad_account_id, 1, metaRateHeader)
-        break // Stop processing more accounts
-      }
-
-      // Record this API call for the user with Meta's actual rate limit info
-      await trackAdAccountUsage(account.user_id, account.ad_account_id, 1, metaRateHeader)
-
-      const insightsData = await insightsRes.json()
-
-      if (insightsData.error) {
-        results.push({ account_id: account.ad_account_id, error: insightsData.error.message })
-        continue
-      }
-
-      // Upsert each row into ad_insights_cache
-      let rowsSynced = 0
-      if (insightsData.data && insightsData.data.length > 0) {
-        for (const row of insightsData.data) {
-          const leads = row.actions
-            ? row.actions.find((a: any) => a.action_type === 'lead')?.value || 0
-            : 0
-
-          await supabase.from('ad_insights_cache').upsert(
-            {
-              ad_account_id: account.ad_account_id,
-              campaign_id: row.campaign_id,
-              campaign_name: row.campaign_name,
-              spend: parseFloat(row.spend || '0'),
-              clicks: parseInt(row.clicks || '0'),
-              impressions: parseInt(row.impressions || '0'),
-              reach: parseInt(row.reach || '0'),
-              leads: parseInt(leads),
-              cpc: parseFloat(row.cpc || '0'),
-              cpm: parseFloat(row.cpm || '0'),
-              ctr: parseFloat(row.ctr || '0'),
-              cost_per_lead: leads > 0 ? parseFloat(row.spend || '0') / parseInt(leads) : 0,
-              date: row.date_start,
-            },
-            { onConflict: 'ad_account_id,campaign_id,date' }
-          )
-          rowsSynced++
-        }
-      }
+      // Check Meta rate limit from last response
+      const budget = checkSyncBudget(parseMetaRateLimitHeader(syncResult.rateLimitHeader))
+      await trackAdAccountUsage(account.user_id, account.ad_account_id, syncResult.totalApiCalls, syncResult.rateLimitHeader)
 
       // Update last sync timestamp
       await supabase
@@ -155,15 +83,33 @@ export async function GET(req: NextRequest) {
         .update({ last_sync_at: new Date().toISOString() })
         .eq('id', account.id)
 
+      // Log sync
+      await supabase.from('sync_logs').insert({
+        user_id: account.user_id,
+        ad_account_id: account.ad_account_id,
+        sync_type: 'cron',
+        status: syncResult.errors.length > 0 ? 'partial' : 'completed',
+        api_calls_made: syncResult.totalApiCalls,
+        rows_synced: syncResult.totalRowsSynced,
+        error_message: syncResult.errors.length > 0 ? syncResult.errors.join('; ') : null,
+        completed_at: new Date().toISOString(),
+      })
+
       results.push({
         account_id: account.ad_account_id,
         account_name: account.ad_account_name,
-        rows_synced: rowsSynced,
-        meta_rate_limit: metaRateLimitInfo ? {
-          tier: metaRateLimitInfo.ads_api_access_tier,
-          throttle_percentage: Math.max(metaRateLimitInfo.app_id_util_pct, metaRateLimitInfo.acc_id_util_pct),
+        rows_synced: syncResult.totalRowsSynced,
+        api_calls: syncResult.totalApiCalls,
+        errors: syncResult.errors.length > 0 ? syncResult.errors : undefined,
+        meta_rate_limit: budget.tier !== 'unknown' ? {
+          tier: budget.tier,
+          throttle_percentage: budget.throttlePercentage,
         } : null,
       })
+
+      if (!budget.allowed) {
+        break
+      }
     } catch (err: any) {
       results.push({ account_id: account.ad_account_id, error: err.message })
     }
@@ -174,7 +120,6 @@ export async function GET(req: NextRequest) {
     sync_time: new Date().toISOString(),
     api_calls_made: totalApiCalls,
     accounts_synced: results.length,
-    skipped_rate_limit: skippedUsers.length,
     results,
   })
 }
