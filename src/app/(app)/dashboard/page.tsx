@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { ArrowRight, CreditCard, DollarSign, PackageCheck, Users } from 'lucide-react'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, Pie, PieChart } from 'recharts'
+import { ArrowRight, CreditCard, DollarSign, PackageCheck, Users, Megaphone } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 
 function currency(value: number) {
@@ -17,6 +17,7 @@ type ChartPoint = { name: string; revenue: number }
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<Stats>({ totalRevenue: 0, paidCount: 0, pendingCount: 0, productCount: 0 })
+  const [metaStats, setMetaStats] = useState<any>(null)
   const [recentOrders, setRecentOrders] = useState<Order[]>([])
   const [chartData, setChartData] = useState<ChartPoint[]>([])
 
@@ -30,17 +31,20 @@ export default function DashboardPage() {
           return
         }
 
-        const [{ data: orders }, { count: productCount }] = await Promise.all([
+        const [{ data: orders }, { count: productCount }, adsRes] = await Promise.all([
           supabase
             .from('orders')
-          .select('id, amount, status, created_at, customer_name, product:products!inner(name, owner_id)')
-          .eq('product.owner_id', user.id)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('products')
-          .select('id', { count: 'exact', head: true })
-          .eq('owner_id', user.id),
-      ])
+            .select('id, amount, status, created_at, customer_name, product:products!inner(name, owner_id)')
+            .eq('product.owner_id', user.id)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('products')
+            .select('id', { count: 'exact', head: true })
+            .eq('owner_id', user.id),
+          fetch('/api/meta-ads/dashboard')
+        ])
+
+        const adsData = await adsRes.json()
 
       const ordersList = (orders || []) as Order[]
       const paid = ordersList.filter(o => o.status === 'paid')
@@ -98,12 +102,20 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-10 border-y border-slate-200">
-        <RowTitle title="Resumo" description="Indicadores principais." />
+        <RowTitle title="Resumo" description="Indicadores principais (E-commerce + Meta Ads)." />
         <div className="grid gap-6 py-6 md:grid-cols-4">
           <Summary label="Faturamento" value={currency(stats.totalRevenue)} icon={<DollarSign className="h-4 w-4" />} />
           <Summary label="Produtos" value={String(stats.productCount)} icon={<PackageCheck className="h-4 w-4" />} />
           <Summary label="Aprovadas" value={String(stats.paidCount)} icon={<Users className="h-4 w-4" />} />
           <Summary label="Pendentes" value={String(stats.pendingCount)} icon={<CreditCard className="h-4 w-4" />} />
+          
+          {metaStats && (
+            <>
+              <Summary label="Gasto Meta" value={currency(metaStats.summary.total_spend)} icon={<Megaphone className="h-4 w-4" />} />
+              <Summary label="ROAS" value={`${metaStats.summary.roas.toFixed(2)}x`} icon={<DollarSign className="h-4 w-4" />} />
+              <Summary label="Lucro Líquido" value={currency(metaStats.summary.net_profit)} icon={<DollarSign className="h-4 w-4" />} />
+            </>
+          )}
         </div>
       </div>
 
