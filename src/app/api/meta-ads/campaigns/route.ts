@@ -33,7 +33,21 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url)
+  const action = searchParams.get('action')
   const adAccountId = searchParams.get('ad_account_id')
+
+  // Return list of connected accounts
+  if (action === 'accounts') {
+    const { data: accounts } = await supabase
+      .from('ad_accounts')
+      .select('id, ad_account_id, ad_account_name, pixel_id, sync_enabled, last_sync_at, created_at')
+      .eq('user_id', user.id)
+      .eq('platform', 'meta')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+
+    return NextResponse.json({ accounts: accounts || [] })
+  }
 
   if (!adAccountId) {
     return NextResponse.json({ error: 'ad_account_id required' }, { status: 400 })

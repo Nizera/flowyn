@@ -7,6 +7,7 @@ const GRAPH_API = 'https://graph.facebook.com/v21.0'
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const bypassSecret = searchParams.get('bypass') === 'true'
+  const accountId = searchParams.get('account_id') // Optional: sync single account
 
   // Validate cron secret if not bypassed
   if (!bypassSecret) {
@@ -20,11 +21,18 @@ export async function GET(req: NextRequest) {
 
   const supabase = createAdminClient()
 
-  // Retrieve all active ad accounts
-  const { data: adAccounts, error: adAccountsError } = await supabase
+  // Build query - sync all enabled accounts or single account
+  let query = supabase
     .from('ad_accounts')
     .select('*')
     .eq('is_active', true)
+    .eq('sync_enabled', true)
+
+  if (accountId) {
+    query = query.eq('ad_account_id', accountId)
+  }
+
+  const { data: adAccounts, error: adAccountsError } = await query
 
   if (adAccountsError) {
     console.error('[Meta Sync Cron] Database error:', adAccountsError.message)
@@ -32,7 +40,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (!adAccounts || adAccounts.length === 0) {
-    return NextResponse.json({ message: 'No active connected ad accounts to sync' })
+    return NextResponse.json({ message: 'No enabled ad accounts to sync' })
   }
 
   const results: any[] = []
@@ -46,65 +54,50 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-      // 1. Fetch campaigns (1 API call)
-      const campaignsRes = await fetch(
-        `${GRAPH_API}/act_${account.ad_account_id}/campaigns?fields=id,name,status&limit=10&access_token=${accessToken}`
+      // 1 API call: Fetch campaign-level insights for the account
+      // This returns all campaigns with their metrics in a single call
+      const insightsRes = await fetch(
+        `${GRAPH_API}/act_${account.ad_account_id}/insights?fields=campaign_id,campaign_name,impressions,clicks,spend,ctr,cpc,cpm,reach,actions,action_values&level=campaign&time_increment=1&time_range={'since':'2026-01-01','until':'2026-12-31'}&access_token=${accessToken}`
       )
       totalApiCalls++
-      const campaignsData = await campaignsRes.json()
+      const insightsData = await insightsRes.json()
 
-      if (campaignsData.error) {
-        results.push({ account_id: account.ad_account_id, error: campaignsData.error.message })
+      if (insightsData.error) {
+        results.push({ account_id: account.ad_account_id, error: insightsData.error.message })
         continue
       }
 
-      const campaigns = campaignsData.data || []
-      const campaignSyncResults: any[] = []
+      // Upsert each row into ad_insights_cache
+      let rowsSynced = 0
+      if (insightsData.data && insightsData.data.length > 0) {
+        for (const row of insightsData.data) {
+          const leads = row.actions
+            ? row.actions.find((a: any) => a.action_type === 'lead')?.value || 0
+            : 0
 
-      // 2. Fetch daily insights for each campaign and upsert into ad_insights_cache
-      const campaignsToSync = campaigns.slice(0, 5)
-      for (const campaign of campaignsToSync) {
-        const insightsRes = await fetch(
-          `${GRAPH_API}/${campaign.id}/insights?fields=impressions,clicks,spend,ctr,cpc,cpm,reach,actions,action_values&time_increment=1&time_range={'since':'2026-01-01','until':'2026-12-31'}&access_token=${accessToken}`
-        )
-        totalApiCalls++
-        const insightsData = await insightsRes.json()
-
-        if (insightsData.data && insightsData.data.length > 0) {
-          for (const row of insightsData.data) {
-            const leads = row.actions
-              ? row.actions.find((a: any) => a.action_type === 'lead')?.value || 0
-              : 0
-
-            await supabase.from('ad_insights_cache').upsert(
-              {
-                ad_account_id: account.ad_account_id,
-                campaign_id: campaign.id,
-                campaign_name: campaign.name,
-                spend: parseFloat(row.spend || '0'),
-                clicks: parseInt(row.clicks || '0'),
-                impressions: parseInt(row.impressions || '0'),
-                reach: parseInt(row.reach || '0'),
-                leads: parseInt(leads),
-                cpc: parseFloat(row.cpc || '0'),
-                cpm: parseFloat(row.cpm || '0'),
-                ctr: parseFloat(row.ctr || '0'),
-                cost_per_lead: leads > 0 ? parseFloat(row.spend || '0') / parseInt(leads) : 0,
-                date: row.date_start,
-              },
-              { onConflict: 'ad_account_id,campaign_id,date' }
-            )
-          }
+          await supabase.from('ad_insights_cache').upsert(
+            {
+              ad_account_id: account.ad_account_id,
+              campaign_id: row.campaign_id,
+              campaign_name: row.campaign_name,
+              spend: parseFloat(row.spend || '0'),
+              clicks: parseInt(row.clicks || '0'),
+              impressions: parseInt(row.impressions || '0'),
+              reach: parseInt(row.reach || '0'),
+              leads: parseInt(leads),
+              cpc: parseFloat(row.cpc || '0'),
+              cpm: parseFloat(row.cpm || '0'),
+              ctr: parseFloat(row.ctr || '0'),
+              cost_per_lead: leads > 0 ? parseFloat(row.spend || '0') / parseInt(leads) : 0,
+              date: row.date_start,
+            },
+            { onConflict: 'ad_account_id,campaign_id,date' }
+          )
+          rowsSynced++
         }
-
-        campaignSyncResults.push({
-          campaign_id: campaign.id,
-          campaign_name: campaign.name,
-          insights_rows: insightsData.data?.length || 0,
-        })
       }
 
-      // 3. Update last sync timestamp on the database
+      // Update last sync timestamp
       await supabase
         .from('ad_accounts')
         .update({ last_sync_at: new Date().toISOString() })
@@ -113,8 +106,7 @@ export async function GET(req: NextRequest) {
       results.push({
         account_id: account.ad_account_id,
         account_name: account.ad_account_name,
-        campaigns_synced: campaignsToSync.length,
-        campaigns: campaignSyncResults,
+        rows_synced: rowsSynced,
       })
     } catch (err: any) {
       results.push({ account_id: account.ad_account_id, error: err.message })
@@ -125,6 +117,7 @@ export async function GET(req: NextRequest) {
     success: true,
     sync_time: new Date().toISOString(),
     api_calls_made: totalApiCalls,
+    accounts_synced: results.length,
     results,
   })
 }
