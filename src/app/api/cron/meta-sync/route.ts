@@ -61,18 +61,46 @@ export async function GET(req: NextRequest) {
       const campaigns = campaignsData.data || []
       const campaignSyncResults: any[] = []
 
-      // 2. Fetch insights for each campaign individually to maximize API call count (up to 5 campaigns per account)
+      // 2. Fetch daily insights for each campaign and upsert into ad_insights_cache
       const campaignsToSync = campaigns.slice(0, 5)
       for (const campaign of campaignsToSync) {
         const insightsRes = await fetch(
-          `${GRAPH_API}/${campaign.id}/insights?fields=impressions,clicks,spend,ctr,cpc,cpm&time_range={'since':'2026-01-01','until':'2026-12-31'}&access_token=${accessToken}`
+          `${GRAPH_API}/${campaign.id}/insights?fields=impressions,clicks,spend,ctr,cpc,cpm,reach,actions,action_values&time_increment=1&time_range={'since':'2026-01-01','until':'2026-12-31'}&access_token=${accessToken}`
         )
         totalApiCalls++
         const insightsData = await insightsRes.json()
+
+        if (insightsData.data && insightsData.data.length > 0) {
+          for (const row of insightsData.data) {
+            const leads = row.actions
+              ? row.actions.find((a: any) => a.action_type === 'lead')?.value || 0
+              : 0
+
+            await supabase.from('ad_insights_cache').upsert(
+              {
+                ad_account_id: account.ad_account_id,
+                campaign_id: campaign.id,
+                campaign_name: campaign.name,
+                spend: parseFloat(row.spend || '0'),
+                clicks: parseInt(row.clicks || '0'),
+                impressions: parseInt(row.impressions || '0'),
+                reach: parseInt(row.reach || '0'),
+                leads: parseInt(leads),
+                cpc: parseFloat(row.cpc || '0'),
+                cpm: parseFloat(row.cpm || '0'),
+                ctr: parseFloat(row.ctr || '0'),
+                cost_per_lead: leads > 0 ? parseFloat(row.spend || '0') / parseInt(leads) : 0,
+                date: row.date_start,
+              },
+              { onConflict: 'ad_account_id,campaign_id,date' }
+            )
+          }
+        }
+
         campaignSyncResults.push({
           campaign_id: campaign.id,
           campaign_name: campaign.name,
-          insights: insightsData.data || null,
+          insights_rows: insightsData.data?.length || 0,
         })
       }
 

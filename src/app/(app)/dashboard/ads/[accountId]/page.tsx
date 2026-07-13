@@ -101,12 +101,18 @@ export default function CampaignListPage() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
           </svg>
         </Link>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-black text-slate-950">Campanhas</h1>
           <p className="mt-1 text-sm text-slate-500">
             Conta: {accountId} • {campaigns.length} campanhas
           </p>
         </div>
+        <Link
+          href={`/dashboard/ads/${accountId}/attribution`}
+          className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-700"
+        >
+          Ver Atribuição & Lucro
+        </Link>
       </div>
 
       {campaigns.length === 0 ? (
