@@ -69,9 +69,9 @@ export function CheckoutForm({
   const [postalCodeAddress, setPostalCodeAddress] = useState<CepAddress | null>(null)
   const [postalCodeError, setPostalCodeError] = useState<string | null>(null)
   const [searchingPostalCode, setSearchingPostalCode] = useState(false)
+  const [trackingParams, setTrackingParams] = useState<Record<string, string> | undefined>(undefined)
 
-  // Capture tracking params from URL on mount
-  const trackingParams = useMemo(() => {
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const result: Record<string, string> = {}
     const knownParams = [
@@ -82,13 +82,12 @@ export function CheckoutForm({
       const val = params.get(key)
       if (val) result[key] = val
     }
-    // Capture fbp / fbc from cookies
     const cookies = document.cookie.split('; ')
     for (const c of cookies) {
       const [k, v] = c.split('=', 2) as [string, string | undefined]
       if ((k === '_fbp' || k === '_fbc') && v) result[k] = v
     }
-    return Object.keys(result).length > 0 ? result : undefined
+    setTrackingParams(Object.keys(result).length > 0 ? result : undefined)
   }, [])
 
   async function searchPostalCode() {
