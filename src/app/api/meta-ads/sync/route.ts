@@ -3,6 +3,26 @@ import { createClient } from '@/utils/supabase/server'
 import { getDecryptedToken } from '@/lib/meta-oauth'
 
 const GRAPH_API = 'https://graph.facebook.com/v21.0'
+const MAX_CALLS_PER_HOUR = 200
+
+async function getUsage(supabase: any, userId: string) {
+  const { data } = await supabase
+    .from('meta_api_usage')
+    .select('calls_made')
+    .eq('user_id', userId)
+    .gte('window_start', new Date(new Date().setMinutes(0, 0, 0)).toISOString())
+
+  return (data || []).reduce((sum: number, row: any) => sum + row.calls_made, 0)
+}
+
+async function recordUsage(supabase: any, userId: string, calls: number) {
+  await supabase.from('meta_api_usage').insert({
+    user_id: userId,
+    endpoint: 'sync',
+    calls_made: calls,
+    window_start: new Date().toISOString(),
+  })
+}
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -10,6 +30,18 @@ export async function POST(req: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Check rate limit BEFORE making any API calls
+  const currentUsage = await getUsage(supabase, user.id)
+  if (currentUsage >= MAX_CALLS_PER_HOUR) {
+    const resetAt = new Date(new Date().setHours(new Date().getHours() + 1, 0, 0, 0))
+    return NextResponse.json({
+      error: 'Rate limit exceeded',
+      current_usage: currentUsage,
+      max_calls: MAX_CALLS_PER_HOUR,
+      reset_at: resetAt.toISOString(),
+    }, { status: 429 })
   }
 
   const body = await req.json()
@@ -47,6 +79,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: insightsData.error.message }, { status: 500 })
     }
 
+    // Record this API call (1 call made)
+    await recordUsage(supabase, user.id, 1)
+
     // Upsert each row into ad_insights_cache
     let rowsSynced = 0
     if (insightsData.data && insightsData.data.length > 0) {
@@ -83,11 +118,20 @@ export async function POST(req: NextRequest) {
       .update({ last_sync_at: new Date().toISOString() })
       .eq('id', account.id)
 
+    // Get updated usage
+    const updatedUsage = await getUsage(supabase, user.id)
+
     return NextResponse.json({
       success: true,
       account_id: ad_account_id,
       rows_synced: rowsSynced,
       synced_at: new Date().toISOString(),
+      api_usage: {
+        current: updatedUsage,
+        max: MAX_CALLS_PER_HOUR,
+        remaining: MAX_CALLS_PER_HOUR - updatedUsage,
+        reset_at: new Date(new Date().setHours(new Date().getHours() + 1, 0, 0, 0)).toISOString(),
+      },
     })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
@@ -121,4 +165,23 @@ export async function PATCH(req: NextRequest) {
   }
 
   return NextResponse.json({ success: true, sync_enabled })
+}
+
+// GET: Return current API usage
+export async function GET(req: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const usage = await getUsage(supabase, user.id)
+
+  return NextResponse.json({
+    current_usage: usage,
+    max_calls: MAX_CALLS_PER_HOUR,
+    remaining: MAX_CALLS_PER_HOUR - usage,
+    reset_at: new Date(new Date().setHours(new Date().getHours() + 1, 0, 0, 0)).toISOString(),
+  })
 }

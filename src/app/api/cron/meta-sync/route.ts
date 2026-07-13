@@ -3,6 +3,25 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { getDecryptedToken } from '@/lib/meta-oauth'
 
 const GRAPH_API = 'https://graph.facebook.com/v21.0'
+const MAX_CALLS_PER_HOUR = 200
+
+async function getUserUsage(supabase: any, userId: string) {
+  const { data } = await supabase
+    .from('meta_api_usage')
+    .select('calls_made')
+    .eq('user_id', userId)
+    .gte('window_start', new Date(new Date().setMinutes(0, 0, 0)).toISOString())
+  return (data || []).reduce((sum: number, row: any) => sum + row.calls_made, 0)
+}
+
+async function recordUserUsage(supabase: any, userId: string, calls: number) {
+  await supabase.from('meta_api_usage').insert({
+    user_id: userId,
+    endpoint: 'cron-sync',
+    calls_made: calls,
+    window_start: new Date().toISOString(),
+  })
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -45,8 +64,21 @@ export async function GET(req: NextRequest) {
 
   const results: any[] = []
   let totalApiCalls = 0
+  const skippedUsers: string[] = []
 
   for (const account of adAccounts) {
+    // Check rate limit for this user BEFORE making API calls
+    const userUsage = await getUserUsage(supabase, account.user_id)
+    if (userUsage >= MAX_CALLS_PER_HOUR) {
+      skippedUsers.push(account.user_id)
+      results.push({
+        account_id: account.ad_account_id,
+        error: 'Rate limit reached for this user',
+        usage: userUsage,
+      })
+      continue
+    }
+
     const accessToken = await getDecryptedToken(account.ad_account_id, account.user_id)
     if (!accessToken) {
       results.push({ account_id: account.ad_account_id, error: 'Token decryption failed' })
@@ -55,11 +87,14 @@ export async function GET(req: NextRequest) {
 
     try {
       // 1 API call: Fetch campaign-level insights for the account
-      // This returns all campaigns with their metrics in a single call
       const insightsRes = await fetch(
         `${GRAPH_API}/act_${account.ad_account_id}/insights?fields=campaign_id,campaign_name,impressions,clicks,spend,ctr,cpc,cpm,reach,actions,action_values&level=campaign&time_increment=1&time_range={'since':'2026-01-01','until':'2026-12-31'}&access_token=${accessToken}`
       )
       totalApiCalls++
+
+      // Record this API call for the user
+      await recordUserUsage(supabase, account.user_id, 1)
+
       const insightsData = await insightsRes.json()
 
       if (insightsData.error) {
@@ -118,6 +153,7 @@ export async function GET(req: NextRequest) {
     sync_time: new Date().toISOString(),
     api_calls_made: totalApiCalls,
     accounts_synced: results.length,
+    skipped_rate_limit: skippedUsers.length,
     results,
   })
 }

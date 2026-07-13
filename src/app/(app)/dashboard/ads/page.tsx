@@ -13,6 +13,13 @@ type AdAccount = {
   created_at: string
 }
 
+type ApiUsage = {
+  current_usage: number
+  max_calls: number
+  remaining: number
+  reset_at: string
+}
+
 function formatTimeAgo(dateStr: string | null) {
   if (!dateStr) return 'Nunca sincronizado'
   const now = new Date()
@@ -27,13 +34,21 @@ function formatTimeAgo(dateStr: string | null) {
   return `Há ${diffDays}d`
 }
 
+function formatResetTime(dateStr: string) {
+  const date = new Date(dateStr)
+  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
+
 export default function AdsPage() {
   const [accounts, setAccounts] = useState<AdAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [syncingId, setSyncingId] = useState<string | null>(null)
+  const [apiUsage, setApiUsage] = useState<ApiUsage | null>(null)
+  const [syncError, setSyncError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAccounts()
+    fetchApiUsage()
   }, [])
 
   async function fetchAccounts() {
@@ -48,17 +63,45 @@ export default function AdsPage() {
     }
   }
 
+  async function fetchApiUsage() {
+    try {
+      const res = await fetch('/api/meta-ads/sync')
+      const data = await res.json()
+      setApiUsage(data)
+    } catch {
+      // Ignore
+    }
+  }
+
   async function handleSync(accountId: string) {
     setSyncingId(accountId)
+    setSyncError(null)
     try {
-      await fetch('/api/meta-ads/sync', {
+      const res = await fetch('/api/meta-ads/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ad_account_id: accountId }),
       })
-      fetchAccounts()
+      const data = await res.json()
+
+      if (res.status === 429) {
+        setSyncError(`Limite de API atingido. Reseta às ${formatResetTime(data.reset_at)}`)
+      } else if (data.error) {
+        setSyncError(data.error)
+      } else {
+        // Update usage from response
+        if (data.api_usage) {
+          setApiUsage({
+            current_usage: data.api_usage.current,
+            max_calls: data.api_usage.max,
+            remaining: data.api_usage.remaining,
+            reset_at: data.api_usage.reset_at,
+          })
+        }
+        fetchAccounts()
+      }
     } catch (err) {
-      console.error('Sync failed:', err)
+      setSyncError('Erro ao sincronizar')
     } finally {
       setSyncingId(null)
     }
@@ -81,6 +124,8 @@ export default function AdsPage() {
     }
   }
 
+  const isRateLimited = apiUsage ? apiUsage.remaining <= 0 : false
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -100,6 +145,47 @@ export default function AdsPage() {
           Conectar conta Meta
         </a>
       </div>
+
+      {/* API Usage Indicator */}
+      {apiUsage && (
+        <div className={`rounded-2xl border p-4 ${isRateLimited ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-white'}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${isRateLimited ? 'bg-amber-100' : 'bg-blue-50'}`}>
+                <svg className={`h-5 w-5 ${isRateLimited ? 'text-amber-600' : 'text-blue-600'}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-900">
+                  Uso da API Meta: {apiUsage.current_usage} / {apiUsage.max_calls}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {isRateLimited
+                    ? `Limite atingido. Reseta às ${formatResetTime(apiUsage.reset_at)}`
+                    : `${apiUsage.remaining} chamadas restantes nesta hora`
+                  }
+                </p>
+              </div>
+            </div>
+            <div className="h-2 w-32 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  isRateLimited ? 'bg-amber-500' : apiUsage.current_usage > 150 ? 'bg-amber-400' : 'bg-emerald-500'
+                }`}
+                style={{ width: `${Math.min(100, (apiUsage.current_usage / apiUsage.max_calls) * 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sync Error */}
+      {syncError && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+          <p className="text-sm font-medium text-red-700">{syncError}</p>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -152,8 +238,9 @@ export default function AdsPage() {
                   {/* Manual sync button */}
                   <button
                     onClick={() => handleSync(account.ad_account_id)}
-                    disabled={syncingId === account.ad_account_id}
-                    className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                    disabled={syncingId === account.ad_account_id || isRateLimited}
+                    className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    title={isRateLimited ? 'Limite de API atingido' : ''}
                   >
                     {syncingId === account.ad_account_id ? (
                       <span className="flex items-center gap-2">
