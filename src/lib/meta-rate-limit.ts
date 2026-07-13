@@ -115,11 +115,22 @@ export async function getUserHourlyUsage(supabase: any, userId: string): Promise
   return (data || []).reduce((sum: number, row: any) => sum + row.calls_made, 0)
 }
 
-// Our internal safety limit (conservative, to avoid hitting Meta's actual limits)
-// This is a soft limit - we primarily rely on Meta's response headers
-export const INTERNAL_CALLS_LIMIT_PER_HOUR = 1000
+// App-level limit: 200 calls × number of users (rolling 1 hour window)
+// Conservative: assume up to 20 active users = 4000 calls/hour app total
+// Individual sync makes 6 calls per account
+export const APP_LEVEL_CALLS_LIMIT_PER_HOUR = 4000
 
-export async function checkInternalLimit(supabase: any, userId: string): Promise<boolean> {
-  const usage = await getUserHourlyUsage(supabase, userId)
-  return usage < INTERNAL_CALLS_LIMIT_PER_HOUR
+// Check app-wide usage across ALL users (not per-user)
+export async function checkAppLevelLimit(supabase: any): Promise<{ allowed: boolean; appUsage: number }> {
+  const oneHourAgo = new Date(new Date().setMinutes(0, 0, 0)).toISOString()
+  const { data } = await supabase
+    .from('meta_api_usage')
+    .select('calls_made')
+    .gte('window_start', oneHourAgo)
+
+  const appUsage = (data || []).reduce((sum: number, row: any) => sum + row.calls_made, 0)
+  return {
+    allowed: appUsage < APP_LEVEL_CALLS_LIMIT_PER_HOUR,
+    appUsage,
+  }
 }

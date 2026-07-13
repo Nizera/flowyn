@@ -5,9 +5,9 @@ import { requireProPlan } from '@/lib/subscription'
 import {
   parseMetaRateLimitHeader,
   checkSyncBudget,
-  getUserHourlyUsage,
+  checkAppLevelLimit,
   trackAdAccountUsage,
-  INTERNAL_CALLS_LIMIT_PER_HOUR,
+  APP_LEVEL_CALLS_LIMIT_PER_HOUR,
 } from '@/lib/meta-rate-limit'
 
 const GRAPH_API = 'https://graph.facebook.com/v21.0'
@@ -26,14 +26,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Subscription required' }, { status: 403 })
   }
 
-  // Check internal safety limit BEFORE making any API calls
-  const currentUsage = await getUserHourlyUsage(supabase, user.id)
-  if (currentUsage >= INTERNAL_CALLS_LIMIT_PER_HOUR) {
+  // Check app-wide safety limit BEFORE making any API calls
+  const { allowed: appAllowed, appUsage } = await checkAppLevelLimit(supabase)
+  if (!appAllowed) {
     const resetAt = new Date(new Date().setHours(new Date().getHours() + 1, 0, 0, 0))
     return NextResponse.json({
-      error: 'Internal rate limit exceeded',
-      current_usage: currentUsage,
-      max_calls: INTERNAL_CALLS_LIMIT_PER_HOUR,
+      error: 'App-wide rate limit exceeded',
+      app_usage: appUsage,
+      app_max: APP_LEVEL_CALLS_LIMIT_PER_HOUR,
       reset_at: resetAt.toISOString(),
     }, { status: 429 })
   }
@@ -131,8 +131,8 @@ export async function POST(req: NextRequest) {
       .update({ last_sync_at: new Date().toISOString() })
       .eq('id', account.id)
 
-    // Get updated usage
-    const updatedUsage = await getUserHourlyUsage(supabase, user.id)
+    // Get updated app-wide usage
+    const { appUsage: updatedAppUsage } = await checkAppLevelLimit(supabase)
 
     return NextResponse.json({
       success: true,
@@ -140,9 +140,9 @@ export async function POST(req: NextRequest) {
       rows_synced: rowsSynced,
       synced_at: new Date().toISOString(),
       api_usage: {
-        current: updatedUsage,
-        max: INTERNAL_CALLS_LIMIT_PER_HOUR,
-        remaining: INTERNAL_CALLS_LIMIT_PER_HOUR - updatedUsage,
+        app_current: updatedAppUsage,
+        app_max: APP_LEVEL_CALLS_LIMIT_PER_HOUR,
+        app_remaining: APP_LEVEL_CALLS_LIMIT_PER_HOUR - updatedAppUsage,
         reset_at: new Date(new Date().setHours(new Date().getHours() + 1, 0, 0, 0)).toISOString(),
       },
       meta_rate_limit: metaRateLimitInfo ? {
@@ -207,12 +207,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Subscription required' }, { status: 403 })
   }
 
-  const usage = await getUserHourlyUsage(supabase, user.id)
+  const { appUsage } = await checkAppLevelLimit(supabase)
 
   return NextResponse.json({
-    current_usage: usage,
-    max_calls: INTERNAL_CALLS_LIMIT_PER_HOUR,
-    remaining: INTERNAL_CALLS_LIMIT_PER_HOUR - usage,
+    app_current_usage: appUsage,
+    app_max_calls: APP_LEVEL_CALLS_LIMIT_PER_HOUR,
+    app_remaining: APP_LEVEL_CALLS_LIMIT_PER_HOUR - appUsage,
     reset_at: new Date(new Date().setHours(new Date().getHours() + 1, 0, 0, 0)).toISOString(),
   })
 }

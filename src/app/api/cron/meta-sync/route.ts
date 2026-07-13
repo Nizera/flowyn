@@ -4,9 +4,9 @@ import { getDecryptedToken } from '@/lib/meta-oauth'
 import {
   parseMetaRateLimitHeader,
   checkSyncBudget,
-  getUserHourlyUsage,
+  checkAppLevelLimit,
   trackAdAccountUsage,
-  INTERNAL_CALLS_LIMIT_PER_HOUR,
+  APP_LEVEL_CALLS_LIMIT_PER_HOUR,
 } from '@/lib/meta-rate-limit'
 
 const GRAPH_API = 'https://graph.facebook.com/v21.0'
@@ -61,19 +61,17 @@ export async function GET(req: NextRequest) {
   let totalApiCalls = 0
   const skippedUsers: string[] = []
 
-  for (const account of adAccounts) {
-    // Check internal safety limit for this user BEFORE making API calls
-    const userUsage = await getUserHourlyUsage(supabase, account.user_id)
-    if (userUsage >= INTERNAL_CALLS_LIMIT_PER_HOUR) {
-      skippedUsers.push(account.user_id)
-      results.push({
-        account_id: account.ad_account_id,
-        error: 'Internal rate limit reached for this user',
-        usage: userUsage,
-      })
-      continue
-    }
+  // Check app-wide safety limit before starting
+  const { allowed: appAllowed, appUsage } = await checkAppLevelLimit(supabase)
+  if (!appAllowed) {
+    return NextResponse.json({
+      error: 'App-wide rate limit exceeded',
+      app_usage: appUsage,
+      app_max: APP_LEVEL_CALLS_LIMIT_PER_HOUR,
+    }, { status: 429 })
+  }
 
+  for (const account of adAccounts) {
     const accessToken = await getDecryptedToken(account.ad_account_id, account.user_id)
     if (!accessToken) {
       results.push({ account_id: account.ad_account_id, error: 'Token decryption failed' })
