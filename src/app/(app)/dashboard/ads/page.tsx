@@ -135,19 +135,24 @@ export default function AdsDashboardPage() {
   async function handleSync(accountId: string) {
     if (cooldowns[accountId] > 0) return
     setSyncingId(accountId)
-    try {
-      const res = await fetch('/api/meta-ads/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ad_account_id: accountId }),
-      })
+      try {
+        const res = await fetch('/api/meta-ads/sync-expanded', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ad_account_id: accountId }),
+        })
       const json = await res.json()
-      if (!json.error) {
+      if (json.error) {
+        alert(`Erro: ${json.error}`)
+      } else {
         setCooldowns(prev => ({ ...prev, [accountId]: 60 }))
+        alert('Sincronização concluída!')
         fetchDashboard()
         fetchAccounts()
       }
-    } catch {} finally {
+    } catch (err: any) {
+      alert(`Erro: ${err.message}`)
+    } finally {
       setSyncingId(null)
     }
   }
