@@ -2,28 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { getDecryptedToken } from '@/lib/meta-oauth'
 import { requireProPlan } from '@/lib/subscription'
+import {
+  parseMetaRateLimitHeader,
+  checkSyncBudget,
+  getUserHourlyUsage,
+  trackAdAccountUsage,
+  INTERNAL_CALLS_LIMIT_PER_HOUR,
+} from '@/lib/meta-rate-limit'
 
 const GRAPH_API = 'https://graph.facebook.com/v21.0'
-const MAX_CALLS_PER_HOUR = 200
-
-async function getUsage(supabase: any, userId: string) {
-  const { data } = await supabase
-    .from('meta_api_usage')
-    .select('calls_made')
-    .eq('user_id', userId)
-    .gte('window_start', new Date(new Date().setMinutes(0, 0, 0)).toISOString())
-
-  return (data || []).reduce((sum: number, row: any) => sum + row.calls_made, 0)
-}
-
-async function recordUsage(supabase: any, userId: string, calls: number) {
-  await supabase.from('meta_api_usage').insert({
-    user_id: userId,
-    endpoint: 'sync',
-    calls_made: calls,
-    window_start: new Date().toISOString(),
-  })
-}
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -39,14 +26,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Subscription required' }, { status: 403 })
   }
 
-  // Check rate limit BEFORE making any API calls
-  const currentUsage = await getUsage(supabase, user.id)
-  if (currentUsage >= MAX_CALLS_PER_HOUR) {
+  // Check internal safety limit BEFORE making any API calls
+  const currentUsage = await getUserHourlyUsage(supabase, user.id)
+  if (currentUsage >= INTERNAL_CALLS_LIMIT_PER_HOUR) {
     const resetAt = new Date(new Date().setHours(new Date().getHours() + 1, 0, 0, 0))
     return NextResponse.json({
-      error: 'Rate limit exceeded',
+      error: 'Internal rate limit exceeded',
       current_usage: currentUsage,
-      max_calls: MAX_CALLS_PER_HOUR,
+      max_calls: INTERNAL_CALLS_LIMIT_PER_HOUR,
       reset_at: resetAt.toISOString(),
     }, { status: 429 })
   }
@@ -80,14 +67,33 @@ export async function POST(req: NextRequest) {
     const insightsRes = await fetch(
       `${GRAPH_API}/act_${ad_account_id}/insights?fields=campaign_id,campaign_name,impressions,clicks,spend,ctr,cpc,cpm,reach,actions,action_values&level=campaign&time_increment=1&time_range={'since':'2026-01-01','until':'2026-12-31'}&access_token=${accessToken}`
     )
+
+    // Read Meta's rate limit headers from response
+    const metaRateHeader = insightsRes.headers.get('x-business-use-case-usage')
+      || insightsRes.headers.get('x-ad-account-usage')
+      || insightsRes.headers.get('x-fb-ads-insights-throttle')
+    const metaRateLimitInfo = parseMetaRateLimitHeader(metaRateHeader)
+
+    // Check Meta's actual rate limit budget before proceeding
+    const budget = checkSyncBudget(metaRateLimitInfo)
+    if (!budget.allowed) {
+      return NextResponse.json({
+        error: 'Meta API rate limit exceeded',
+        tier: budget.tier,
+        throttle_percentage: budget.throttlePercentage,
+        retry_after_seconds: budget.retryAfterSeconds,
+        meta_limit: true,
+      }, { status: 429 })
+    }
+
     const insightsData = await insightsRes.json()
 
     if (insightsData.error) {
       return NextResponse.json({ error: insightsData.error.message }, { status: 500 })
     }
 
-    // Record this API call (1 call made)
-    await recordUsage(supabase, user.id, 1)
+    // Record this API call (1 call made) + Meta's actual rate limit info
+    await trackAdAccountUsage(user.id, ad_account_id, 1, metaRateHeader)
 
     // Upsert each row into ad_insights_cache
     let rowsSynced = 0
@@ -126,7 +132,7 @@ export async function POST(req: NextRequest) {
       .eq('id', account.id)
 
     // Get updated usage
-    const updatedUsage = await getUsage(supabase, user.id)
+    const updatedUsage = await getUserHourlyUsage(supabase, user.id)
 
     return NextResponse.json({
       success: true,
@@ -135,10 +141,16 @@ export async function POST(req: NextRequest) {
       synced_at: new Date().toISOString(),
       api_usage: {
         current: updatedUsage,
-        max: MAX_CALLS_PER_HOUR,
-        remaining: MAX_CALLS_PER_HOUR - updatedUsage,
+        max: INTERNAL_CALLS_LIMIT_PER_HOUR,
+        remaining: INTERNAL_CALLS_LIMIT_PER_HOUR - updatedUsage,
         reset_at: new Date(new Date().setHours(new Date().getHours() + 1, 0, 0, 0)).toISOString(),
       },
+      meta_rate_limit: metaRateLimitInfo ? {
+        tier: metaRateLimitInfo.ads_api_access_tier,
+        throttle_percentage: Math.max(metaRateLimitInfo.app_id_util_pct, metaRateLimitInfo.acc_id_util_pct),
+        app_util_pct: metaRateLimitInfo.app_id_util_pct,
+        account_util_pct: metaRateLimitInfo.acc_id_util_pct,
+      } : null,
     })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
@@ -195,12 +207,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Subscription required' }, { status: 403 })
   }
 
-  const usage = await getUsage(supabase, user.id)
+  const usage = await getUserHourlyUsage(supabase, user.id)
 
   return NextResponse.json({
     current_usage: usage,
-    max_calls: MAX_CALLS_PER_HOUR,
-    remaining: MAX_CALLS_PER_HOUR - usage,
+    max_calls: INTERNAL_CALLS_LIMIT_PER_HOUR,
+    remaining: INTERNAL_CALLS_LIMIT_PER_HOUR - usage,
     reset_at: new Date(new Date().setHours(new Date().getHours() + 1, 0, 0, 0)).toISOString(),
   })
 }

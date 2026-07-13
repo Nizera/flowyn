@@ -2,27 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { getDecryptedToken } from '@/lib/meta-oauth'
 import { requireProPlan } from '@/lib/subscription'
+import {
+  parseMetaRateLimitHeader,
+  checkSyncBudget,
+  getUserHourlyUsage,
+  trackAdAccountUsage,
+  INTERNAL_CALLS_LIMIT_PER_HOUR,
+} from '@/lib/meta-rate-limit'
 
 const GRAPH_API = 'https://graph.facebook.com/v21.0'
-const MAX_CALLS_PER_HOUR = 200
-
-async function getUsage(supabase: any, userId: string) {
-  const { data } = await supabase
-    .from('meta_api_usage')
-    .select('calls_made')
-    .eq('user_id', userId)
-    .gte('window_start', new Date(new Date().setMinutes(0, 0, 0)).toISOString())
-  return (data || []).reduce((sum: number, row: any) => sum + row.calls_made, 0)
-}
-
-async function recordUsage(supabase: any, userId: string, calls: number) {
-  await supabase.from('meta_api_usage').insert({
-    user_id: userId,
-    endpoint: 'sync-expanded',
-    calls_made: calls,
-    window_start: new Date().toISOString(),
-  })
-}
 
 function extractActions(actions: any[] | undefined, type: string): number {
   if (!actions) return 0
@@ -47,6 +35,21 @@ function getDateRange() {
   return JSON.stringify({ since: `${year}-01-01`, until: `${year}-12-31` })
 }
 
+// Helper to make API call with rate limit header extraction
+async function metaApiCall(url: string): Promise<{ data: any; rateLimitHeader: string | null }> {
+  const res = await fetch(url)
+  const rateLimitHeader = res.headers.get('x-business-use-case-usage')
+    || res.headers.get('x-ad-account-usage')
+    || res.headers.get('x-fb-ads-insights-throttle')
+  const data = await res.json()
+  return { data, rateLimitHeader }
+}
+
+// Delay between API calls to pace requests (avoid burst throttling)
+function delay(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -68,14 +71,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'ad_account_id required' }, { status: 400 })
   }
 
-  // Check rate limit
-  const currentUsage = await getUsage(supabase, user.id)
-  if (currentUsage >= MAX_CALLS_PER_HOUR) {
+  // Check internal safety limit
+  const currentUsage = await getUserHourlyUsage(supabase, user.id)
+  if (currentUsage >= INTERNAL_CALLS_LIMIT_PER_HOUR) {
     const resetAt = new Date(new Date().setHours(new Date().getHours() + 1, 0, 0, 0))
     return NextResponse.json({
-      error: 'Rate limit exceeded',
+      error: 'Internal rate limit exceeded',
       current_usage: currentUsage,
-      max_calls: MAX_CALLS_PER_HOUR,
+      max_calls: INTERNAL_CALLS_LIMIT_PER_HOUR,
       reset_at: resetAt.toISOString(),
     }, { status: 429 })
   }
@@ -102,14 +105,28 @@ export async function POST(req: NextRequest) {
   let totalRowsSynced = 0
   const errors: string[] = []
   const timeRange = getDateRange()
+  let lastMetaRateLimit: any = null
 
   try {
     // 1. Sync Campaigns (1 API call)
-    const campaignsRes = await fetch(
+    const { data: campaignsData, rateLimitHeader: campaignsRateHeader } = await metaApiCall(
       `${GRAPH_API}/act_${ad_account_id}/campaigns?fields=id,name,status,effective_status,objective,buying_type,daily_budget,lifetime_budget,bid_strategy,special_ad_categories,created_time,updated_time&limit=500&access_token=${accessToken}`
     )
     totalApiCalls++
-    const campaignsData = await campaignsRes.json()
+    lastMetaRateLimit = parseMetaRateLimitHeader(campaignsRateHeader)
+
+    // Check Meta's rate limit budget before continuing
+    const budget = checkSyncBudget(lastMetaRateLimit)
+    if (!budget.allowed) {
+      return NextResponse.json({
+        error: 'Meta API rate limit exceeded',
+        tier: budget.tier,
+        throttle_percentage: budget.throttlePercentage,
+        retry_after_seconds: budget.retryAfterSeconds,
+        api_calls_made: totalApiCalls,
+        partial_sync: true,
+      }, { status: 429 })
+    }
 
     if (campaignsData.error) {
       errors.push(`Campaigns: ${campaignsData.error.message}`)
@@ -137,12 +154,26 @@ export async function POST(req: NextRequest) {
       totalRowsSynced += campaignsData.data.length
     }
 
-    // 2. Sync Ad Sets (1 API call)
-    const adsetsRes = await fetch(
+    // 2. Sync Ad Sets (1 API call) — pace with delay
+    await delay(100)
+    const { data: adsetsData, rateLimitHeader: adsetsRateHeader } = await metaApiCall(
       `${GRAPH_API}/act_${ad_account_id}/adsets?fields=id,name,campaign_id,status,effective_status,optimization_goal,billing_event,bid_strategy,bid_amount,budget_remaining,daily_budget,lifetime_budget,start_time,end_time,targeting&limit=500&access_token=${accessToken}`
     )
     totalApiCalls++
-    const adsetsData = await adsetsRes.json()
+    lastMetaRateLimit = parseMetaRateLimitHeader(adsetsRateHeader)
+
+    const adsetsBudget = checkSyncBudget(lastMetaRateLimit)
+    if (!adsetsBudget.allowed) {
+      return NextResponse.json({
+        error: 'Meta API rate limit exceeded',
+        tier: adsetsBudget.tier,
+        throttle_percentage: adsetsBudget.throttlePercentage,
+        retry_after_seconds: adsetsBudget.retryAfterSeconds,
+        api_calls_made: totalApiCalls,
+        rows_synced: totalRowsSynced,
+        partial_sync: true,
+      }, { status: 429 })
+    }
 
     if (adsetsData.error) {
       errors.push(`AdSets: ${adsetsData.error.message}`)
@@ -173,12 +204,26 @@ export async function POST(req: NextRequest) {
       totalRowsSynced += adsetsData.data.length
     }
 
-    // 3. Sync Ads + Creatives (1 API call)
-    const adsRes = await fetch(
+    // 3. Sync Ads + Creatives (1 API call) — pace with delay
+    await delay(100)
+    const { data: adsData, rateLimitHeader: adsRateHeader } = await metaApiCall(
       `${GRAPH_API}/act_${ad_account_id}/ads?fields=id,name,adset_id,campaign_id,status,effective_status,creative{id,name,object_story_spec,effective_object_story_id,url_tags},tracking_specs,ad_review_feedback&limit=500&access_token=${accessToken}`
     )
     totalApiCalls++
-    const adsData = await adsRes.json()
+    lastMetaRateLimit = parseMetaRateLimitHeader(adsRateHeader)
+
+    const adsBudget = checkSyncBudget(lastMetaRateLimit)
+    if (!adsBudget.allowed) {
+      return NextResponse.json({
+        error: 'Meta API rate limit exceeded',
+        tier: adsBudget.tier,
+        throttle_percentage: adsBudget.throttlePercentage,
+        retry_after_seconds: adsBudget.retryAfterSeconds,
+        api_calls_made: totalApiCalls,
+        rows_synced: totalRowsSynced,
+        partial_sync: true,
+      }, { status: 429 })
+    }
 
     if (adsData.error) {
       errors.push(`Ads: ${adsData.error.message}`)
@@ -217,12 +262,26 @@ export async function POST(req: NextRequest) {
       totalRowsSynced += adsData.data.length
     }
 
-    // 4. Campaign-level insights (1 API call)
-    const campaignInsightsRes = await fetch(
+    // 4. Campaign-level insights (1 API call) — pace with delay
+    await delay(100)
+    const { data: campaignInsightsData, rateLimitHeader: campaignInsightsRateHeader } = await metaApiCall(
       `${GRAPH_API}/act_${ad_account_id}/insights?fields=campaign_id,campaign_name,impressions,clicks,spend,ctr,cpc,cpm,reach,frequency,actions,action_values,quality_ranking,engagement_rate_ranking,conversion_rate_ranking&level=campaign&time_increment=1&time_range=${timeRange}&access_token=${accessToken}`
     )
     totalApiCalls++
-    const campaignInsightsData = await campaignInsightsRes.json()
+    lastMetaRateLimit = parseMetaRateLimitHeader(campaignInsightsRateHeader)
+
+    const campaignInsightsBudget = checkSyncBudget(lastMetaRateLimit)
+    if (!campaignInsightsBudget.allowed) {
+      return NextResponse.json({
+        error: 'Meta API rate limit exceeded',
+        tier: campaignInsightsBudget.tier,
+        throttle_percentage: campaignInsightsBudget.throttlePercentage,
+        retry_after_seconds: campaignInsightsBudget.retryAfterSeconds,
+        api_calls_made: totalApiCalls,
+        rows_synced: totalRowsSynced,
+        partial_sync: true,
+      }, { status: 429 })
+    }
 
     if (campaignInsightsData.error) {
       errors.push(`Campaign Insights: ${campaignInsightsData.error.message}`)
@@ -264,12 +323,26 @@ export async function POST(req: NextRequest) {
       totalRowsSynced += campaignInsightsData.data.length
     }
 
-    // 5. Ad Set-level insights (1 API call)
-    const adsetInsightsRes = await fetch(
+    // 5. Ad Set-level insights (1 API call) — pace with delay
+    await delay(100)
+    const { data: adsetInsightsData, rateLimitHeader: adsetInsightsRateHeader } = await metaApiCall(
       `${GRAPH_API}/act_${ad_account_id}/insights?fields=campaign_id,adset_id,adset_name,impressions,clicks,spend,ctr,cpc,cpm,reach,frequency,actions,action_values&level=adset&time_increment=1&time_range=${timeRange}&access_token=${accessToken}`
     )
     totalApiCalls++
-    const adsetInsightsData = await adsetInsightsRes.json()
+    lastMetaRateLimit = parseMetaRateLimitHeader(adsetInsightsRateHeader)
+
+    const adsetInsightsBudget = checkSyncBudget(lastMetaRateLimit)
+    if (!adsetInsightsBudget.allowed) {
+      return NextResponse.json({
+        error: 'Meta API rate limit exceeded',
+        tier: adsetInsightsBudget.tier,
+        throttle_percentage: adsetInsightsBudget.throttlePercentage,
+        retry_after_seconds: adsetInsightsBudget.retryAfterSeconds,
+        api_calls_made: totalApiCalls,
+        rows_synced: totalRowsSynced,
+        partial_sync: true,
+      }, { status: 429 })
+    }
 
     if (adsetInsightsData.error) {
       errors.push(`AdSet Insights: ${adsetInsightsData.error.message}`)
@@ -308,12 +381,13 @@ export async function POST(req: NextRequest) {
       totalRowsSynced += adsetInsightsData.data.length
     }
 
-    // 6. Ad-level insights (1 API call)
-    const adInsightsRes = await fetch(
+    // 6. Ad-level insights (1 API call) — pace with delay
+    await delay(100)
+    const { data: adInsightsData, rateLimitHeader: adInsightsRateHeader } = await metaApiCall(
       `${GRAPH_API}/act_${ad_account_id}/insights?fields=campaign_id,adset_id,ad_id,ad_name,impressions,clicks,spend,ctr,cpc,cpm,reach,frequency,actions,action_values&level=ad&time_increment=1&time_range=${timeRange}&access_token=${accessToken}`
     )
     totalApiCalls++
-    const adInsightsData = await adInsightsRes.json()
+    lastMetaRateLimit = parseMetaRateLimitHeader(adInsightsRateHeader)
 
     if (adInsightsData.error) {
       errors.push(`Ad Insights: ${adInsightsData.error.message}`)
@@ -358,8 +432,8 @@ export async function POST(req: NextRequest) {
       .update({ last_sync_at: new Date().toISOString() })
       .eq('id', account.id)
 
-    // Record usage
-    await recordUsage(supabase, user.id, totalApiCalls)
+    // Record usage with Meta's actual rate limit info
+    await trackAdAccountUsage(user.id, ad_account_id, totalApiCalls, lastMetaRateLimit ? JSON.stringify(lastMetaRateLimit) : null)
 
     // Log sync
     await supabase.from('sync_logs').insert({
@@ -374,7 +448,7 @@ export async function POST(req: NextRequest) {
       completed_at: new Date().toISOString(),
     })
 
-    const updatedUsage = await getUsage(supabase, user.id)
+    const updatedUsage = await getUserHourlyUsage(supabase, user.id)
 
     return NextResponse.json({
       success: true,
@@ -386,10 +460,16 @@ export async function POST(req: NextRequest) {
       synced_at: new Date().toISOString(),
       api_usage: {
         current: updatedUsage,
-        max: MAX_CALLS_PER_HOUR,
-        remaining: MAX_CALLS_PER_HOUR - updatedUsage,
+        max: INTERNAL_CALLS_LIMIT_PER_HOUR,
+        remaining: INTERNAL_CALLS_LIMIT_PER_HOUR - updatedUsage,
         reset_at: new Date(new Date().setHours(new Date().getHours() + 1, 0, 0, 0)).toISOString(),
       },
+      meta_rate_limit: lastMetaRateLimit ? {
+        tier: lastMetaRateLimit.ads_api_access_tier,
+        throttle_percentage: Math.max(lastMetaRateLimit.app_id_util_pct, lastMetaRateLimit.acc_id_util_pct),
+        app_util_pct: lastMetaRateLimit.app_id_util_pct,
+        account_util_pct: lastMetaRateLimit.acc_id_util_pct,
+      } : null,
     })
   } catch (err: any) {
     // Log failed sync

@@ -1,26 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { getDecryptedToken } from '@/lib/meta-oauth'
+import {
+  parseMetaRateLimitHeader,
+  checkSyncBudget,
+  getUserHourlyUsage,
+  trackAdAccountUsage,
+  INTERNAL_CALLS_LIMIT_PER_HOUR,
+} from '@/lib/meta-rate-limit'
 
 const GRAPH_API = 'https://graph.facebook.com/v21.0'
-const MAX_CALLS_PER_HOUR = 200
 
-async function getUserUsage(supabase: any, userId: string) {
-  const { data } = await supabase
-    .from('meta_api_usage')
-    .select('calls_made')
-    .eq('user_id', userId)
-    .gte('window_start', new Date(new Date().setMinutes(0, 0, 0)).toISOString())
-  return (data || []).reduce((sum: number, row: any) => sum + row.calls_made, 0)
-}
-
-async function recordUserUsage(supabase: any, userId: string, calls: number) {
-  await supabase.from('meta_api_usage').insert({
-    user_id: userId,
-    endpoint: 'cron-sync',
-    calls_made: calls,
-    window_start: new Date().toISOString(),
-  })
+function delay(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 export async function GET(req: NextRequest) {
@@ -70,13 +62,13 @@ export async function GET(req: NextRequest) {
   const skippedUsers: string[] = []
 
   for (const account of adAccounts) {
-    // Check rate limit for this user BEFORE making API calls
-    const userUsage = await getUserUsage(supabase, account.user_id)
-    if (userUsage >= MAX_CALLS_PER_HOUR) {
+    // Check internal safety limit for this user BEFORE making API calls
+    const userUsage = await getUserHourlyUsage(supabase, account.user_id)
+    if (userUsage >= INTERNAL_CALLS_LIMIT_PER_HOUR) {
       skippedUsers.push(account.user_id)
       results.push({
         account_id: account.ad_account_id,
-        error: 'Rate limit reached for this user',
+        error: 'Internal rate limit reached for this user',
         usage: userUsage,
       })
       continue
@@ -89,14 +81,38 @@ export async function GET(req: NextRequest) {
     }
 
     try {
+      // Pace requests to avoid burst throttling
+      await delay(200)
+
       // 1 API call: Fetch campaign-level insights for the account
       const insightsRes = await fetch(
         `${GRAPH_API}/act_${account.ad_account_id}/insights?fields=campaign_id,campaign_name,impressions,clicks,spend,ctr,cpc,cpm,reach,actions,action_values&level=campaign&time_increment=1&time_range={'since':'2026-01-01','until':'2026-12-31'}&access_token=${accessToken}`
       )
       totalApiCalls++
 
-      // Record this API call for the user
-      await recordUserUsage(supabase, account.user_id, 1)
+      // Read Meta's rate limit headers from response
+      const metaRateHeader = insightsRes.headers.get('x-business-use-case-usage')
+        || insightsRes.headers.get('x-ad-account-usage')
+        || insightsRes.headers.get('x-fb-ads-insights-throttle')
+      const metaRateLimitInfo = parseMetaRateLimitHeader(metaRateHeader)
+
+      // Check Meta's actual rate limit budget before continuing with next account
+      const budget = checkSyncBudget(metaRateLimitInfo)
+      if (!budget.allowed) {
+        results.push({
+          account_id: account.ad_account_id,
+          error: 'Meta API rate limit exceeded',
+          tier: budget.tier,
+          throttle_percentage: budget.throttlePercentage,
+          retry_after_seconds: budget.retryAfterSeconds,
+        })
+        // Record usage even on rate limit to track
+        await trackAdAccountUsage(account.user_id, account.ad_account_id, 1, metaRateHeader)
+        break // Stop processing more accounts
+      }
+
+      // Record this API call for the user with Meta's actual rate limit info
+      await trackAdAccountUsage(account.user_id, account.ad_account_id, 1, metaRateHeader)
 
       const insightsData = await insightsRes.json()
 
@@ -145,6 +161,10 @@ export async function GET(req: NextRequest) {
         account_id: account.ad_account_id,
         account_name: account.ad_account_name,
         rows_synced: rowsSynced,
+        meta_rate_limit: metaRateLimitInfo ? {
+          tier: metaRateLimitInfo.ads_api_access_tier,
+          throttle_percentage: Math.max(metaRateLimitInfo.app_id_util_pct, metaRateLimitInfo.acc_id_util_pct),
+        } : null,
       })
     } catch (err: any) {
       results.push({ account_id: account.ad_account_id, error: err.message })
