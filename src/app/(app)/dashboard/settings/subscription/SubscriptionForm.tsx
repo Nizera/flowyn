@@ -186,7 +186,7 @@ export function SubscriptionForm({ defaultName, defaultEmail, hasActiveSubscript
 
       <button type="submit" disabled={loading} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 text-sm font-semibold text-white transition hover:from-orange-600 hover:to-amber-600 disabled:cursor-not-allowed disabled:opacity-60">
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-        Ativar Flowyn Pro por R$49/mes
+        Ativar Flowyn Pro por R$97/mes
       </button>
     </form>
   )

@@ -10,7 +10,7 @@ import {
 import { isValidCardExpiry, isValidCpfCnpj, isValidEmail, isValidPhone, isValidCardNumber, isValidCvv, isValidPostalCode } from '@/lib/validation'
 import { hashIdentifier } from '@/lib/hash'
 
-const FLOWYN_PRO_PRICE = 49
+const FLOWYN_PRO_PRICE = 97
 
 function getClientIp(req: NextRequest) {
   const forwardedFor = req.headers.get('x-forwarded-for')
@@ -206,6 +206,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Assinatura criada na Asaas, mas nao foi salva na Flowyn.' }, { status: 500 })
   }
 
+  await admin
+    .from('profiles')
+    .update({ plan: 'pro', updated_at: new Date().toISOString() })
+    .eq('id', userId)
+
   await admin.from('security_audit_log').insert({
     user_id: userId,
     action: 'FLOWYN_PRO_SUBSCRIPTION_CREATED',
@@ -249,6 +254,11 @@ export async function DELETE() {
       updated_at: new Date().toISOString(),
     })
     .eq('id', subscription.id)
+
+  await admin
+    .from('profiles')
+    .update({ plan: 'free', updated_at: new Date().toISOString() })
+    .eq('id', userId)
 
   await admin.from('security_audit_log').insert({
     user_id: userId,

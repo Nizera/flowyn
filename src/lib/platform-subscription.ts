@@ -66,6 +66,11 @@ export async function processPlatformSubscriptionPayment(eventType: string, paym
         updated_at: now.toISOString(),
       })
       .eq('id', subscription.id)
+
+    await admin
+      .from('profiles')
+      .update({ plan: 'pro', updated_at: now.toISOString() })
+      .eq('id', subscription.user_id)
   } else if (FAILED_EVENTS.has(eventType)) {
     await admin
       .from('platform_subscriptions')
@@ -85,6 +90,11 @@ export async function processPlatformSubscriptionPayment(eventType: string, paym
         updated_at: now.toISOString(),
       })
       .eq('id', subscription.id)
+
+    await admin
+      .from('profiles')
+      .update({ plan: 'free', updated_at: now.toISOString() })
+      .eq('id', subscription.user_id)
   }
 
   return true

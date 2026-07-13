@@ -75,7 +75,7 @@ export default async function SubscriptionPage() {
         <RowTitle title="Plano" description="Condicoes da conta." />
         <div className="grid gap-6 py-6 md:grid-cols-3">
           <Metric label="Taxa Flowyn por venda" value="R$0" description="Sem percentual da plataforma." />
-          <Metric label="Mensalidade" value="R$49" description="Cobrada mensalmente." />
+          <Metric label="Mensalidade" value="R$97" description="Cobrada mensalmente." />
           <Metric label="Teste gratis" value="7 dias" description={`Termina em ${formatDate(subscription?.trial_ends_at)}.`} />
         </div>
       </div>
