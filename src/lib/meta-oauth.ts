@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/utils/supabase/admin'
 import { decryptApiKey, encryptApiKey } from '@/lib/encryption'
+import crypto from 'crypto'
 
 const META_APP_ID = process.env.META_APP_ID || ''
 const META_APP_SECRET = process.env.META_APP_SECRET || ''
@@ -9,6 +10,27 @@ const META_REDIRECT_URI = process.env.NEXT_PUBLIC_APP_URL
 
 const GRAPH_API = 'https://graph.facebook.com/v21.0'
 
+function generateOAuthState(userId: string): string {
+  const nonce = crypto.randomBytes(32).toString('hex')
+  const payload = JSON.stringify({ userId, nonce, ts: Date.now() })
+  const hmac = crypto.createHmac('sha256', META_APP_SECRET || 'fallback').update(payload).digest('hex')
+  return Buffer.from(JSON.stringify({ payload, hmac })).toString('base64url')
+}
+
+export function verifyOAuthState(state: string): string | null {
+  try {
+    const decoded = JSON.parse(Buffer.from(state, 'base64url').toString())
+    const { payload, hmac } = decoded
+    const expectedHmac = crypto.createHmac('sha256', META_APP_SECRET || 'fallback').update(payload).digest('hex')
+    if (!crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(expectedHmac))) return null
+    const { userId, ts } = JSON.parse(payload)
+    if (Date.now() - ts > 10 * 60 * 1000) return null
+    return userId
+  } catch {
+    return null
+  }
+}
+
 export function getMetaOAuthUrl(userId: string): string {
   const scopes = [
     'ads_management',
@@ -16,10 +38,12 @@ export function getMetaOAuthUrl(userId: string): string {
     'business_management',
   ].join(',')
 
+  const state = generateOAuthState(userId)
+
   const params = new URLSearchParams({
     client_id: META_APP_ID,
     redirect_uri: META_REDIRECT_URI,
-    state: userId,
+    state,
     scope: scopes,
     response_type: 'code',
   })

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { getDecryptedToken } from '@/lib/meta-oauth'
+import { requireProPlan } from '@/lib/subscription'
 
 const GRAPH_API = 'https://graph.facebook.com/v21.0'
 const MAX_CALLS_PER_HOUR = 200
@@ -30,6 +31,12 @@ export async function POST(req: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    await requireProPlan(user.id)
+  } catch {
+    return NextResponse.json({ error: 'Subscription required' }, { status: 403 })
   }
 
   // Check rate limit BEFORE making any API calls
@@ -147,6 +154,12 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  try {
+    await requireProPlan(user.id)
+  } catch {
+    return NextResponse.json({ error: 'Subscription required' }, { status: 403 })
+  }
+
   const body = await req.json()
   const { ad_account_id, sync_enabled } = body
 
@@ -174,6 +187,12 @@ export async function GET(req: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    await requireProPlan(user.id)
+  } catch {
+    return NextResponse.json({ error: 'Subscription required' }, { status: 403 })
   }
 
   const usage = await getUsage(supabase, user.id)

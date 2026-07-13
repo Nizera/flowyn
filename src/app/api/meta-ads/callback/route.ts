@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
-import { exchangeCodeForToken, getLongLivedToken, getAdAccounts, saveAdAccount } from '@/lib/meta-oauth'
+import { exchangeCodeForToken, getLongLivedToken, getAdAccounts, saveAdAccount, verifyOAuthState } from '@/lib/meta-oauth'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -20,7 +20,12 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  const userId = state
+  const userId = verifyOAuthState(state)
+  if (!userId) {
+    return NextResponse.redirect(
+      new URL('/dashboard/ads?error=invalid_state', req.url)
+    )
+  }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

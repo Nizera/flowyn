@@ -29,13 +29,16 @@ export async function checkSubscription(userId: string): Promise<SubscriptionChe
 
   const now = new Date()
   const isTrialing =
-    subscription?.status === 'scheduled' &&
+    (subscription?.status === 'scheduled' || subscription?.status === 'trialing') &&
     subscription.trial_ends_at &&
     new Date(subscription.trial_ends_at).getTime() > now.getTime()
+
+  const isGracePeriod = subscription?.status === 'grace_period'
 
   const isActive =
     subscription?.status === 'active' ||
     isTrialing ||
+    isGracePeriod ||
     (plan !== 'free')
 
   return {

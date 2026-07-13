@@ -289,6 +289,34 @@ export async function POST(req: NextRequest) {
 
     if (SUBSCRIPTION_EVENTS_CANCELLED.has(eventType) && payment.subscription) {
       const subscriptionId = String(payment.subscription)
+
+      // Handle platform subscription cancellation
+      const { data: platformSub } = await supabase
+        .from('platform_subscriptions')
+        .select('id, user_id')
+        .eq('asaas_subscription_id', subscriptionId)
+        .maybeSingle()
+
+      if (platformSub) {
+        await supabase
+          .from('platform_subscriptions')
+          .update({ status: 'suspended', updated_at: new Date().toISOString() })
+          .eq('id', platformSub.id)
+
+        await supabase
+          .from('profiles')
+          .update({ plan: 'free', updated_at: new Date().toISOString() })
+          .eq('id', platformSub.user_id)
+
+        await supabase.from('security_audit_log').insert({
+          action: eventType,
+          entity_type: 'platform_subscription',
+          entity_id: platformSub.id,
+          metadata: { subscription_id: subscriptionId, user_id: platformSub.user_id },
+        })
+      }
+
+      // Handle product subscription cancellation
       const { data: subscriptionOrders } = await supabase
         .from('orders')
         .select('id, product_id')

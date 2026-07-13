@@ -15,7 +15,7 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith('/brand/')) return NextResponse.next()
   if (pathname.startsWith('/checkout/')) return NextResponse.next()
   if (pathname.startsWith('/webhook/')) return NextResponse.next()
-  if (pathname.startsWith('/api/')) return NextResponse.next()
+  if (pathname.startsWith('/api/checkout/') || pathname.startsWith('/api/webhooks/') || pathname.startsWith('/api/cron/') || pathname.startsWith('/api/meta-ads/webhook') || pathname.startsWith('/api/meta-ads/data-deletion')) return NextResponse.next()
 
   let supabaseResponse = NextResponse.next({ request: req })
 

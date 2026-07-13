@@ -212,7 +212,7 @@ export async function POST(req: NextRequest) {
     .eq('id', userId)
 
   await admin.from('security_audit_log').insert({
-    user_id: userId,
+    actor_user_id: userId,
     action: 'FLOWYN_PRO_SUBSCRIPTION_CREATED',
     entity_type: 'platform_subscription',
     entity_id: updatedSubscription.id,
@@ -225,7 +225,12 @@ export async function POST(req: NextRequest) {
   )
 }
 
-export async function DELETE() {
+export async function DELETE(req: NextRequest) {
+  const origin = req.headers.get('origin')
+  if (!origin || origin !== req.nextUrl.origin) {
+    return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 })
+  }
+
   const userId = await getCurrentUserId()
   if (!userId) {
     return NextResponse.json({ error: 'Nao autenticado.' }, { status: 401 })
@@ -261,7 +266,7 @@ export async function DELETE() {
     .eq('id', userId)
 
   await admin.from('security_audit_log').insert({
-    user_id: userId,
+    actor_user_id: userId,
     action: 'FLOWYN_PRO_SUBSCRIPTION_CANCELLED',
     entity_type: 'platform_subscription',
     entity_id: subscription.id,

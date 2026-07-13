@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { getMetaOAuthUrl } from '@/lib/meta-oauth'
+import { requireProPlan } from '@/lib/subscription'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -8,6 +9,12 @@ export async function GET(req: NextRequest) {
 
   if (!user) {
     return NextResponse.redirect(new URL('/login', req.url))
+  }
+
+  try {
+    await requireProPlan(user.id)
+  } catch {
+    return NextResponse.redirect(new URL('/dashboard/settings/subscription', req.url))
   }
 
   const META_APP_ID = process.env.META_APP_ID

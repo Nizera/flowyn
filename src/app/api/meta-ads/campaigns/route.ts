@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { getDecryptedToken } from '@/lib/meta-oauth'
+import { requireProPlan } from '@/lib/subscription'
 
 const GRAPH_API = 'https://graph.facebook.com/v21.0'
 
@@ -30,6 +31,12 @@ export async function GET(req: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    await requireProPlan(user.id)
+  } catch {
+    return NextResponse.json({ error: 'Subscription required' }, { status: 403 })
   }
 
   const { searchParams } = new URL(req.url)

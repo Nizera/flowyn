@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { requireProPlan } from '@/lib/subscription'
 
 type CampaignAttribution = {
   campaign_id: string
@@ -30,6 +31,12 @@ export async function POST(req: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    await requireProPlan(user.id)
+  } catch {
+    return NextResponse.json({ error: 'Subscription required' }, { status: 403 })
   }
 
   const body = await req.json()
