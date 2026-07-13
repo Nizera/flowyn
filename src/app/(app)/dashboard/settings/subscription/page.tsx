@@ -54,7 +54,9 @@ export default async function SubscriptionPage() {
 
   const hasActiveSubscription =
     subscription?.status === 'active'
+    || subscription?.status === 'grace_period'
     || (subscription?.status === 'scheduled' && isFuture(subscription.trial_ends_at))
+    || (subscription?.status === 'trialing' && isFuture(subscription.trial_ends_at))
 
   return (
     <section className="overflow-hidden rounded-[10px] bg-white px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
