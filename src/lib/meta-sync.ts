@@ -54,6 +54,36 @@ export async function syncAccountFull(
     })
   }
 
+  async function fetchAllPages(url: string): Promise<{ allData: any[]; header: string | null }> {
+    const allData: any[] = []
+    let currentUrl: string | null = url
+    let lastHeader: string | null = null
+    let safety = 0
+
+    while (currentUrl && safety < 50) {
+      safety++
+      const { data, header } = await metaApiCall(currentUrl)
+      lastHeader = header
+
+      if (data.error) {
+        errors.push(`Pagination: ${data.error.message}`)
+        break
+      }
+
+      if (data.data) {
+        allData.push(...data.data)
+      }
+
+      currentUrl = data.paging?.next || null
+
+      if (currentUrl) {
+        await delay(200)
+      }
+    }
+
+    return { allData, header: lastHeader }
+  }
+
   function delay(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms))
   }
@@ -213,46 +243,40 @@ export async function syncAccountFull(
     }
   }
 
-  // 4. Campaign-level insights
+  // 4. Campaign-level insights (paginated)
   await delay(100)
-  const { data: campaignInsights, header: cih } = await metaApiCall(
-    `${GRAPH_API}/act_${adAccountId}/insights?fields=campaign_id,campaign_name,impressions,clicks,spend,ctr,cpc,cpm,reach,frequency,actions,action_values,quality_ranking,engagement_rate_ranking,conversion_rate_ranking&level=campaign&time_increment=1&time_range=${timeRange}&access_token=${accessToken}`
+  const { allData: campaignInsightsData, header: cih } = await fetchAllPages(
+    `${GRAPH_API}/act_${adAccountId}/insights?fields=campaign_id,campaign_name,impressions,clicks,spend,ctr,cpc,cpm,reach,frequency,actions,action_values,quality_ranking,engagement_rate_ranking,conversion_rate_ranking&level=campaign&time_increment=1&time_range=${timeRange}&limit=500&access_token=${accessToken}`
   )
   totalApiCalls++
   rateLimitHeader = cih
 
-  if (campaignInsights.error) {
-    errors.push(`Campaign Insights: ${campaignInsights.error.message}`)
-  } else if (campaignInsights.data) {
-    await upsertInsights(campaignInsights.data, 'campaign')
+  if (campaignInsightsData.length > 0) {
+    await upsertInsights(campaignInsightsData, 'campaign')
   }
 
-  // 5. Ad Set-level insights
+  // 5. Ad Set-level insights (paginated)
   await delay(100)
-  const { data: adsetInsights, header: aih } = await metaApiCall(
-    `${GRAPH_API}/act_${adAccountId}/insights?fields=campaign_id,adset_id,adset_name,impressions,clicks,spend,ctr,cpc,cpm,reach,frequency,actions,action_values&level=adset&time_increment=1&time_range=${timeRange}&access_token=${accessToken}`
+  const { allData: adsetInsightsData, header: aih } = await fetchAllPages(
+    `${GRAPH_API}/act_${adAccountId}/insights?fields=campaign_id,adset_id,adset_name,impressions,clicks,spend,ctr,cpc,cpm,reach,frequency,actions,action_values&level=adset&time_increment=1&time_range=${timeRange}&limit=500&access_token=${accessToken}`
   )
   totalApiCalls++
   rateLimitHeader = aih
 
-  if (adsetInsights.error) {
-    errors.push(`AdSet Insights: ${adsetInsights.error.message}`)
-  } else if (adsetInsights.data) {
-    await upsertInsights(adsetInsights.data, 'adset')
+  if (adsetInsightsData.length > 0) {
+    await upsertInsights(adsetInsightsData, 'adset')
   }
 
-  // 6. Ad-level insights
+  // 6. Ad-level insights (paginated)
   await delay(100)
-  const { data: adInsights, header: adi } = await metaApiCall(
-    `${GRAPH_API}/act_${adAccountId}/insights?fields=campaign_id,adset_id,ad_id,ad_name,impressions,clicks,spend,ctr,cpc,cpm,reach,frequency,actions,action_values&level=ad&time_increment=1&time_range=${timeRange}&access_token=${accessToken}`
+  const { allData: adInsightsData, header: adi } = await fetchAllPages(
+    `${GRAPH_API}/act_${adAccountId}/insights?fields=campaign_id,adset_id,ad_id,ad_name,impressions,clicks,spend,ctr,cpc,cpm,reach,frequency,actions,action_values&level=ad&time_increment=1&time_range=${timeRange}&limit=500&access_token=${accessToken}`
   )
   totalApiCalls++
   rateLimitHeader = adi
 
-  if (adInsights.error) {
-    errors.push(`Ad Insights: ${adInsights.error.message}`)
-  } else if (adInsights.data) {
-    await upsertInsights(adInsights.data, 'ad')
+  if (adInsightsData.length > 0) {
+    await upsertInsights(adInsightsData, 'ad')
   }
 
   return { totalApiCalls, totalRowsSynced, errors, rateLimitHeader }
