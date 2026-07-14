@@ -43,6 +43,28 @@ export async function GET(req: NextRequest) {
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false })
 
+  // Fetch insights
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+  const { data: insights } = await supabase
+    .from('ad_insights_cache')
+    .select('*')
+    .eq('ad_account_id', adAccountId)
+    .eq('insight_level', 'campaign')
+    .gte('date', thirtyDaysAgo)
+
+  // Enrich
+  const enrichedCampaigns = (campaigns || []).map(c => ({
+    ...c,
+    insights: (insights || []).filter(i => i.campaign_id === c.campaign_id)
+      .reduce((acc: any, curr: any) => ({
+        spend: acc.spend + (parseFloat(curr.spend) || 0),
+        impressions: acc.impressions + (parseInt(curr.impressions) || 0),
+        clicks: acc.clicks + (parseInt(curr.clicks) || 0),
+        conversions: acc.conversions + (parseInt(curr.conversions) || 0),
+        conversion_value: acc.conversion_value + (parseFloat(curr.conversion_value) || 0),
+      }), { spend: 0, impressions: 0, clicks: 0, conversions: 0, conversion_value: 0 })
+  }))
+
   // Fetch ad sets from local DB
   const { data: adSets } = await supabase
     .from('ad_sets')
@@ -60,7 +82,7 @@ export async function GET(req: NextRequest) {
     .order('updated_at', { ascending: false })
 
   return NextResponse.json({
-    campaigns: campaigns || [],
+    campaigns: enrichedCampaigns,
     ad_sets: adSets || [],
     ads: ads || [],
   })

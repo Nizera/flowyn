@@ -21,13 +21,41 @@ function formatTimeAgo(dateStr: string | null) {
 export default function AdsAccountsPage() {
   const [accounts, setAccounts] = useState<AdAccount[]>([])
   const [loading, setLoading] = useState(true)
+  const [syncingId, setSyncingId] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/meta-ads/campaigns?action=accounts')
-      .then(res => res.json())
-      .then(data => setAccounts(data.accounts || []))
-      .finally(() => setLoading(false))
+    fetchAccounts()
   }, [])
+
+  async function fetchAccounts() {
+    const res = await fetch('/api/meta-ads/campaigns?action=accounts')
+    const data = await res.json()
+    setAccounts(data.accounts || [])
+    setLoading(false)
+  }
+
+  async function handleSync(accountId: string) {
+    setSyncingId(accountId)
+    const res = await fetch('/api/meta-ads/sync-expanded', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ad_account_id: accountId }),
+    })
+    const json = await res.json()
+    if (json.error) alert(`Erro: ${json.error}`)
+    else alert('Sincronização concluída!')
+    setSyncingId(null)
+    fetchAccounts()
+  }
+
+  async function handleToggleSync(accountId: string, enabled: boolean) {
+    await fetch('/api/meta-ads/sync', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ad_account_id: accountId, sync_enabled: enabled }),
+    })
+    setAccounts(prev => prev.map(a => a.ad_account_id === accountId ? { ...a, sync_enabled: enabled } : a))
+  }
 
   return (
     <div className="space-y-6">
@@ -46,9 +74,22 @@ export default function AdsAccountsPage() {
                 <p className="font-bold">{acc.ad_account_name || acc.ad_account_id}</p>
                 <p className="text-xs text-slate-400">Último sync: {formatTimeAgo(acc.last_sync_at)}</p>
               </div>
-              <Link href={`/dashboard/ads/${acc.ad_account_id}`} className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200">
-                Gerenciar campanhas
-              </Link>
+              <div className='flex items-center gap-3'>
+                <label className="flex items-center gap-2 cursor-pointer">
+                    <span className="text-xs font-bold text-slate-500">Auto-sync</span>
+                    <button type="button" onClick={() => handleToggleSync(acc.ad_account_id, !acc.sync_enabled)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${acc.sync_enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${acc.sync_enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                </label>
+                <button onClick={() => handleSync(acc.ad_account_id)} disabled={syncingId === acc.ad_account_id}
+                    className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200">
+                    {syncingId === acc.ad_account_id ? '...' : 'Sync'}
+                </button>
+                <Link href={`/dashboard/ads/${acc.ad_account_id}`} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700">
+                  Gerenciar campanhas
+                </Link>
+              </div>
             </div>
           ))}
         </div>
