@@ -52,7 +52,7 @@ async function fetchAdSets(accessToken: string, campaignId: string): Promise<AdS
 
 async function fetchAds(accessToken: string, adSetId: string): Promise<AdData[]> {
   const res = await fetch(
-    `${GRAPH_API}/${adSetId}/ads?fields=name,status,creative&limit=100&access_token=${accessToken}`
+    `${GRAPH_API}/${adSetId}/ads?fields=name,status,creative{id,name}&limit=100&access_token=${accessToken}`
   )
   const data = await res.json()
   return data.data || []
@@ -110,12 +110,39 @@ async function createAdSet(accessToken: string, accountId: string, campaignId: s
   return res.json()
 }
 
-async function createAd(accessToken: string, accountId: string, adSetId: string, ad: AdData, startPaused: boolean) {
+async function fetchCreative(accessToken: string, creativeId: string): Promise<Record<string, unknown>> {
+  const res = await fetch(
+    `${GRAPH_API}/${creativeId}?fields=name,title,body,object_story_spec,asset_feed_spec,url_tags,image_hash,video_id,link_url,call_to_action_type&access_token=${accessToken}`
+  )
+  return res.json()
+}
+
+async function createCreative(accessToken: string, accountId: string, name: string, source: Record<string, unknown>): Promise<{ id?: string; error?: { message: string } }> {
+  const body: Record<string, unknown> = { name, access_token: accessToken }
+  if (source.object_story_spec) body.object_story_spec = source.object_story_spec
+  if (source.asset_feed_spec) body.asset_feed_spec = source.asset_feed_spec
+  if (source.url_tags) body.url_tags = source.url_tags
+  if (source.title) body.title = source.title
+  if (source.body) body.body = source.body
+  if (source.call_to_action_type) body.call_to_action_type = source.call_to_action_type
+  if (source.link_url) body.link_url = source.link_url
+  if (source.image_hash) body.image_hash = source.image_hash
+  if (source.video_id) body.video_id = source.video_id
+
+  const res = await fetch(`${GRAPH_API}/act_${accountId}/adcreatives`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  return res.json()
+}
+
+async function createAd(accessToken: string, accountId: string, adSetId: string, ad: AdData, startPaused: boolean, newCreativeId?: string) {
   const body: Record<string, string | boolean | { creative_id: string }> = {
     adset_id: adSetId,
     name: ad.name,
     status: startPaused ? 'PAUSED' : 'ACTIVE',
-    creative: { creative_id: ad.creative?.id || '' },
+    creative: { creative_id: newCreativeId || ad.creative?.id || '' },
     access_token: accessToken,
   }
 
@@ -206,7 +233,24 @@ async function copyOneCampaign(
       if (copyAds) {
         const ads = await fetchAds(sourceToken, adSet.id)
         for (const ad of ads) {
-          const newAd = await createAd(targetToken, targetAccountId, newAdSet.id, ad, startPaused)
+          let newCreativeId: string | undefined
+          if (ad.creative?.id) {
+            const sourceCreative = await fetchCreative(sourceToken, ad.creative.id)
+            if (!sourceCreative.error) {
+              const newCreativeName = `${ad.creative.id} - ${ad.name}`
+              const newCreative = await createCreative(targetToken, targetAccountId, newCreativeName, sourceCreative)
+              if (newCreative.id) {
+                newCreativeId = newCreative.id
+              } else {
+                console.error('[Duplicate] Creative copy failed:', JSON.stringify(newCreative))
+              }
+            } else {
+              console.error('[Duplicate] Fetch creative failed:', JSON.stringify(sourceCreative))
+            }
+            await new Promise(r => setTimeout(r, 200))
+          }
+
+          const newAd = await createAd(targetToken, targetAccountId, newAdSet.id, ad, startPaused, newCreativeId)
           if (newAd.error) {
             result.ads.push({ name: ad.name, error: newAd.error.message })
             continue
@@ -222,7 +266,7 @@ async function copyOneCampaign(
             name: ad.name,
             status: startPaused ? 'PAUSED' : 'ACTIVE',
             effective_status: startPaused ? 'PAUSED' : 'ACTIVE',
-            creative_id: ad.creative?.id || null,
+            creative_id: newCreativeId || ad.creative?.id || null,
             synced_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }, { onConflict: 'user_id,ad_account_id,ad_id' })
