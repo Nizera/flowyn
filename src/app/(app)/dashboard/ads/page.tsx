@@ -74,22 +74,18 @@ export default function AdsAccountsPage() {
                 <p className="font-bold">{acc.ad_account_name || acc.ad_account_id}</p>
                 <p className="text-xs text-slate-400">Último sync: {formatTimeAgo(acc.last_sync_at)}</p>
               </div>
-              <div className='flex items-center gap-3'>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <span className="text-xs font-bold text-slate-500">Auto-sync</span>
                     <button type="button" onClick={() => handleToggleSync(acc.ad_account_id, !acc.sync_enabled)}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${acc.sync_enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}>
                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${acc.sync_enabled ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
-                </label>
-                <button onClick={() => handleSync(acc.ad_account_id)} disabled={syncingId === acc.ad_account_id}
-                    className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200">
-                    {syncingId === acc.ad_account_id ? '...' : 'Sync'}
-                </button>
-                <Link href={`/dashboard/ads/${acc.ad_account_id}`} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700">
-                  Gerenciar campanhas
-                </Link>
-              </div>
+                  </label>
+                  <Link href={`/dashboard/ads/${acc.ad_account_id}`} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700">
+                    Gerenciar campanhas
+                  </Link>
+                </div>
             </div>
           ))}
         </div>
