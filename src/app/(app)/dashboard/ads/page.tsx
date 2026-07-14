@@ -72,11 +72,11 @@ export default function AdsAccountsPage() {
             <div key={acc.id} className="rounded-2xl border border-slate-200 bg-white p-6 flex justify-between items-center">
               <div>
                 <p className="font-bold">{acc.ad_account_name || acc.ad_account_id}</p>
-                <p className="text-xs text-slate-400">Último sync: {formatTimeAgo(acc.last_sync_at)}</p>
+                <p className="text-xs text-slate-400">Última sincronização: {formatTimeAgo(acc.last_sync_at)}</p>
               </div>
                 <div className="flex items-center gap-3">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <span className="text-xs font-bold text-slate-500">Auto-sync</span>
+                    <span className="text-xs font-bold text-slate-500">Sincronização</span>
                     <button type="button" onClick={() => handleToggleSync(acc.ad_account_id, !acc.sync_enabled)}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${acc.sync_enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}>
                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${acc.sync_enabled ? 'translate-x-6' : 'translate-x-1'}`} />

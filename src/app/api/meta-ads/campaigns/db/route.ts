@@ -18,6 +18,8 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const adAccountId = searchParams.get('ad_account_id')
+  const dateFrom = searchParams.get('date_from')
+  const dateTo = searchParams.get('date_to')
 
   if (!adAccountId) {
     return NextResponse.json({ error: 'ad_account_id required' }, { status: 400 })
@@ -44,27 +46,31 @@ export async function GET(req: NextRequest) {
     .order('updated_at', { ascending: false })
 
   // Fetch all insights (campaign, adset, ad level)
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+  const since = dateFrom || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+  const until = dateTo || new Date().toISOString().slice(0, 10)
   const { data: campaignInsights } = await supabase
     .from('ad_insights_cache')
     .select('*')
     .eq('ad_account_id', adAccountId)
     .eq('insight_level', 'campaign')
-    .gte('date', thirtyDaysAgo)
+    .gte('date', since)
+    .lte('date', until)
 
   const { data: adsetInsights } = await supabase
     .from('ad_insights_cache')
     .select('*')
     .eq('ad_account_id', adAccountId)
     .eq('insight_level', 'adset')
-    .gte('date', thirtyDaysAgo)
+    .gte('date', since)
+    .lte('date', until)
 
   const { data: adInsights } = await supabase
     .from('ad_insights_cache')
     .select('*')
     .eq('ad_account_id', adAccountId)
     .eq('insight_level', 'ad')
-    .gte('date', thirtyDaysAgo)
+    .gte('date', since)
+    .lte('date', until)
 
   function reduceInsights(rows: any[]) {
     return rows.reduce((acc: any, curr: any) => ({

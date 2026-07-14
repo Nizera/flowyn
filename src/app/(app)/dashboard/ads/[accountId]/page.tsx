@@ -68,25 +68,36 @@ function StatusBadge({ status }: { status: string }) {
 function BudgetDisplay({ daily, lifetime }: { daily?: string | number; lifetime?: string | number }) {
   const d = typeof daily === 'string' ? parseFloat(daily) : (daily || 0)
   const l = typeof lifetime === 'string' ? parseFloat(lifetime) : (lifetime || 0)
-  if (d > 0) {
-    return <span className="text-sm">{formatBRL(d / 100)}/dia</span>
-  }
-  if (l > 0) {
-    return <span className="text-sm">{formatBRL(l / 100)} total</span>
-  }
+  if (d > 0) return <span className="text-sm">{formatBRL(d / 100)}/dia</span>
+  if (l > 0) return <span className="text-sm">{formatBRL(l / 100)} total</span>
   return <span className="text-slate-400 text-sm">Sem limite</span>
 }
 
 function MetricCell({ value, prefix = '', suffix = '', decimals = 0 }: {
   value: number; prefix?: string; suffix?: string; decimals?: number
 }) {
-  if (value === 0) return <span className="text-slate-400">—</span>
+  if (value === 0) return <span className="text-slate-400">&mdash;</span>
   const formatted = value.toLocaleString('pt-BR', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   })
   return <span>{prefix}{formatted}{suffix}</span>
 }
+
+function getDefaultDateRange() {
+  const now = new Date()
+  const from = new Date(now.getTime() - 30 * 86400000)
+  return { from: from.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) }
+}
+
+const DATE_PRESETS = [
+  { label: 'Ultimos 7 dias', days: 7 },
+  { label: 'Ultimos 14 dias', days: 14 },
+  { label: 'Ultimos 30 dias', days: 30 },
+  { label: 'Ultimos 90 dias', days: 90 },
+  { label: 'Este mes', days: 'month' as const },
+  { label: 'Mes passado', days: 'lastmonth' as const },
+]
 
 export default function CampaignManagementPage() {
   const params = useParams()
@@ -103,14 +114,30 @@ export default function CampaignManagementPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [bulkAction, setBulkAction] = useState<'PAUSED' | 'ACTIVE' | 'DELETED' | null>(null)
   const [search, setSearch] = useState('')
+  const [dateRange, setDateRange] = useState(getDefaultDateRange)
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [showColumnMenu, setShowColumnMenu] = useState(false)
+  const [showGroupMenu, setShowGroupMenu] = useState(false)
+
+  const [visibleColumns, setVisibleColumns] = useState({
+    reach: true,
+    impressions: true,
+    clicks: true,
+    ctr: true,
+    cpc: true,
+    cpm: true,
+    conversions: true,
+    conversionValue: true,
+    roas: true,
+  })
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const res = await fetch(`/api/meta-ads/campaigns/db?ad_account_id=${accountId}`)
+    const res = await fetch(`/api/meta-ads/campaigns/db?ad_account_id=${accountId}&date_from=${dateRange.from}&date_to=${dateRange.to}`)
     const json = await res.json()
     setData(json)
     setLoading(false)
-  }, [accountId])
+  }, [accountId, dateRange])
 
   async function handleSync() {
     setIsSyncing(true)
@@ -121,7 +148,7 @@ export default function CampaignManagementPage() {
     })
     const json = await res.json()
     if (json.error) alert(`Erro: ${json.error}`)
-    else alert('Sincronização concluída!')
+    else alert('Sincronizacao concluida!')
     setIsSyncing(false)
     fetchData()
   }
@@ -130,7 +157,6 @@ export default function CampaignManagementPage() {
     const id = level === 'campaign' ? (item as CampaignItem).campaign_id : level === 'adset' ? (item as AdSetItem).ad_set_id : (item as AdItem).ad_id
     const newStatus = item.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE'
     setTogglingId(id)
-
     const res = await fetch('/api/meta-ads/campaigns/toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -139,7 +165,6 @@ export default function CampaignManagementPage() {
     const json = await res.json()
     if (json.error) alert(`Erro: ${json.error}`)
     else fetchData()
-
     setTogglingId(null)
   }
 
@@ -147,7 +172,6 @@ export default function CampaignManagementPage() {
     if (!bulkAction || selected.size === 0) return
     const level = tab === 'campaigns' ? 'campaign' : tab === 'adsets' ? 'adset' : 'ad'
     const ids = Array.from(selected)
-
     setBulkAction(null)
     const res = await fetch('/api/meta-ads/campaigns/bulk', {
       method: 'POST',
@@ -156,58 +180,66 @@ export default function CampaignManagementPage() {
     })
     const json = await res.json()
     if (json.error) alert(`Erro: ${json.error}`)
-    else {
-      setSelected(new Set())
-      fetchData()
-    }
+    else { setSelected(new Set()); fetchData() }
   }
 
   function toggleSelectAll() {
     const allItems = data[tab === 'campaigns' ? 'campaigns' : tab === 'adsets' ? 'ad_sets' : 'ads']
-    const filteredItems = allItems.filter((i) => {
-      if (!search) return true
-      return i.name?.toLowerCase().includes(search.toLowerCase())
-    })
-    if (selected.size === filteredItems.length) {
-      setSelected(new Set())
-    } else {
-      setSelected(new Set(filteredItems.map((i) =>
-        tab === 'campaigns' ? (i as CampaignItem).campaign_id : tab === 'adsets' ? (i as AdSetItem).ad_set_id : (i as AdItem).ad_id
-      )))
-    }
+    const filteredItems = allItems.filter(i => !search || i.name?.toLowerCase().includes(search.toLowerCase()))
+    if (selected.size === filteredItems.length) setSelected(new Set())
+    else setSelected(new Set(filteredItems.map(i => tab === 'campaigns' ? (i as CampaignItem).campaign_id : tab === 'adsets' ? (i as AdSetItem).ad_set_id : (i as AdItem).ad_id)))
   }
 
   function toggleSelect(id: string) {
     const next = new Set(selected)
-    if (next.has(id)) next.delete(id)
-    else next.add(id)
+    if (next.has(id)) next.delete(id); else next.add(id)
     setSelected(next)
   }
 
+  function applyDatePreset(preset: typeof DATE_PRESETS[number]) {
+    const now = new Date()
+    let from: Date
+    if (preset.days === 'month') {
+      from = new Date(now.getFullYear(), now.getMonth(), 1)
+    } else if (preset.days === 'lastmonth') {
+      from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const to = new Date(now.getFullYear(), now.getMonth(), 0)
+      setDateRange({ from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) })
+      setShowDatePicker(false)
+      return
+    } else {
+      from = new Date(now.getTime() - (preset.days as number) * 86400000)
+    }
+    setDateRange({ from: from.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) })
+    setShowDatePicker(false)
+  }
+
   /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
+  useEffect(() => { fetchData() }, [fetchData])
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const items: (CampaignItem | AdSetItem | AdItem)[] = data[tab === 'campaigns' ? 'campaigns' : tab === 'adsets' ? 'ad_sets' : 'ads']
-  const filtered = items.filter((i) => {
-    if (!search) return true
-    return i.name?.toLowerCase().includes(search.toLowerCase())
-  })
-
+  const filtered = items.filter(i => !search || i.name?.toLowerCase().includes(search.toLowerCase()))
   const tabs = [
     { key: 'campaigns' as TabType, label: 'Campanhas', count: data.campaigns.length },
     { key: 'adsets' as TabType, label: 'Conjuntos', count: data.ad_sets.length },
-    { key: 'ads' as TabType, label: 'Anúncios', count: data.ads.length },
+    { key: 'ads' as TabType, label: 'Anuncios', count: data.ads.length },
   ]
-
   const getId = (item: CampaignItem | AdSetItem | AdItem) => tab === 'campaigns' ? (item as CampaignItem).campaign_id : tab === 'adsets' ? (item as AdSetItem).ad_set_id : (item as AdItem).ad_id
   const level = tab === 'campaigns' ? 'campaign' : tab === 'adsets' ? 'adset' : 'ad'
 
+  const formatDateRange = () => {
+    const from = new Date(dateRange.from + 'T00:00:00')
+    const to = new Date(dateRange.to + 'T00:00:00')
+    return `${from.toLocaleDateString('pt-BR')} - ${to.toLocaleDateString('pt-BR')}`
+  }
+
+  const toggleColumn = (key: keyof typeof visibleColumns) => {
+    setVisibleColumns(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
       <div className="border-b border-slate-200">
         <div className="max-w-[1600px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
@@ -218,15 +250,12 @@ export default function CampaignManagementPage() {
                 </svg>
               </Link>
               <div>
-                <h1 className="text-lg font-bold text-slate-900">Gestão de Campanhas</h1>
+                <h1 className="text-lg font-bold text-slate-900">Gestao de Campanhas</h1>
                 <p className="text-sm text-slate-500">Conta: {accountId}</p>
               </div>
             </div>
-            <button
-              onClick={handleSync}
-              disabled={isSyncing}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-            >
+            <button onClick={handleSync} disabled={isSyncing}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
               {isSyncing ? (
                 <>
                   <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
@@ -253,19 +282,13 @@ export default function CampaignManagementPage() {
         <div className="max-w-[1600px] mx-auto px-6">
           <div className="flex gap-0">
             {tabs.map(t => (
-              <button
-                key={t.key}
+              <button key={t.key}
                 onClick={() => { setTab(t.key); setSelected(new Set()); router.push(`?tab=${t.key}`) }}
                 className={`px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
-                  tab === t.key
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                {t.label}
-                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                  tab === t.key ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'
+                  tab === t.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'
                 }`}>
+                {t.label}
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${tab === t.key ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
                   {t.count}
                 </span>
               </button>
@@ -274,47 +297,134 @@ export default function CampaignManagementPage() {
         </div>
       </div>
 
-      {/* Toolbar */}
+      {/* Action Bar - estilo Utmify/Meta */}
+      <div className="border-b border-slate-200 bg-white">
+        <div className="max-w-[1600px] mx-auto px-6 py-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Colunas */}
+            <div className="relative">
+              <button onClick={() => { setShowColumnMenu(!showColumnMenu); setShowGroupMenu(false); setShowDatePicker(false) }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                Colunas
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              {showColumnMenu && (
+                <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-50 py-1">
+                  {[
+                    { key: 'reach' as const, label: 'Alcance' },
+                    { key: 'impressions' as const, label: 'Impressoes' },
+                    { key: 'clicks' as const, label: 'Cliques' },
+                    { key: 'ctr' as const, label: 'CTR' },
+                    { key: 'cpc' as const, label: 'CPC' },
+                    { key: 'cpm' as const, label: 'CPM' },
+                    { key: 'conversions' as const, label: 'Conversoes' },
+                    { key: 'conversionValue' as const, label: 'Valor Conv.' },
+                    { key: 'roas' as const, label: 'ROAS' },
+                  ].map(col => (
+                    <button key={col.key} onClick={() => toggleColumn(col.key)}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${visibleColumns[col.key] ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                        {visibleColumns[col.key] && (
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                        )}
+                      </div>
+                      {col.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Detalhamento */}
+            <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+              Detalhamento
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+            </button>
+
+            {/* Agrupamento */}
+            <div className="relative">
+              <button onClick={() => { setShowGroupMenu(!showGroupMenu); setShowColumnMenu(false); setShowDatePicker(false) }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                Agrupamento
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              {showGroupMenu && (
+                <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-lg z-50 py-1">
+                  {['Nenhum', 'Campanha', 'Conjunto de anuncio', 'Anuncio'].map(g => (
+                    <button key={g} onClick={() => setShowGroupMenu(false)}
+                      className="w-full px-3 py-2 text-sm text-left text-slate-700 hover:bg-slate-50">
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="h-5 w-px bg-slate-200 mx-1" />
+
+            {/* Date Picker */}
+            <div className="relative">
+              <button onClick={() => { setShowDatePicker(!showDatePicker); setShowColumnMenu(false); setShowGroupMenu(false) }}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                {formatDateRange()}
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              {showDatePicker && (
+                <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-4">
+                  <div className="flex gap-2 mb-4">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-slate-500 mb-1">De</label>
+                      <input type="date" value={dateRange.from}
+                        onChange={e => setDateRange(prev => ({ ...prev, from: e.target.value }))}
+                        className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Ate</label>
+                      <input type="date" value={dateRange.to}
+                        onChange={e => setDateRange(prev => ({ ...prev, to: e.target.value }))}
+                        className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                  </div>
+                  <div className="border-t border-slate-100 pt-3 space-y-1">
+                    {DATE_PRESETS.map(preset => (
+                      <button key={preset.label} onClick={() => applyDatePreset(preset)}
+                        className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Search + Bulk */}
       <div className="border-b border-slate-200 bg-slate-50">
         <div className="max-w-[1600px] mx-auto px-6 py-3">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              {/* Search */}
               <div className="relative">
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <input
-                  type="text"
-                  placeholder="Buscar..."
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                <input type="text" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)}
+                  className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
               </div>
-
-              {/* Bulk actions */}
               {selected.size > 0 && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-500">{selected.size} selecionado(s)</span>
-                  <button
-                    onClick={() => { setBulkAction('ACTIVE'); handleBulk() }}
-                    className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700"
-                  >
-                    Ativar
-                  </button>
-                  <button
-                    onClick={() => { setBulkAction('PAUSED'); handleBulk() }}
-                    className="px-3 py-1.5 bg-amber-600 text-white text-xs font-semibold rounded-lg hover:bg-amber-700"
-                  >
-                    Pausar
-                  </button>
-                  <button
-                    onClick={() => { if (confirm('Tem certeza que deseja excluir?')) { setBulkAction('DELETED'); handleBulk() } }}
-                    className="px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700"
-                  >
-                    Excluir
-                  </button>
+                  <button onClick={() => { setBulkAction('ACTIVE'); handleBulk() }}
+                    className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700">Ativar</button>
+                  <button onClick={() => { setBulkAction('PAUSED'); handleBulk() }}
+                    className="px-3 py-1.5 bg-amber-600 text-white text-xs font-semibold rounded-lg hover:bg-amber-700">Pausar</button>
+                  <button onClick={() => { if (confirm('Tem certeza que deseja excluir?')) { setBulkAction('DELETED'); handleBulk() } }}
+                    className="px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700">Excluir</button>
                 </div>
               )}
             </div>
@@ -343,32 +453,27 @@ export default function CampaignManagementPage() {
             <p className="text-xs mt-1">Clique em Sincronizar para carregar dados do Meta</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto light-scrollbar">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-white z-10 border-b border-slate-200">
                 <tr className="text-left text-slate-500 text-xs uppercase">
                   <th className="w-12 px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selected.size === filtered.length && filtered.length > 0}
-                      onChange={toggleSelectAll}
-                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                    />
+                    <input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0}
+                      onChange={toggleSelectAll} className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                   </th>
                   <th className="px-4 py-3 min-w-[280px]">Nome</th>
                   <th className="px-4 py-3 w-32">Status</th>
-                  {tab === 'campaigns' && <th className="px-4 py-3 min-w-[160px]">Orçamento</th>}
-                  {tab === 'adsets' && <th className="px-4 py-3 min-w-[160px]">Orçamento</th>}
+                  {(tab === 'campaigns' || tab === 'adsets') && <th className="px-4 py-3 min-w-[160px]">Orcamento</th>}
                   <th className="px-4 py-3 text-right min-w-[120px]">Gasto</th>
-                  <th className="px-4 py-3 text-right min-w-[100px]">Alcance</th>
-                  <th className="px-4 py-3 text-right min-w-[110px]">Impressões</th>
-                  <th className="px-4 py-3 text-right min-w-[100px]">Cliques</th>
-                  <th className="px-4 py-3 text-right min-w-[80px]">CTR</th>
-                  <th className="px-4 py-3 text-right min-w-[100px]">CPC</th>
-                  <th className="px-4 py-3 text-right min-w-[100px]">CPM</th>
-                  <th className="px-4 py-3 text-right min-w-[100px]">Conversões</th>
-                  <th className="px-4 py-3 text-right min-w-[120px]">Valor Conv.</th>
-                  <th className="px-4 py-3 text-right min-w-[100px]">ROAS</th>
+                  {visibleColumns.reach && <th className="px-4 py-3 text-right min-w-[100px]">Alcance</th>}
+                  {visibleColumns.impressions && <th className="px-4 py-3 text-right min-w-[110px]">Impressoes</th>}
+                  {visibleColumns.clicks && <th className="px-4 py-3 text-right min-w-[100px]">Cliques</th>}
+                  {visibleColumns.ctr && <th className="px-4 py-3 text-right min-w-[80px]">CTR</th>}
+                  {visibleColumns.cpc && <th className="px-4 py-3 text-right min-w-[100px]">CPC</th>}
+                  {visibleColumns.cpm && <th className="px-4 py-3 text-right min-w-[100px]">CPM</th>}
+                  {visibleColumns.conversions && <th className="px-4 py-3 text-right min-w-[100px]">Conversoes</th>}
+                  {visibleColumns.conversionValue && <th className="px-4 py-3 text-right min-w-[120px]">Valor Conv.</th>}
+                  {visibleColumns.roas && <th className="px-4 py-3 text-right min-w-[100px]">ROAS</th>}
                   <th className="px-4 py-3 w-16"></th>
                 </tr>
               </thead>
@@ -382,15 +487,11 @@ export default function CampaignManagementPage() {
                   const roas = ins.spend > 0 ? ins.conversion_value / ins.spend : 0
                   const isToggling = togglingId === id
 
-                      return (
+                  return (
                     <tr key={id} className={`border-t border-slate-100 hover:bg-slate-50 transition-colors ${selected.has(id) ? 'bg-blue-50' : ''}`}>
                       <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selected.has(id)}
-                          onChange={() => toggleSelect(id)}
-                          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                        />
+                        <input type="checkbox" checked={selected.has(id)} onChange={() => toggleSelect(id)}
+                          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                       </td>
                       <td className="px-4 py-3">
                         <div className="font-semibold text-slate-900">{item.name}</div>
@@ -399,11 +500,7 @@ export default function CampaignManagementPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => handleToggle(item, level)}
-                          disabled={isToggling}
-                          className="focus:outline-none"
-                        >
+                        <button onClick={() => handleToggle(item, level)} disabled={isToggling} className="focus:outline-none">
                           {isToggling ? (
                             <svg className="animate-spin w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -416,28 +513,29 @@ export default function CampaignManagementPage() {
                       </td>
                       {(tab === 'campaigns' || tab === 'adsets') && (
                         <td className="px-4 py-3">
-                          <BudgetDisplay
-                            daily={(item as CampaignItem | AdSetItem).daily_budget}
-                            lifetime={(item as CampaignItem | AdSetItem).lifetime_budget}
-                          />
+                          <BudgetDisplay daily={(item as CampaignItem | AdSetItem).daily_budget} lifetime={(item as CampaignItem | AdSetItem).lifetime_budget} />
                         </td>
                       )}
                       <td className="px-4 py-3 text-right font-medium">{formatBRL(ins.spend)}</td>
-                      <td className="px-4 py-3 text-right"><MetricCell value={ins.reach} /></td>
-                      <td className="px-4 py-3 text-right"><MetricCell value={ins.impressions} /></td>
-                      <td className="px-4 py-3 text-right"><MetricCell value={ins.clicks} /></td>
-                      <td className="px-4 py-3 text-right"><MetricCell value={ctr} suffix="%" decimals={2} /></td>
-                      <td className="px-4 py-3 text-right"><MetricCell value={cpc} prefix="R$ " decimals={2} /></td>
-                      <td className="px-4 py-3 text-right"><MetricCell value={cpm} prefix="R$ " decimals={2} /></td>
-                      <td className="px-4 py-3 text-right"><MetricCell value={ins.conversions} /></td>
-                      <td className="px-4 py-3 text-right font-medium text-emerald-600">
-                        <MetricCell value={ins.conversion_value} prefix="R$ " decimals={2} />
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className={`font-semibold ${roas >= 1 ? 'text-emerald-600' : roas > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
-                          <MetricCell value={roas} suffix="x" decimals={2} />
-                        </span>
-                      </td>
+                      {visibleColumns.reach && <td className="px-4 py-3 text-right"><MetricCell value={ins.reach} /></td>}
+                      {visibleColumns.impressions && <td className="px-4 py-3 text-right"><MetricCell value={ins.impressions} /></td>}
+                      {visibleColumns.clicks && <td className="px-4 py-3 text-right"><MetricCell value={ins.clicks} /></td>}
+                      {visibleColumns.ctr && <td className="px-4 py-3 text-right"><MetricCell value={ctr} suffix="%" decimals={2} /></td>}
+                      {visibleColumns.cpc && <td className="px-4 py-3 text-right"><MetricCell value={cpc} prefix="R$ " decimals={2} /></td>}
+                      {visibleColumns.cpm && <td className="px-4 py-3 text-right"><MetricCell value={cpm} prefix="R$ " decimals={2} /></td>}
+                      {visibleColumns.conversions && <td className="px-4 py-3 text-right"><MetricCell value={ins.conversions} /></td>}
+                      {visibleColumns.conversionValue && (
+                        <td className="px-4 py-3 text-right font-medium text-emerald-600">
+                          <MetricCell value={ins.conversion_value} prefix="R$ " decimals={2} />
+                        </td>
+                      )}
+                      {visibleColumns.roas && (
+                        <td className="px-4 py-3 text-right">
+                          <span className={`font-semibold ${roas >= 1 ? 'text-emerald-600' : roas > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                            <MetricCell value={roas} suffix="x" decimals={2} />
+                          </span>
+                        </td>
+                      )}
                       <td className="px-4 py-3">
                         <button className="text-slate-400 hover:text-slate-600">
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
