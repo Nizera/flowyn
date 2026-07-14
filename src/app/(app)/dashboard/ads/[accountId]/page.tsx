@@ -234,15 +234,16 @@ export default function CampaignManagementPage() {
     setTogglingId(null)
   }
 
-  async function handleBulk() {
-    if (!bulkAction || selected.size === 0) return
+  async function handleBulk(action?: 'PAUSED' | 'ACTIVE' | 'DELETED') {
+    const effectiveAction = action || bulkAction
+    if (!effectiveAction || selected.size === 0) return
     const level = tab === 'campaigns' ? 'campaign' : tab === 'adsets' ? 'adset' : 'ad'
     const ids = Array.from(selected)
     setBulkAction(null)
     const res = await fetch('/api/meta-ads/campaigns/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids, ad_account_id: accountId, action: bulkAction === 'DELETED' ? 'DELETE' : bulkAction, level }),
+      body: JSON.stringify({ ids, ad_account_id: accountId, action: effectiveAction === 'DELETED' ? 'delete' : effectiveAction === 'PAUSED' ? 'pause' : 'resume', level }),
     })
     const json = await res.json()
     if (json.error) alert(`Erro: ${json.error}`)
@@ -286,10 +287,21 @@ export default function CampaignManagementPage() {
 
   const items: (CampaignItem | AdSetItem | AdItem)[] = data[tab === 'campaigns' ? 'campaigns' : tab === 'adsets' ? 'ad_sets' : 'ads']
   const filtered = items.filter(i => !search || i.name?.toLowerCase().includes(search.toLowerCase()))
+
+  const selectedCampaignIds = tab === 'campaigns'
+    ? [...selected]
+    : data.campaigns.map(c => c.campaign_id)
+  const adsForSelected = data.ads.filter((a: AdItem & { campaign_id?: string }) =>
+    selectedCampaignIds.includes(a.campaign_id || '')
+  )
+  const adSetsForSelected = data.ad_sets.filter((a: AdSetItem & { campaign_id?: string }) =>
+    selectedCampaignIds.includes(a.campaign_id || '')
+  )
+
   const tabs = [
     { key: 'campaigns' as TabType, label: 'Campanhas', count: data.campaigns.length },
-    { key: 'adsets' as TabType, label: 'Conjuntos', count: data.ad_sets.length },
-    { key: 'ads' as TabType, label: 'Anuncios', count: data.ads.length },
+    { key: 'adsets' as TabType, label: 'Conjuntos', count: selected.size > 0 && tab === 'campaigns' ? adSetsForSelected.length : data.ad_sets.length },
+    { key: 'ads' as TabType, label: 'Anuncios', count: selected.size > 0 && tab === 'campaigns' ? adsForSelected.length : data.ads.length },
   ]
   const getId = (item: CampaignItem | AdSetItem | AdItem) => tab === 'campaigns' ? (item as CampaignItem).campaign_id : tab === 'adsets' ? (item as AdSetItem).ad_set_id : (item as AdItem).ad_id
   const level = tab === 'campaigns' ? 'campaign' : tab === 'adsets' ? 'adset' : 'ad'
@@ -498,11 +510,11 @@ export default function CampaignManagementPage() {
                     <button onClick={openDuplicateModal}
                       className="px-3 py-1.5 bg-purple-600 text-white text-xs font-semibold rounded-lg hover:bg-purple-700">Duplicar</button>
                   )}
-                  <button onClick={() => { setBulkAction('ACTIVE'); handleBulk() }}
+                  <button onClick={() => handleBulk('ACTIVE')}
                     className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700">Ativar</button>
-                  <button onClick={() => { setBulkAction('PAUSED'); handleBulk() }}
+                  <button onClick={() => handleBulk('PAUSED')}
                     className="px-3 py-1.5 bg-amber-600 text-white text-xs font-semibold rounded-lg hover:bg-amber-700">Pausar</button>
-                  <button onClick={() => { if (confirm('Tem certeza que deseja excluir?')) { setBulkAction('DELETED'); handleBulk() } }}
+                  <button onClick={() => { if (confirm('Tem certeza que deseja excluir?')) handleBulk('DELETED') }}
                     className="px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700">Excluir</button>
                 </div>
               )}

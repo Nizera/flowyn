@@ -109,12 +109,33 @@ export async function POST(req: NextRequest) {
           continue
       }
 
-      await adminSupabase
-        .from(localTable)
-        .update({ status: metaStatus, effective_status: metaStatus, updated_at: new Date().toISOString() })
-        .eq(localIdField, id)
-        .eq('ad_account_id', ad_account_id)
-        .eq('user_id', user.id)
+      if (action === 'delete') {
+        await adminSupabase
+          .from(localTable)
+          .delete()
+          .eq(localIdField, id)
+          .eq('ad_account_id', ad_account_id)
+          .eq('user_id', user.id)
+
+        if (level === 'campaign') {
+          const { data: childAdSets } = await adminSupabase
+            .from('ad_sets').select('ad_set_id').eq('campaign_id', id).eq('ad_account_id', ad_account_id)
+          const childAdSetIds = (childAdSets || []).map(a => a.ad_set_id)
+          if (childAdSetIds.length > 0) {
+            await adminSupabase.from('ads').delete().in('ad_set_id', childAdSetIds).eq('ad_account_id', ad_account_id)
+          }
+          await adminSupabase.from('ad_sets').delete().eq('campaign_id', id).eq('ad_account_id', ad_account_id)
+        } else if (level === 'adset') {
+          await adminSupabase.from('ads').delete().eq('ad_set_id', id).eq('ad_account_id', ad_account_id)
+        }
+      } else {
+        await adminSupabase
+          .from(localTable)
+          .update({ status: metaStatus, effective_status: metaStatus, updated_at: new Date().toISOString() })
+          .eq(localIdField, id)
+          .eq('ad_account_id', ad_account_id)
+          .eq('user_id', user.id)
+      }
 
       results.push({ id, status: metaStatus })
     } catch (err: any) {
