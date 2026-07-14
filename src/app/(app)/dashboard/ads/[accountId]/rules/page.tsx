@@ -23,6 +23,7 @@ interface AutomationRule {
   notify_whatsapp: boolean
   notify_email: boolean
   webhook_url: string | null
+  webhook_secret: string | null
   created_at: string
 }
 
