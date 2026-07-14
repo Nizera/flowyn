@@ -202,6 +202,7 @@ export default function CampaignManagementPage() {
     setSelected(new Set())
     alert(results.join('\n'))
     setDuplicating(false)
+    fetchData()
   }
 
   async function handleToggle(item: CampaignItem | AdSetItem | AdItem, level: 'campaign' | 'adset' | 'ad') {

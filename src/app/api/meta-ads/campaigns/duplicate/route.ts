@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { getDecryptedToken } from '@/lib/meta-oauth'
 import { requireProPlan } from '@/lib/subscription'
 
@@ -138,6 +139,7 @@ async function copyOneCampaign(
   nameSuffix: string,
   copyAdSets: boolean,
   copyAds: boolean,
+  userId: string,
 ) {
   const copyNum = copyIndex + 1
   const suffix = nameSuffix ? `${nameSuffix} ${copyNum}` : `Copia ${copyNum}`
@@ -153,6 +155,22 @@ async function copyOneCampaign(
     return { campaign: { error: 'No campaign ID. Response: ' + JSON.stringify(newCampaign).slice(0, 500) }, ad_sets: [], ads: [] }
   }
 
+  const admin = createAdminClient()
+  await admin.from('campaigns').upsert({
+    user_id: userId,
+    ad_account_id: targetAccountId,
+    campaign_id: newCampaign.id,
+    name: campaignName,
+    status: startPaused ? 'PAUSED' : 'ACTIVE',
+    effective_status: startPaused ? 'PAUSED' : 'ACTIVE',
+    objective: campaignDetails.objective,
+    daily_budget: campaignDetails.daily_budget || null,
+    lifetime_budget: campaignDetails.lifetime_budget || null,
+    bid_strategy: campaignDetails.bid_strategy || null,
+    synced_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,ad_account_id,campaign_id' })
+
   const result: { campaign: { id: string; name: string }; ad_sets: Array<{ id?: string; name: string; error?: string }>; ads: Array<{ id?: string; name: string; error?: string }> } = {
     campaign: { id: newCampaign.id, name: campaignName },
     ad_sets: [],
@@ -167,7 +185,23 @@ async function copyOneCampaign(
         result.ad_sets.push({ name: adSet.name, error: newAdSet.error.message })
         continue
       }
-      result.ad_sets.push({ id: newAdSet.id, name: adSet.name })
+        result.ad_sets.push({ id: newAdSet.id, name: adSet.name })
+
+        await admin.from('ad_sets').upsert({
+          user_id: userId,
+          ad_account_id: targetAccountId,
+          campaign_id: newCampaign.id,
+          ad_set_id: newAdSet.id,
+          name: adSet.name,
+          status: startPaused ? 'PAUSED' : 'ACTIVE',
+          effective_status: startPaused ? 'PAUSED' : 'ACTIVE',
+          optimization_goal: adSet.optimization_goal,
+          billing_event: adSet.billing_event,
+          daily_budget: adSet.daily_budget || null,
+          lifetime_budget: adSet.lifetime_budget || null,
+          synced_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,ad_account_id,ad_set_id' })
 
       if (copyAds) {
         const ads = await fetchAds(sourceToken, adSet.id)
@@ -178,6 +212,20 @@ async function copyOneCampaign(
             continue
           }
           result.ads.push({ id: newAd.id, name: ad.name })
+
+          await admin.from('ads').upsert({
+            user_id: userId,
+            ad_account_id: targetAccountId,
+            campaign_id: newCampaign.id,
+            ad_set_id: newAdSet.id,
+            ad_id: newAd.id,
+            name: ad.name,
+            status: startPaused ? 'PAUSED' : 'ACTIVE',
+            effective_status: startPaused ? 'PAUSED' : 'ACTIVE',
+            creative_id: ad.creative?.id || null,
+            synced_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id,ad_account_id,ad_id' })
         }
       }
       await new Promise(r => setTimeout(r, 200))
@@ -255,6 +303,7 @@ export async function POST(req: NextRequest) {
         name_suffix || '',
         copy_ad_sets !== false,
         copy_ads !== false,
+        user.id,
       )
       results.push({ copy: i + 1, result })
       if (i < copies - 1) await new Promise(r => setTimeout(r, 500))
