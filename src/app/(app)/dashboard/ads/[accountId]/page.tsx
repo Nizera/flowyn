@@ -254,8 +254,16 @@ export default function CampaignManagementPage() {
                 <p className="text-sm text-slate-500">Conta: {accountId}</p>
               </div>
             </div>
-            <button onClick={handleSync} disabled={isSyncing}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+            <div className="flex items-center gap-3">
+              <Link href={`/dashboard/ads/${accountId}/rules`}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                Regras
+              </Link>
+              <button onClick={handleSync} disabled={isSyncing}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
               {isSyncing ? (
                 <>
                   <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
@@ -272,7 +280,8 @@ export default function CampaignManagementPage() {
                   Sincronizar
                 </>
               )}
-            </button>
+              </button>
+            </div>
           </div>
         </div>
       </div>
