@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { getDecryptedToken } from '@/lib/meta-oauth'
 import { requireProPlan } from '@/lib/subscription'
 import { syncAccountFull } from '@/lib/meta-sync'
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
   const startTime = Date.now()
 
   try {
-    const syncResult = await syncAccountFull(supabase, user.id, ad_account_id, accessToken)
+    const syncResult = await syncAccountFull(createAdminClient(), user.id, ad_account_id, accessToken)
 
     // Check Meta rate limit from last response
     const budget = checkSyncBudget(parseMetaRateLimitHeader(syncResult.rateLimitHeader))

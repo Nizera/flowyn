@@ -21,8 +21,12 @@ function parseBudget(value: string | undefined): number | null {
 
 function getDateRange() {
   const now = new Date()
-  const year = now.getFullYear()
-  return JSON.stringify({ since: `${year}-01-01`, until: `${year}-12-31` })
+  const since = new Date(now)
+  since.setDate(since.getDate() - 90)
+  return JSON.stringify({
+    since: since.toISOString().slice(0, 10),
+    until: now.toISOString().slice(0, 10),
+  })
 }
 
 type SyncResult = {
@@ -43,6 +47,19 @@ export async function syncAccountFull(
   const errors: string[] = []
   let rateLimitHeader: string | null = null
   const timeRange = getDateRange()
+  const timeRangeObj = JSON.parse(timeRange)
+
+  // Clear stale insights before re-syncing to prevent zero-rows from overwriting real data
+  const { error: deleteError } = await supabase
+    .from('ad_insights_cache')
+    .delete()
+    .eq('ad_account_id', adAccountId)
+    .gte('date', timeRangeObj.since)
+    .lte('date', timeRangeObj.until)
+
+  if (deleteError) {
+    errors.push(`Clear old insights: ${deleteError.message}`)
+  }
 
   function metaApiCall(url: string): Promise<{ data: any; header: string | null }> {
     return fetch(url).then(async res => {
@@ -60,7 +77,7 @@ export async function syncAccountFull(
     let lastHeader: string | null = null
     let safety = 0
 
-    while (currentUrl && safety < 50) {
+    while (currentUrl && safety < 100) {
       safety++
       const { data, header } = await metaApiCall(currentUrl)
       lastHeader = header
@@ -203,13 +220,15 @@ export async function syncAccountFull(
     totalRowsSynced += adsData.data.length
   }
 
-  // Helper to upsert insights
+  // Helper to upsert insights in batches
   async function upsertInsights(rows: any[], level: string) {
-    for (const row of rows) {
+    const BATCH_SIZE = 100
+
+    function mapRow(row: any) {
       const purchases = extractActions(row.actions, 'purchase')
       const purchaseValue = extractActionValues(row.action_values, 'purchase')
       const leadCount = extractActions(row.actions, 'lead')
-      await supabase.from('ad_insights_cache').upsert({
+      return {
         ad_account_id: adAccountId,
         campaign_id: row.campaign_id,
         campaign_name: row.campaign_name || row.adset_name || row.ad_name || '',
@@ -238,8 +257,28 @@ export async function syncAccountFull(
         engagement_rate_ranking: row.engagement_rate_ranking || null,
         conversion_rate_ranking: row.conversion_rate_ranking || null,
         date: row.date_start,
-      }, { onConflict: 'ad_account_id,campaign_id,ad_set_id,ad_id,insight_level,date' })
-      totalRowsSynced++
+      }
+    }
+
+    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+      const batch = rows.slice(i, i + BATCH_SIZE).map(mapRow)
+        .filter(row => row.spend > 0 || row.impressions > 0 || row.clicks > 0 || row.conversions > 0)
+
+      if (batch.length === 0) continue
+
+      const { error } = await supabase
+        .from('ad_insights_cache')
+        .upsert(batch, { onConflict: 'ad_account_id,campaign_id,ad_set_id,ad_id,insight_level,date' })
+
+      if (error) {
+        errors.push(`Insights batch (${level}): ${error.message}`)
+      } else {
+        totalRowsSynced += batch.length
+      }
+
+      if (i + BATCH_SIZE < rows.length) {
+        await delay(100)
+      }
     }
   }
 
