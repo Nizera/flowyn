@@ -64,10 +64,14 @@ async function createCampaign(accessToken: string, accountId: string, details: C
     status: startPaused ? 'PAUSED' : 'ACTIVE',
     special_ad_categories: details.special_ad_categories || [],
     access_token: accessToken,
+    is_adset_budget_sharing_enabled: 'false',
   }
   if (details.daily_budget) body.daily_budget = details.daily_budget
   if (details.lifetime_budget) body.lifetime_budget = details.lifetime_budget
   if (details.bid_strategy) body.bid_strategy = details.bid_strategy
+  if (!details.daily_budget && !details.lifetime_budget) {
+    body.is_adset_budget_sharing_enabled = 'true'
+  }
 
   const res = await fetch(`${GRAPH_API}/act_${accountId}/campaigns`, {
     method: 'POST',
