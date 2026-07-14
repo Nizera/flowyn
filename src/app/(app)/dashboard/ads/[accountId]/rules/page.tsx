@@ -611,7 +611,7 @@ export default function RulesPage() {
                     <input type="checkbox" checked={form.notify_whatsapp}
                       onChange={e => setForm(p => ({ ...p, notify_whatsapp: e.target.checked }))}
                       className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-                    <span className="text-sm text-slate-700">WhatsApp (via CRM)</span>
+                    <span className="text-sm text-slate-700">WhatsApp</span>
                   </label>
                 </div>
                 <div>
@@ -620,7 +620,7 @@ export default function RulesPage() {
                     onChange={e => setForm(p => ({ ...p, webhook_url: e.target.value }))}
                     placeholder="https://seu-crm.com/api/webhook"
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  <p className="text-xs text-slate-400 mt-1">URL do webhook para enviar dados quando a regra disparar. O CRM ira processar e enviar a mensagem.</p>
+                  <p className="text-xs text-slate-400 mt-1">URL do webhook para enviar os dados quando a regra disparar.</p>
                 </div>
                 {form.webhook_url && (
                   <div>
