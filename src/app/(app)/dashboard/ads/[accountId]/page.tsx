@@ -122,6 +122,7 @@ export default function CampaignManagementPage() {
   const [duplicateTarget, setDuplicateTarget] = useState('')
   const [duplicateNameSuffix, setDuplicateNameSuffix] = useState('')
   const [duplicateStartPaused, setDuplicateStartPaused] = useState(true)
+  const [duplicateQuantity, setDuplicateQuantity] = useState(1)
   const [duplicating, setDuplicating] = useState(false)
   const [accounts, setAccounts] = useState<{ ad_account_id: string; ad_account_name: string | null }[]>([])
 
@@ -162,19 +163,20 @@ export default function CampaignManagementPage() {
   async function fetchAccounts() {
     const res = await fetch('/api/meta-ads/campaigns?action=accounts')
     const json = await res.json()
-    setAccounts((json.accounts || []).filter((a: { ad_account_id: string }) => a.ad_account_id !== accountId))
+    setAccounts(json.accounts || [])
   }
 
   function openDuplicateModal() {
     setDuplicateTarget('')
     setDuplicateNameSuffix('')
     setDuplicateStartPaused(true)
+    setDuplicateQuantity(1)
     setShowDuplicateModal(true)
     fetchAccounts()
   }
 
   async function handleDuplicate() {
-    if (!duplicateTarget || selected.size === 0) return
+    if (selected.size === 0) return
     setDuplicating(true)
     const results: string[] = []
     for (const campaignId of selected) {
@@ -184,16 +186,17 @@ export default function CampaignManagementPage() {
         body: JSON.stringify({
           source_campaign_id: campaignId,
           source_ad_account_id: accountId,
-          target_ad_account_id: duplicateTarget,
+          target_ad_account_id: duplicateTarget || accountId,
           name_suffix: duplicateNameSuffix,
           copy_ad_sets: true,
           copy_ads: true,
           start_paused: duplicateStartPaused,
+          quantity: duplicateQuantity,
         }),
       })
       const json = await res.json()
       if (json.error) results.push(`Erro: ${json.error}`)
-      else results.push(`Campanha duplicada com sucesso!`)
+      else results.push(`${json.copies} copia(s) criada(s) com sucesso!`)
     }
     setShowDuplicateModal(false)
     setSelected(new Set())
@@ -632,17 +635,28 @@ export default function CampaignManagementPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Conta de destino</label>
                 <select value={duplicateTarget} onChange={e => setDuplicateTarget(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Selecione uma conta...</option>
-                  {accounts.map(a => (
+                  <option value="">Mesma conta</option>
+                  {accounts.filter(a => a.ad_account_id !== accountId).map(a => (
                     <option key={a.ad_account_id} value={a.ad_account_id}>{a.ad_account_name || a.ad_account_id}</option>
                   ))}
                 </select>
+                {!duplicateTarget && <p className="text-xs text-slate-400 mt-1">A campanha sera criada nesta mesma conta</p>}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Sufixo do nome (opcional)</label>
-                <input type="text" value={duplicateNameSuffix} onChange={e => setDuplicateNameSuffix(e.target.value)}
-                  placeholder="Ex: Copy, Teste"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Quantidade</label>
+                  <input type="number" min={1} max={20} value={duplicateQuantity}
+                    onChange={e => setDuplicateQuantity(Math.min(20, Math.max(1, Number(e.target.value) || 1)))}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <p className="text-xs text-slate-400 mt-1">Max. 20 copias</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Sufixo (opcional)</label>
+                  <input type="text" value={duplicateNameSuffix} onChange={e => setDuplicateNameSuffix(e.target.value)}
+                    placeholder="Ex: Copy"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <p className="text-xs text-slate-400 mt-1">Ex: &quot;Nome - Copia 1&quot;</p>
+                </div>
               </div>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={duplicateStartPaused}
@@ -650,14 +664,14 @@ export default function CampaignManagementPage() {
                   className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                 <span className="text-sm text-slate-700">Criar pausada (recomendado)</span>
               </label>
-              <p className="text-xs text-slate-400">Campanhas, conjuntos e anuncios serao copiados para a conta de destino.</p>
+              <p className="text-xs text-slate-400">Campanhas, conjuntos e anuncios serao copiados.</p>
             </div>
             <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3">
               <button onClick={() => setShowDuplicateModal(false)}
                 className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button>
-              <button onClick={handleDuplicate} disabled={!duplicateTarget || duplicating}
+              <button onClick={handleDuplicate} disabled={duplicating}
                 className="px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors">
-                {duplicating ? 'Duplicando...' : `Duplicar ${selected.size > 1 ? `${selected.size} campanhas` : 'campanha'}`}
+                {duplicating ? 'Duplicando...' : `Duplicar ${selected.size > 1 ? `${selected.size} campanhas` : 'campanha'}${duplicateQuantity > 1 ? ` x${duplicateQuantity}` : ''}`}
               </button>
             </div>
           </div>
