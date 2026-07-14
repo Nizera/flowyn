@@ -255,16 +255,26 @@ async function copyOneCampaign(
 
       if (copyAds) {
         const ads = await fetchAds(sourceToken, adSet.id)
+        console.log(`[Duplicate] Source adSet ${adSet.id} has ${ads.length} ads`)
         const sameAccount = sourceAccountId === targetAccountId
         for (const ad of ads) {
+          const hasCreative = !!ad.creative?.id
+          console.log(`[Duplicate] Ad ${ad.id} "${ad.name}" creative=${hasCreative ? ad.creative?.id : 'NONE'}`)
+
           let newCreativeId: string | undefined
+
+          if (!hasCreative) {
+            console.warn(`[Duplicate] Skipping ad "${ad.name}" - no creative attached`)
+            result.ads.push({ name: ad.name, error: 'No creative attached to source ad' })
+            continue
+          }
 
           if (sameAccount) {
             newCreativeId = ad.creative?.id
-          } else if (ad.creative?.id) {
-            const sourceCreative = await fetchCreative(sourceToken, ad.creative.id)
+          } else {
+            const sourceCreative = await fetchCreative(sourceToken, ad.creative!.id)
             if (!sourceCreative.error) {
-              const newCreativeName = `${ad.creative.id} - ${ad.name}`
+              const newCreativeName = `${ad.creative!.id} - ${ad.name}`
               const newCreative = await createCreative(targetToken, targetAccountId, newCreativeName, sourceCreative)
               if (newCreative.id) {
                 newCreativeId = newCreative.id
@@ -279,7 +289,9 @@ async function copyOneCampaign(
             await new Promise(r => setTimeout(r, 200))
           }
 
+          console.log(`[Duplicate] Creating ad "${ad.name}" with creative_id=${newCreativeId}`)
           const newAd = await createAd(targetToken, targetAccountId, newAdSet.id, ad, startPaused, newCreativeId)
+          console.log(`[Duplicate] Ad creation result:`, JSON.stringify(newAd))
           if (newAd.error) {
             result.ads.push({ name: ad.name, error: newAd.error.message })
             continue
