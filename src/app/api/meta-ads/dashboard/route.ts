@@ -154,6 +154,13 @@ export async function GET(req: NextRequest) {
   const netProfit = totalAttributedRevenue - totalSpend - totalFees - totalProductionCost
   const roas = totalSpend > 0 ? totalAttributedRevenue / totalSpend : 0
   const roi = totalSpend > 0 ? (netProfit / totalSpend) * 100 : 0
+  
+  // Novos cálculos
+  const pendingRevenue = orders.filter(o => o.status === 'pending').reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0)
+  const refundedRevenue = orders.filter(o => o.status === 'refunded').reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0)
+  const profitMargin = totalAttributedRevenue > 0 ? (netProfit / totalAttributedRevenue) * 100 : 0
+  const arpu = totalAttributedOrders > 0 ? totalAttributedRevenue / totalAttributedOrders : 0
+  const chargebackRate = orders.length > 0 ? (orders.filter(o => o.status === 'refunded').length / orders.length) * 100 : 0
 
   // 9. Spend over time (daily aggregation)
   const spendByDay: Record<string, number> = {}
@@ -198,6 +205,11 @@ export async function GET(req: NextRequest) {
       total_orders: totalAttributedOrders,
       roas,
       roi,
+      pending_revenue: pendingRevenue,
+      refunded_revenue: refundedRevenue,
+      profit_margin: profitMargin,
+      arpu,
+      chargeback_rate: chargebackRate,
     },
     payment_breakdown: Object.entries(paymentBreakdown).map(([status, data]) => ({
       status,
