@@ -45,6 +45,7 @@ export default function DashboardPage() {
         ])
 
         const adsData = await adsRes.json()
+        setMetaStats(adsData)
 
       const ordersList = (orders || []) as Order[]
       const paid = ordersList.filter(o => o.status === 'paid')
