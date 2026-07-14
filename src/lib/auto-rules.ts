@@ -554,7 +554,8 @@ async function getAllEntityIds(
     .eq('user_id', userId)
     .eq('status', 'ACTIVE')
 
-  return (data || []).map((r: Record<string, string>) => r[idField])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data || []).map((r: any) => r[idField])
 }
 
 export async function evaluateAllRules(): Promise<{
