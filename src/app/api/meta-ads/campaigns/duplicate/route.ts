@@ -71,6 +71,9 @@ async function createCampaign(accessToken: string, accountId: string, details: C
   if (details.bid_strategy) body.bid_strategy = details.bid_strategy
   if (!details.daily_budget && !details.lifetime_budget) {
     body.is_adset_budget_sharing_enabled = 'true'
+    if (!details.bid_strategy) {
+      body.bid_strategy = 'LOWEST_COST_WITHOUT_CAP'
+    }
   }
 
   const res = await fetch(`${GRAPH_API}/act_${accountId}/campaigns`, {
