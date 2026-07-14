@@ -58,11 +58,11 @@ async function fetchAds(accessToken: string, adSetId: string): Promise<AdData[]>
 }
 
 async function createCampaign(accessToken: string, accountId: string, details: CampaignDetails, campaignName: string, startPaused: boolean) {
-  const body: Record<string, string> = {
+  const body: Record<string, string | string[]> = {
     name: campaignName,
     objective: details.objective,
     status: startPaused ? 'PAUSED' : 'ACTIVE',
-    special_ad_categories: JSON.stringify(details.special_ad_categories || []),
+    special_ad_categories: details.special_ad_categories || [],
     access_token: accessToken,
   }
   if (details.daily_budget) body.daily_budget = details.daily_budget
@@ -78,13 +78,13 @@ async function createCampaign(accessToken: string, accountId: string, details: C
 }
 
 async function createAdSet(accessToken: string, accountId: string, campaignId: string, adSet: AdSetData, startPaused: boolean) {
-  const body: Record<string, string | number | boolean> = {
+  const body: Record<string, string | number | boolean | Record<string, unknown>> = {
     campaign_id: campaignId,
     name: adSet.name,
     status: startPaused ? 'PAUSED' : 'ACTIVE',
     optimization_goal: adSet.optimization_goal,
     billing_event: adSet.billing_event,
-    targeting: JSON.stringify(adSet.targeting || {}),
+    targeting: adSet.targeting || {},
     access_token: accessToken,
   }
   if (adSet.bid_strategy) body.bid_strategy = adSet.bid_strategy
@@ -103,11 +103,11 @@ async function createAdSet(accessToken: string, accountId: string, campaignId: s
 }
 
 async function createAd(accessToken: string, accountId: string, adSetId: string, ad: AdData, startPaused: boolean) {
-  const body: Record<string, string | boolean> = {
+  const body: Record<string, string | boolean | { creative_id: string }> = {
     adset_id: adSetId,
     name: ad.name,
     status: startPaused ? 'PAUSED' : 'ACTIVE',
-    creative: JSON.stringify({ creative_id: ad.creative?.id }),
+    creative: { creative_id: ad.creative?.id || '' },
     access_token: accessToken,
   }
 
@@ -138,7 +138,12 @@ async function copyOneCampaign(
 
   const newCampaign = await createCampaign(targetToken, targetAccountId, campaignDetails, campaignName, startPaused)
   if (newCampaign.error) {
-    return { campaign: { error: newCampaign.error.message }, ad_sets: [], ads: [] }
+    console.error('[Duplicate] Campaign creation failed:', JSON.stringify(newCampaign))
+    return { campaign: { error: newCampaign.error.message || JSON.stringify(newCampaign.error) }, ad_sets: [], ads: [] }
+  }
+  if (!newCampaign.id) {
+    console.error('[Duplicate] Campaign no id returned:', JSON.stringify(newCampaign))
+    return { campaign: { error: 'No campaign ID. Response: ' + JSON.stringify(newCampaign).slice(0, 500) }, ad_sets: [], ads: [] }
   }
 
   const result: { campaign: { id: string; name: string }; ad_sets: Array<{ id?: string; name: string; error?: string }>; ads: Array<{ id?: string; name: string; error?: string }> } = {
