@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
   const errors: string[] = []
 
   // Process in batches to respect rate limits
+  console.log(`[Bulk] action=${action} level=${level} ids=`, ids)
   for (const id of ids) {
     try {
       let metaStatus: string
@@ -65,15 +66,14 @@ export async function POST(req: NextRequest) {
 
       if (action === 'delete') {
         // Delete from Meta
-        const metaRes = await fetch(`${GRAPH_API}/${id}`, {
+        const metaRes = await fetch(`${GRAPH_API}/${id}?access_token=${accessToken}`, {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ access_token: accessToken }),
         })
         const metaData = await metaRes.json()
+        console.log(`[Bulk] DELETE ${id}:`, JSON.stringify(metaData))
         if (metaData.error) {
           errors.push(`${id}: ${metaData.error.message}`)
-          continue
+          // Still delete from local DB even if Meta refuses
         }
         metaStatus = 'DELETED'
       } else {

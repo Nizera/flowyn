@@ -247,7 +247,13 @@ export default function CampaignManagementPage() {
     })
     const json = await res.json()
     if (json.error) alert(`Erro: ${json.error}`)
-    else { setSelected(new Set()); fetchData() }
+    else {
+      if (json.errors && json.errors.length > 0) {
+        alert(`Alguns itens falharam:\n${json.errors.join('\n')}`)
+      }
+      setSelected(new Set())
+      fetchData()
+    }
   }
 
   function toggleSelectAll() {
