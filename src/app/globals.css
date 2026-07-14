@@ -84,3 +84,8 @@ body {
 .light-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
 .light-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 .light-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+.sidebar-scrollbar::-webkit-scrollbar { width: 4px; }
+.sidebar-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.sidebar-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 3px; }
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
