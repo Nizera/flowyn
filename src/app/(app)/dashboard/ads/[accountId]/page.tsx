@@ -118,6 +118,12 @@ export default function CampaignManagementPage() {
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showColumnMenu, setShowColumnMenu] = useState(false)
   const [showGroupMenu, setShowGroupMenu] = useState(false)
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false)
+  const [duplicateTarget, setDuplicateTarget] = useState('')
+  const [duplicateNameSuffix, setDuplicateNameSuffix] = useState('')
+  const [duplicateStartPaused, setDuplicateStartPaused] = useState(true)
+  const [duplicating, setDuplicating] = useState(false)
+  const [accounts, setAccounts] = useState<{ ad_account_id: string; ad_account_name: string | null }[]>([])
 
   const [visibleColumns, setVisibleColumns] = useState({
     reach: true,
@@ -151,6 +157,48 @@ export default function CampaignManagementPage() {
     else alert('Sincronizacao concluida!')
     setIsSyncing(false)
     fetchData()
+  }
+
+  async function fetchAccounts() {
+    const res = await fetch('/api/meta-ads/campaigns?action=accounts')
+    const json = await res.json()
+    setAccounts((json.accounts || []).filter((a: { ad_account_id: string }) => a.ad_account_id !== accountId))
+  }
+
+  function openDuplicateModal() {
+    setDuplicateTarget('')
+    setDuplicateNameSuffix('')
+    setDuplicateStartPaused(true)
+    setShowDuplicateModal(true)
+    fetchAccounts()
+  }
+
+  async function handleDuplicate() {
+    if (!duplicateTarget || selected.size === 0) return
+    setDuplicating(true)
+    const results: string[] = []
+    for (const campaignId of selected) {
+      const res = await fetch('/api/meta-ads/campaigns/duplicate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_campaign_id: campaignId,
+          source_ad_account_id: accountId,
+          target_ad_account_id: duplicateTarget,
+          name_suffix: duplicateNameSuffix,
+          copy_ad_sets: true,
+          copy_ads: true,
+          start_paused: duplicateStartPaused,
+        }),
+      })
+      const json = await res.json()
+      if (json.error) results.push(`Erro: ${json.error}`)
+      else results.push(`Campanha duplicada com sucesso!`)
+    }
+    setShowDuplicateModal(false)
+    setSelected(new Set())
+    alert(results.join('\n'))
+    setDuplicating(false)
   }
 
   async function handleToggle(item: CampaignItem | AdSetItem | AdItem, level: 'campaign' | 'adset' | 'ad') {
@@ -428,6 +476,10 @@ export default function CampaignManagementPage() {
               {selected.size > 0 && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-500">{selected.size} selecionado(s)</span>
+                  {tab === 'campaigns' && (
+                    <button onClick={openDuplicateModal}
+                      className="px-3 py-1.5 bg-purple-600 text-white text-xs font-semibold rounded-lg hover:bg-purple-700">Duplicar</button>
+                  )}
                   <button onClick={() => { setBulkAction('ACTIVE'); handleBulk() }}
                     className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700">Ativar</button>
                   <button onClick={() => { setBulkAction('PAUSED'); handleBulk() }}
@@ -560,6 +612,57 @@ export default function CampaignManagementPage() {
           </div>
         )}
       </div>
+
+      {/* Duplicate Modal */}
+      {showDuplicateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowDuplicateModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-slate-900">Duplicar Campanha{selected.size > 1 ? 's' : ''}</h2>
+                <button onClick={() => setShowDuplicateModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Conta de destino</label>
+                <select value={duplicateTarget} onChange={e => setDuplicateTarget(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">Selecione uma conta...</option>
+                  {accounts.map(a => (
+                    <option key={a.ad_account_id} value={a.ad_account_id}>{a.ad_account_name || a.ad_account_id}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Sufixo do nome (opcional)</label>
+                <input type="text" value={duplicateNameSuffix} onChange={e => setDuplicateNameSuffix(e.target.value)}
+                  placeholder="Ex: Copy, Teste"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={duplicateStartPaused}
+                  onChange={e => setDuplicateStartPaused(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                <span className="text-sm text-slate-700">Criar pausada (recomendado)</span>
+              </label>
+              <p className="text-xs text-slate-400">Campanhas, conjuntos e anuncios serao copiados para a conta de destino.</p>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3">
+              <button onClick={() => setShowDuplicateModal(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button>
+              <button onClick={handleDuplicate} disabled={!duplicateTarget || duplicating}
+                className="px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors">
+                {duplicating ? 'Duplicando...' : `Duplicar ${selected.size > 1 ? `${selected.size} campanhas` : 'campanha'}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
