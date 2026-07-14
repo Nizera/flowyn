@@ -6,6 +6,20 @@ import { requireProPlan } from '@/lib/subscription'
 
 const GRAPH_API = 'https://graph.facebook.com/v21.0'
 
+const API_BUDGET_PER_OP = 1000
+const HARD_CAP = 20
+const DELAY_MS = 500
+
+function calculateApiCost(adSets: number, totalAds: number): number {
+  return 3 + adSets * 2 + totalAds * 3
+}
+
+function calculateMaxCopies(adSets: number, totalAds: number): number {
+  const costPerCopy = calculateApiCost(adSets, totalAds)
+  const maxByBudget = Math.floor(API_BUDGET_PER_OP / costPerCopy)
+  return Math.min(maxByBudget, HARD_CAP)
+}
+
 interface CampaignDetails {
   name: string
   objective: string
@@ -56,6 +70,15 @@ async function fetchAds(accessToken: string, adSetId: string): Promise<AdData[]>
   )
   const data = await res.json()
   return data.data || []
+}
+
+async function countAllAds(accessToken: string, adSets: AdSetData[]): Promise<number> {
+  let total = 0
+  for (const adSet of adSets) {
+    const ads = await fetchAds(accessToken, adSet.id)
+    total += ads.length
+  }
+  return total
 }
 
 async function createCampaign(accessToken: string, accountId: string, details: CampaignDetails, campaignName: string, startPaused: boolean) {
@@ -212,23 +235,23 @@ async function copyOneCampaign(
         result.ad_sets.push({ name: adSet.name, error: newAdSet.error.message })
         continue
       }
-        result.ad_sets.push({ id: newAdSet.id, name: adSet.name })
+      result.ad_sets.push({ id: newAdSet.id, name: adSet.name })
 
-        await admin.from('ad_sets').upsert({
-          user_id: userId,
-          ad_account_id: targetAccountId,
-          campaign_id: newCampaign.id,
-          ad_set_id: newAdSet.id,
-          name: adSet.name,
-          status: startPaused ? 'PAUSED' : 'ACTIVE',
-          effective_status: startPaused ? 'PAUSED' : 'ACTIVE',
-          optimization_goal: adSet.optimization_goal,
-          billing_event: adSet.billing_event,
-          daily_budget: adSet.daily_budget || null,
-          lifetime_budget: adSet.lifetime_budget || null,
-          synced_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id,ad_account_id,ad_set_id' })
+      await admin.from('ad_sets').upsert({
+        user_id: userId,
+        ad_account_id: targetAccountId,
+        campaign_id: newCampaign.id,
+        ad_set_id: newAdSet.id,
+        name: adSet.name,
+        status: startPaused ? 'PAUSED' : 'ACTIVE',
+        effective_status: startPaused ? 'PAUSED' : 'ACTIVE',
+        optimization_goal: adSet.optimization_goal,
+        billing_event: adSet.billing_event,
+        daily_budget: adSet.daily_budget || null,
+        lifetime_budget: adSet.lifetime_budget || null,
+        synced_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,ad_account_id,ad_set_id' })
 
       if (copyAds) {
         const ads = await fetchAds(sourceToken, adSet.id)
@@ -279,6 +302,42 @@ async function copyOneCampaign(
   return result
 }
 
+export async function GET(req: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { searchParams } = new URL(req.url)
+  const campaignId = searchParams.get('campaign_id')
+  const accountId = searchParams.get('account_id')
+
+  if (!campaignId || !accountId) {
+    return NextResponse.json({ error: 'campaign_id and account_id required' }, { status: 400 })
+  }
+
+  const token = await getDecryptedToken(accountId, user.id)
+  if (!token) return NextResponse.json({ error: 'Token not found' }, { status: 404 })
+
+  const adSets = await fetchAdSets(token, campaignId)
+  const totalAds = await countAllAds(token, adSets)
+  const adSetCount = adSets.length
+
+  const apiCostPerCopy = calculateApiCost(adSetCount, totalAds)
+  const maxCopies = calculateMaxCopies(adSetCount, totalAds)
+  const estimatedTimeSec = Math.ceil((maxCopies * DELAY_MS) / 1000)
+
+  return NextResponse.json({
+    campaign_name: 'Campaign',
+    ad_sets: adSetCount,
+    total_ads: totalAds,
+    api_cost_per_copy: apiCostPerCopy,
+    max_copies: maxCopies,
+    hard_cap: HARD_CAP,
+    budget: API_BUDGET_PER_OP,
+    estimated_time_sec: estimatedTimeSec,
+  })
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -305,7 +364,6 @@ export async function POST(req: NextRequest) {
   }
 
   const finalTargetAccountId = target_ad_account_id || source_ad_account_id
-  const copies = Math.min(Math.max(Number(quantity) || 1, 1), 20)
 
   const sourceToken = await getDecryptedToken(source_ad_account_id, user.id)
   if (!sourceToken) return NextResponse.json({ error: 'Source token not found' }, { status: 404 })
@@ -332,6 +390,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: campaignDetails.error.message }, { status: 500 })
     }
 
+    const adSets = await fetchAdSets(sourceToken, source_campaign_id)
+    const totalAds = await countAllAds(sourceToken, adSets)
+    const maxCopies = calculateMaxCopies(adSets.length, totalAds)
+    const requestedCopies = Math.max(Number(quantity) || 1, 1)
+
+    if (requestedCopies > maxCopies) {
+      return NextResponse.json({
+        error: `Maximo permitido: ${maxCopies} copias (${adSets.length} conjuntos, ${totalAds} anuncios, ${calculateApiCost(adSets.length, totalAds)} calls/copia). Limite de ${API_BUDGET_PER_OP} calls/operacao.`,
+        max_copies: maxCopies,
+        api_cost_per_copy: calculateApiCost(adSets.length, totalAds),
+        ad_sets: adSets.length,
+        total_ads: totalAds,
+      }, { status: 400 })
+    }
+
+    const copies = Math.min(requestedCopies, maxCopies)
     const results: Array<{ copy: number; result: Awaited<ReturnType<typeof copyOneCampaign>> }> = []
 
     for (let i = 0; i < copies; i++) {
@@ -350,7 +424,7 @@ export async function POST(req: NextRequest) {
         user.id,
       )
       results.push({ copy: i + 1, result })
-      if (i < copies - 1) await new Promise(r => setTimeout(r, 500))
+      if (i < copies - 1) await new Promise(r => setTimeout(r, DELAY_MS))
     }
 
     return NextResponse.json({ success: true, copies, results })

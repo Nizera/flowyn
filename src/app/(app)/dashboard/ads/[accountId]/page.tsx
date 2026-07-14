@@ -124,6 +124,7 @@ export default function CampaignManagementPage() {
   const [duplicateStartPaused, setDuplicateStartPaused] = useState(true)
   const [duplicateQuantity, setDuplicateQuantity] = useState(1)
   const [duplicating, setDuplicating] = useState(false)
+  const [duplicateLimit, setDuplicateLimit] = useState<{ max_copies: number; api_cost_per_copy: number; ad_sets: number; total_ads: number } | null>(null)
   const [accounts, setAccounts] = useState<{ ad_account_id: string; ad_account_name: string | null }[]>([])
 
   const [visibleColumns, setVisibleColumns] = useState({
@@ -171,8 +172,21 @@ export default function CampaignManagementPage() {
     setDuplicateNameSuffix('')
     setDuplicateStartPaused(true)
     setDuplicateQuantity(1)
+    setDuplicateLimit(null)
     setShowDuplicateModal(true)
     fetchAccounts()
+    const firstCampaign = [...selected][0]
+    if (firstCampaign) {
+      fetch(`/api/meta-ads/campaigns/duplicate?campaign_id=${firstCampaign}&account_id=${accountId}`)
+        .then(r => r.json())
+        .then(json => {
+          if (!json.error) {
+            setDuplicateLimit(json)
+            setDuplicateQuantity(Math.min(1, json.max_copies))
+          }
+        })
+        .catch(() => {})
+    }
   }
 
   async function handleDuplicate() {
@@ -646,10 +660,14 @@ export default function CampaignManagementPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Quantidade</label>
-                  <input type="number" min={1} max={20} value={duplicateQuantity}
-                    onChange={e => setDuplicateQuantity(Math.min(20, Math.max(1, Number(e.target.value) || 1)))}
+                  <input type="number" min={1} max={duplicateLimit?.max_copies || 20} value={duplicateQuantity}
+                    onChange={e => setDuplicateQuantity(Math.min(duplicateLimit?.max_copies || 20, Math.max(1, Number(e.target.value) || 1)))}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  <p className="text-xs text-slate-400 mt-1">Max. 20 copias</p>
+                  {duplicateLimit ? (
+                    <p className="text-xs text-slate-400 mt-1">Max. {duplicateLimit.max_copies} copias</p>
+                  ) : (
+                    <p className="text-xs text-slate-400 mt-1">Carregando...</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Sufixo (opcional)</label>
@@ -665,7 +683,14 @@ export default function CampaignManagementPage() {
                   className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                 <span className="text-sm text-slate-700">Criar pausada (recomendado)</span>
               </label>
-              <p className="text-xs text-slate-400">Campanhas, conjuntos e anuncios serao copiados.</p>
+              {duplicateLimit && (
+                <div className="bg-slate-50 rounded-lg px-3 py-2 text-xs text-slate-500 space-y-0.5">
+                  <p>{duplicateLimit.ad_sets} conjunto(s) de anuncio(s), {duplicateLimit.total_ads} anuncio(s)</p>
+                  <p>{duplicateLimit.api_cost_per_copy} chamadas API por copia</p>
+                  <p>Limite: 1.000 chamadas/operacao (25% do limite horario)</p>
+                </div>
+              )}
+              <p className="text-xs text-slate-400">Campanhas, conjuntos, anuncios e criativos serao copiados.</p>
             </div>
             <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3">
               <button onClick={() => setShowDuplicateModal(false)}
