@@ -255,9 +255,13 @@ async function copyOneCampaign(
 
       if (copyAds) {
         const ads = await fetchAds(sourceToken, adSet.id)
+        const sameAccount = sourceAccountId === targetAccountId
         for (const ad of ads) {
           let newCreativeId: string | undefined
-          if (ad.creative?.id) {
+
+          if (sameAccount) {
+            newCreativeId = ad.creative?.id
+          } else if (ad.creative?.id) {
             const sourceCreative = await fetchCreative(sourceToken, ad.creative.id)
             if (!sourceCreative.error) {
               const newCreativeName = `${ad.creative.id} - ${ad.name}`
@@ -266,9 +270,11 @@ async function copyOneCampaign(
                 newCreativeId = newCreative.id
               } else {
                 console.error('[Duplicate] Creative copy failed:', JSON.stringify(newCreative))
+                newCreativeId = ad.creative?.id
               }
             } else {
               console.error('[Duplicate] Fetch creative failed:', JSON.stringify(sourceCreative))
+              newCreativeId = ad.creative?.id
             }
             await new Promise(r => setTimeout(r, 200))
           }
