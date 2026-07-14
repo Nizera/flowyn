@@ -15,6 +15,7 @@ interface CampaignDetails {
 }
 
 interface AdSetData {
+  id: string
   name: string
   optimization_goal: string
   billing_event: string
@@ -28,6 +29,7 @@ interface AdSetData {
 }
 
 interface AdData {
+  id: string
   name: string
   creative?: { id: string }
 }
