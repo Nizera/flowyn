@@ -72,7 +72,7 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
     if (!name || !price) return
 
     const priceNum = parseFloat(price)
-    if (isNaN(priceNum) || priceNum <= 0) return
+    if (isNaN(priceNum) || priceNum < 5) return
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -116,7 +116,7 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
               <input name="name" required className={inputClass} placeholder="Acesso Completo" />
             </Field>
             <Field label="Preco">
-              <input name="price" type="number" min="0" step="0.01" required className={inputClass} placeholder="97.00" />
+              <input name="price" type="number" min="5" step="0.01" required className={inputClass} placeholder="97.00" />
             </Field>
             <Field label="Tipo">
               <select name="billing_type" className={inputClass} defaultValue="one_time">

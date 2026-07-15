@@ -61,7 +61,7 @@ export function EditablePlanCard({ plan, productId }: { plan: Plan; productId: s
               <input className={inputClass} type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
             </EditField>
             <EditField label="Preco">
-              <input className={inputClass} type="number" step="0.01" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} required />
+              <input className={inputClass} type="number" min="5" step="0.01" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} required />
             </EditField>
             <EditField label="Tipo">
               <select className={inputClass} value={formData.billing_type} onChange={e => setFormData({ ...formData, billing_type: e.target.value })}>

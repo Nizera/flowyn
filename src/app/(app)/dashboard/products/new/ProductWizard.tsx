@@ -89,7 +89,7 @@ export function ProductWizard({
     if (!draft.name.trim()) fields.push('nome do produto')
     if (!draft.product_type) fields.push('tipo de produto')
     if (!draft.category) fields.push('categoria')
-    if (!draft.price || Number(draft.price) <= 0) fields.push('preco inicial')
+    if (!draft.price || Number(draft.price) < 5) fields.push('preco inicial (minimo R$ 5,00)')
     return fields
   }, [draft])
 
@@ -238,7 +238,7 @@ export function ProductWizard({
                 <input
                   className={`${fieldClass} max-w-sm`}
                   type="number"
-                  min="1"
+                  min="5"
                   step="0.01"
                   value={draft.price}
                   onChange={event => update('price', event.target.value)}

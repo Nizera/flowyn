@@ -181,8 +181,8 @@ export async function POST(req: NextRequest) {
     }
     const totalAmount = Number((Number(plan.price) + orderBumpAmount).toFixed(2))
 
-    if (!Number.isFinite(Number(plan.price)) || Number(plan.price) <= 0 || !Number.isFinite(totalAmount) || totalAmount <= 0) {
-      return NextResponse.json({ error: 'Valor do produto invalido.' }, { status: 400 })
+    if (!Number.isFinite(Number(plan.price)) || Number(plan.price) < 5 || !Number.isFinite(totalAmount) || totalAmount < 5) {
+      return NextResponse.json({ error: 'O valor minimo e de R$ 5,00.' }, { status: 400 })
     }
 
     step = 'create_asaas_customer'

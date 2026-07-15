@@ -27,7 +27,7 @@ export async function updatePlanAction(productId: string, planId: string, formDa
   if (!name || !price) return { success: false, error: 'Missing required fields' }
 
   const priceNum = parseFloat(price)
-  if (isNaN(priceNum) || priceNum <= 0) return { success: false, error: 'O preço deve ser maior que zero.' }
+  if (isNaN(priceNum) || priceNum < 5) return { success: false, error: 'O valor minimo e de R$ 5,00.' }
 
   const { error } = await supabase
     .from('plans')

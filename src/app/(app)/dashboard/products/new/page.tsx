@@ -93,6 +93,11 @@ async function createProductAction(data: CreateProductActionInput): Promise<{ pr
         price: typeof p.price === 'string' ? parseFloat(p.price) || 0 : p.price,
         billing_type: p.billing_type === 'recurring' ? 'recurring' : 'one_time',
       }))
+
+      const invalidPlan = plans.find(p => !Number.isFinite(p.price) || p.price < 5)
+      if (invalidPlan) {
+        return { error: 'O valor minimo de um plano e de R$ 5,00.' }
+      }
       const { error: plansError } = await supabase.from('plans').insert(plans)
       if (plansError) {
         console.error('[createProductAction] Plans Error:', plansError)
