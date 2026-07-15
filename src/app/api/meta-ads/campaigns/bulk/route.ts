@@ -109,8 +109,25 @@ export async function POST(req: NextRequest) {
         results.push({ id, action: 'delete' })
 
       } else if (action === 'increase_budget' || action === 'decrease_budget' || action === 'set_budget') {
+        let metaTargetId = id
+
+        if (level === 'adset') {
+          const { data: adSet } = await adminSupabase
+            .from('ad_sets').select('campaign_id').eq('ad_set_id', id).eq('ad_account_id', ad_account_id).single()
+          if (adSet?.campaign_id) {
+            const campaignRes = await fetch(`${GRAPH_API}/${adSet.campaign_id}?fields=is_adset_budget_sharing_enabled&access_token=${accessToken}`)
+            const campaignData = await campaignRes.json()
+            if (campaignData.is_adset_budget_sharing_enabled === true) {
+              metaTargetId = adSet.campaign_id
+            }
+          }
+        }
+
+        const localTableBudget = metaTargetId !== id ? 'campaigns' : localTable
+        const localIdFieldBudget = metaTargetId !== id ? 'campaign_id' : localIdField
+
         const { data: currentItem } = await adminSupabase
-          .from(localTable).select('daily_budget,lifetime_budget').eq(localIdField, id).eq('ad_account_id', ad_account_id).single()
+          .from(localTableBudget).select('daily_budget,lifetime_budget').eq(localIdFieldBudget, metaTargetId).eq('ad_account_id', ad_account_id).single()
 
         const currentBudget = Number(currentItem?.daily_budget || currentItem?.lifetime_budget || 0)
         const isDaily = !!currentItem?.daily_budget && Number(currentItem.daily_budget) > 0
@@ -124,9 +141,9 @@ export async function POST(req: NextRequest) {
         } else {
           newBudget = Math.round(currentBudget * (1 - Number(budget_amount) / 100))
         }
-        newBudget = Math.max(newBudget, isDaily ? 100 : 100)
+        newBudget = Math.max(newBudget, 100)
 
-        const metaRes = await fetch(`${GRAPH_API}/${id}`, {
+        const metaRes = await fetch(`${GRAPH_API}/${metaTargetId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ [budgetField]: String(newBudget), access_token: accessToken }),
@@ -137,10 +154,10 @@ export async function POST(req: NextRequest) {
           continue
         }
 
-        await adminSupabase.from(localTable).update({ [budgetField]: newBudget, updated_at: new Date().toISOString() })
-          .eq(localIdField, id).eq('ad_account_id', ad_account_id).eq('user_id', user.id)
+        await adminSupabase.from(localTableBudget).update({ [budgetField]: newBudget, updated_at: new Date().toISOString() })
+          .eq(localIdFieldBudget, metaTargetId).eq('ad_account_id', ad_account_id).eq('user_id', user.id)
 
-        results.push({ id, action: 'budget', new_budget: newBudget, field: budgetField })
+        results.push({ id, action: 'budget', new_budget: newBudget, field: budgetField, applied_to: metaTargetId !== id ? 'campaign' : level })
 
       } else {
         const metaStatus = action === 'pause' ? 'PAUSED' : 'ACTIVE'

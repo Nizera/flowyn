@@ -310,7 +310,13 @@ export default function CampaignManagementPage() {
     const json = await res.json()
     setSavingBudget(false)
     if (json.error) alert(`Erro: ${json.error}`)
-    else { setBudgetModalOpen(false); fetchData() }
+    else {
+      if (json.applied_to === 'campaign') {
+        alert('Orcamento aplicado no nivel da Campanha (CBO ativo neste conjunto).')
+      }
+      setBudgetModalOpen(false)
+      fetchData()
+    }
   }
 
   async function handleBulkBudget() {
@@ -336,6 +342,10 @@ export default function CampaignManagementPage() {
     if (json.error) alert(`Erro: ${json.error}`)
     else {
       if (json.errors && json.errors.length > 0) alert(`Alguns itens falharam:\n${json.errors.join('\n')}`)
+      const campaignRedirects = (json.results || []).filter((r: { applied_to?: string }) => r.applied_to === 'campaign')
+      if (campaignRedirects.length > 0) {
+        alert(`${campaignRedirects.length} item(ns) tiveram orcamento aplicado na Campanha (CBO ativo).`)
+      }
       setBulkBudgetModalOpen(false)
       setSelected(new Set())
       fetchData()
