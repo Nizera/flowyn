@@ -171,6 +171,25 @@ export async function GET(req: NextRequest) {
   }
   for (const order of orders || []) {
     if (order.status !== 'paid') continue
+    const trackingParams = order.tracking_params as any
+    if (!trackingParams?.utm_campaign) continue
+
+    const utmCampaign = trackingParams.utm_campaign
+    let matched = false
+
+    if (campaignSpendMap[utmCampaign]) {
+      matched = true
+    } else {
+      for (const [id, camp] of Object.entries(campaignSpendMap)) {
+        if (camp.campaign_name?.toLowerCase() === utmCampaign.toLowerCase()) {
+          matched = true
+          break
+        }
+      }
+    }
+
+    if (!matched) continue
+
     const day = (order.created_at as string).slice(0, 10)
     revenueByDay[day] = (revenueByDay[day] || 0) + (parseFloat(order.amount) || 0)
   }
