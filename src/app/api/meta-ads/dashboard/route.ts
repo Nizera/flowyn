@@ -29,8 +29,6 @@ export async function GET(req: NextRequest) {
     .single()
 
   const taxPercentage = costConfig?.tax_percentage || 0
-  const asaasFlatFee = costConfig?.asaas_flat_fee || 0
-  const asaasPercentFee = costConfig?.asaas_percent_fee || 0
   const productCosts = costConfig?.product_costs || []
   const totalProductionCost = productCosts.reduce((sum: number, item: any) => sum + (parseFloat(item.cost) || 0), 0)
 
@@ -139,7 +137,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (matched) {
-      totalAttributedRevenue += parseFloat(order.amount) || 0
+      totalAttributedRevenue += parseFloat(order.net_value ?? order.amount) || 0
       totalAttributedOrders++
     }
   }
@@ -149,15 +147,13 @@ export async function GET(req: NextRequest) {
 
   // 8. Calculate financial metrics
   const totalTaxes = totalAttributedRevenue * (taxPercentage / 100)
-  const totalAsaasFees = (totalAttributedRevenue * (asaasPercentFee / 100)) + asaasFlatFee
-  const totalFees = totalTaxes + totalAsaasFees
-  const netProfit = totalAttributedRevenue - totalSpend - totalFees - totalProductionCost
+  const netProfit = totalAttributedRevenue - totalSpend - totalTaxes - totalProductionCost
   const roas = totalSpend > 0 ? totalAttributedRevenue / totalSpend : 0
   const roi = totalSpend > 0 ? (netProfit / totalSpend) * 100 : 0
   
   // Novos cálculos
   const pendingRevenue = orders.filter(o => o.status === 'pending').reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0)
-  const refundedRevenue = orders.filter(o => o.status === 'refunded').reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0)
+  const refundedRevenue = orders.filter(o => o.status === 'refunded').reduce((sum, o) => sum + (parseFloat(o.net_value ?? o.amount) || 0), 0)
   const profitMargin = totalAttributedRevenue > 0 ? (netProfit / totalAttributedRevenue) * 100 : 0
   const arpu = totalAttributedOrders > 0 ? totalAttributedRevenue / totalAttributedOrders : 0
   const chargebackRate = orders.length > 0 ? (orders.filter(o => o.status === 'refunded').length / orders.length) * 100 : 0
@@ -191,7 +187,7 @@ export async function GET(req: NextRequest) {
     if (!matched) continue
 
     const day = (order.created_at as string).slice(0, 10)
-    revenueByDay[day] = (revenueByDay[day] || 0) + (parseFloat(order.amount) || 0)
+    revenueByDay[day] = (revenueByDay[day] || 0) + (parseFloat(order.net_value ?? order.amount) || 0)
   }
 
   // Merge all days
@@ -217,7 +213,6 @@ export async function GET(req: NextRequest) {
     summary: {
       total_spend: totalSpend,
       total_revenue: totalAttributedRevenue,
-      total_fees: totalFees,
       total_taxes: totalTaxes,
       total_production_costs: totalProductionCost,
       net_profit: netProfit,

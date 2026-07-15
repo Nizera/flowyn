@@ -56,6 +56,7 @@ type PaymentPayload = {
   status?: unknown
   billingType?: unknown
   value?: unknown
+  netValue?: unknown
   subscription?: unknown
   authorizationId?: unknown
   authorizationStatus?: unknown
@@ -240,10 +241,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (!platformSubscriptionHandled && orderId && paymentId) {
-      const orderUpdate: Record<string, string> = {
+      const orderUpdate: Record<string, string | number | null> = {
         asaas_payment_id: paymentId,
         asaas_status: payment.status ? String(payment.status) : eventType,
         updated_at: new Date().toISOString(),
+      }
+      if (typeof payment.netValue === 'number') {
+        orderUpdate.net_value = payment.netValue
       }
       const orderStatus = getOrderStatus(eventType)
       const transferStatus = getTransferStatus(eventType)

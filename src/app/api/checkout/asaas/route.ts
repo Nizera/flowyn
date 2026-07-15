@@ -57,10 +57,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Requisição inválida.' }, { status: 413 })
   }
 
-  const supabase = createAdminClient()
   let step = 'init'
 
   try {
+    const supabase = createAdminClient()
     const clientIp = getClientIp(req)
     const userAgent = req.headers.get('user-agent') || 'Unknown'
     const { data: withinRateLimit, error: rateLimitError } = await supabase.rpc('consume_rate_limit', {
@@ -443,6 +443,7 @@ export async function POST(req: NextRequest) {
       .update({
         asaas_payment_id: payment.id,
         asaas_status: payment.status,
+        net_value: typeof (payment as any).netValue === 'number' ? (payment as any).netValue : null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', order.id)

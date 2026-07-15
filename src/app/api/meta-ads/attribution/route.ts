@@ -80,8 +80,6 @@ export async function POST(req: NextRequest) {
       .single()
 
     const taxPercentage = costConfig?.tax_percentage || 0
-    const asaasFlatFee = costConfig?.asaas_flat_fee || 0
-    const asaasPercentFee = costConfig?.asaas_percent_fee || 0
     const productCosts = costConfig?.product_costs || []
 
     // 3. Fetch orders with tracking_params that have utm_campaign (only user's orders)
@@ -161,7 +159,7 @@ export async function POST(req: NextRequest) {
       if (matchedCampaignId && campaignMap[matchedCampaignId]) {
         const campaign = campaignMap[matchedCampaignId]
         campaign.attributed_orders += 1
-        campaign.attributed_revenue += parseFloat(order.amount) || 0
+        campaign.attributed_revenue += parseFloat(order.net_value ?? order.amount) || 0
       }
     }
 
@@ -169,10 +167,9 @@ export async function POST(req: NextRequest) {
     const totalProductionCost = productCosts.reduce((sum: number, item: any) => sum + (parseFloat(item.cost) || 0), 0)
 
     for (const campaign of Object.values(campaignMap)) {
-      // Calculate fees and taxes
+      // Calculate taxes
       campaign.total_taxes = campaign.attributed_revenue * (taxPercentage / 100)
-      const asaasFeeTotal = (campaign.attributed_revenue * (asaasPercentFee / 100)) + asaasFlatFee
-      campaign.total_fees = asaasFeeTotal
+      campaign.total_fees = 0
       campaign.total_production_costs = totalProductionCost
 
       // Calculate profits
@@ -180,7 +177,6 @@ export async function POST(req: NextRequest) {
       campaign.net_profit = campaign.attributed_revenue 
         - campaign.total_spend 
         - campaign.total_taxes 
-        - campaign.total_fees 
         - campaign.total_production_costs
 
       // Calculate ROAS and ROI

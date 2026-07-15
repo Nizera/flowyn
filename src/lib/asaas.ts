@@ -239,7 +239,7 @@ export async function cancelSubscription(subscriptionId: string, apiKey: string)
 }
 
 export async function retrievePayment(paymentId: string, apiKey: string) {
-  return asaasRequest<{ id: string; status: string; value: number; externalReference?: string }>(
+  return asaasRequest<{ id: string; status: string; value: number; netValue?: number; externalReference?: string }>(
     `/payments/${paymentId}`,
     { apiKey }
   )
