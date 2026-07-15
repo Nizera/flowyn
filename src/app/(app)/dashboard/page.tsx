@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { DollarSign, Megaphone, Users, PackageCheck, CreditCard, TrendingUp, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
+import { RevenueSpendChart } from './RevenueSpendChart'
 
 function currency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
@@ -71,9 +72,8 @@ export default function DashboardPage() {
             </PieChart>
           </ResponsiveContainer>
         </div>
-        {/* Placeholder para outros gráficos ou funil que implementaremos depois */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm col-span-2 flex items-center justify-center text-slate-400">
-          Funil de Vendas (Em breve)
+        <div className="col-span-2">
+          <RevenueSpendChart data={data?.spend_over_time || []} period={data?.period || { start_date: '', end_date: '' }} />
         </div>
       </div>
     </div>
