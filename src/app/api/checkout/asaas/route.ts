@@ -231,7 +231,7 @@ export async function POST(req: NextRequest) {
 
     if (orderError || !order) {
       console.error('[Asaas Checkout] Order insert failed:', JSON.stringify({ code: orderError?.code, message: orderError?.message, details: orderError?.details, hint: orderError?.hint }))
-      return NextResponse.json({ error: 'Erro ao registrar pedido.', debug: orderError?.message }, { status: 500 })
+      return NextResponse.json({ error: 'Erro ao registrar pedido.' }, { status: 500 })
     }
 
     const { error: privateCustomerError } = await supabase
@@ -247,7 +247,7 @@ export async function POST(req: NextRequest) {
     if (privateCustomerError) {
       console.error('[Asaas Checkout] Private customer insert failed:', JSON.stringify({ code: privateCustomerError?.code, message: privateCustomerError?.message, details: privateCustomerError?.details }))
       await supabase.from('orders').delete().eq('id', order.id)
-      return NextResponse.json({ error: 'Erro ao registrar os dados do pedido.', debug: privateCustomerError?.message }, { status: 500 })
+      return NextResponse.json({ error: 'Erro ao registrar os dados do pedido.' }, { status: 500 })
     }
 
     const mainWalletId = process.env.ASAAS_MAIN_WALLET_ID?.trim()
