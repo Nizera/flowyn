@@ -128,6 +128,18 @@ export default function CampaignManagementPage() {
   const [duplicateLimit, setDuplicateLimit] = useState<{ max_copies: number; api_cost_per_copy: number; ad_sets: number; total_ads: number } | null>(null)
   const [accounts, setAccounts] = useState<{ ad_account_id: string; ad_account_name: string | null }[]>([])
 
+  const [budgetModalOpen, setBudgetModalOpen] = useState(false)
+  const [budgetEditItem, setBudgetEditItem] = useState<CampaignItem | AdSetItem | null>(null)
+  const [budgetType, setBudgetType] = useState<'daily' | 'lifetime'>('daily')
+  const [budgetValue, setBudgetValue] = useState('')
+  const [savingBudget, setSavingBudget] = useState(false)
+
+  const [bulkBudgetModalOpen, setBulkBudgetModalOpen] = useState(false)
+  const [bulkBudgetAction, setBulkBudgetAction] = useState<'increase' | 'decrease' | 'set'>('increase')
+  const [bulkBudgetAmount, setBulkBudgetAmount] = useState('')
+  const [bulkBudgetType, setBulkBudgetType] = useState<'daily' | 'lifetime'>('daily')
+  const [savingBulkBudget, setSavingBulkBudget] = useState(false)
+
   const [visibleColumns, setVisibleColumns] = useState({
     reach: true,
     impressions: true,
@@ -268,6 +280,66 @@ export default function CampaignManagementPage() {
     const next = new Set(selected)
     if (next.has(id)) next.delete(id); else next.add(id)
     setSelected(next)
+  }
+
+  function openBudgetEdit(item: CampaignItem | AdSetItem) {
+    setBudgetEditItem(item)
+    const hasDaily = !!item.daily_budget && Number(item.daily_budget) > 0
+    setBudgetType(hasDaily ? 'daily' : 'lifetime')
+    const current = hasDaily ? Number(item.daily_budget) : Number(item.lifetime_budget || 0)
+    setBudgetValue(current > 0 ? String(current / 100) : '')
+    setBudgetModalOpen(true)
+  }
+
+  async function handleSaveBudget() {
+    if (!budgetEditItem) return
+    setSavingBudget(true)
+    const id = 'campaign_id' in budgetEditItem ? budgetEditItem.campaign_id : budgetEditItem.ad_set_id
+    const level = tab === 'campaigns' ? 'campaign' : 'adset'
+    const payload: Record<string, unknown> = {
+      id, ad_account_id: accountId, level,
+    }
+    if (budgetType === 'daily') payload.daily_budget = Math.round(Number(budgetValue) * 100)
+    else payload.lifetime_budget = Math.round(Number(budgetValue) * 100)
+
+    const res = await fetch('/api/meta-ads/campaigns/budget', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const json = await res.json()
+    setSavingBudget(false)
+    if (json.error) alert(`Erro: ${json.error}`)
+    else { setBudgetModalOpen(false); fetchData() }
+  }
+
+  async function handleBulkBudget() {
+    if (selected.size === 0 || !bulkBudgetAmount) return
+    setSavingBulkBudget(true)
+    const level = tab === 'campaigns' ? 'campaign' : 'adset'
+    const actionMap = { increase: 'increase_budget', decrease: 'decrease_budget', set: 'set_budget' }
+
+    const res = await fetch('/api/meta-ads/campaigns/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ids: Array.from(selected),
+        ad_account_id: accountId,
+        action: actionMap[bulkBudgetAction],
+        level,
+        budget_amount: Number(bulkBudgetAmount),
+        budget_type: bulkBudgetType,
+      }),
+    })
+    const json = await res.json()
+    setSavingBulkBudget(false)
+    if (json.error) alert(`Erro: ${json.error}`)
+    else {
+      if (json.errors && json.errors.length > 0) alert(`Alguns itens falharam:\n${json.errors.join('\n')}`)
+      setBulkBudgetModalOpen(false)
+      setSelected(new Set())
+      fetchData()
+    }
   }
 
   function applyDatePreset(preset: typeof DATE_PRESETS[number]) {
@@ -542,6 +614,10 @@ export default function CampaignManagementPage() {
                     <button onClick={openDuplicateModal}
                       className="px-3 py-1.5 bg-purple-600 text-white text-xs font-semibold rounded-lg hover:bg-purple-700">Duplicar</button>
                   )}
+                  {(tab === 'campaigns' || tab === 'adsets') && (
+                    <button onClick={() => setBulkBudgetModalOpen(true)}
+                      className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700">Alterar Orcamento</button>
+                  )}
                   <button onClick={() => handleBulk('ACTIVE')}
                     className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700">Ativar</button>
                   <button onClick={() => handleBulk('PAUSED')}
@@ -635,8 +711,10 @@ export default function CampaignManagementPage() {
                         </button>
                       </td>
                       {(tab === 'campaigns' || tab === 'adsets') && (
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 cursor-pointer hover:bg-blue-50 transition-colors group"
+                          onClick={() => openBudgetEdit(item as CampaignItem | AdSetItem)}>
                           <BudgetDisplay daily={(item as CampaignItem | AdSetItem).daily_budget} lifetime={(item as CampaignItem | AdSetItem).lifetime_budget} />
+                          <span className="hidden group-hover:inline ml-1 text-xs text-blue-500">editar</span>
                         </td>
                       )}
                       <td className="px-4 py-3 text-right font-medium">{formatBRL(ins.spend)}</td>
@@ -742,6 +820,100 @@ export default function CampaignManagementPage() {
               <button onClick={handleDuplicate} disabled={duplicating}
                 className="px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors">
                 {duplicating ? 'Duplicando...' : `Duplicar ${selected.size > 1 ? `${selected.size} campanhas` : 'campanha'}${duplicateQuantity > 1 ? ` x${duplicateQuantity}` : ''}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Individual Budget Edit Modal */}
+      {budgetModalOpen && budgetEditItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setBudgetModalOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-slate-200">
+              <h2 className="text-lg font-bold text-slate-900">Alterar Orcamento</h2>
+              <p className="text-sm text-slate-500 mt-1">{budgetEditItem.name}</p>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="flex gap-2">
+                <button onClick={() => setBudgetType('daily')}
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${budgetType === 'daily' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                  Diario
+                </button>
+                <button onClick={() => setBudgetType('lifetime')}
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${budgetType === 'lifetime' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                  Total
+                </button>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Valor (R$)</label>
+                <input type="number" step="0.01" min="0" value={budgetValue}
+                  onChange={e => setBudgetValue(e.target.value)}
+                  placeholder="Ex: 50.00"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3">
+              <button onClick={() => setBudgetModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button>
+              <button onClick={handleSaveBudget} disabled={savingBudget || !budgetValue}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                {savingBudget ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Budget Edit Modal */}
+      {bulkBudgetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setBulkBudgetModalOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-slate-200">
+              <h2 className="text-lg font-bold text-slate-900">Alterar Orcamento em Lote</h2>
+              <p className="text-sm text-slate-500 mt-1">{selected.size} item(ns) selecionado(s)</p>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="flex gap-2">
+                <button onClick={() => setBulkBudgetAction('increase')}
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${bulkBudgetAction === 'increase' ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                  Aumentar %
+                </button>
+                <button onClick={() => setBulkBudgetAction('decrease')}
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${bulkBudgetAction === 'decrease' ? 'bg-amber-50 border-amber-300 text-amber-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                  Diminuir %
+                </button>
+                <button onClick={() => setBulkBudgetAction('set')}
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${bulkBudgetAction === 'set' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                  Definir R$
+                </button>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  {bulkBudgetAction === 'set' ? 'Novo valor (R$)' : 'Percentual (%)'}
+                </label>
+                <input type="number" step="0.01" min="0" value={bulkBudgetAmount}
+                  onChange={e => setBulkBudgetAmount(e.target.value)}
+                  placeholder={bulkBudgetAction === 'set' ? 'Ex: 50.00' : 'Ex: 20'}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setBulkBudgetType('daily')}
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${bulkBudgetType === 'daily' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                  Diario
+                </button>
+                <button onClick={() => setBulkBudgetType('lifetime')}
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${bulkBudgetType === 'lifetime' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                  Total
+                </button>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3">
+              <button onClick={() => setBulkBudgetModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button>
+              <button onClick={handleBulkBudget} disabled={savingBulkBudget || !bulkBudgetAmount}
+                className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+                {savingBulkBudget ? 'Aplicando...' : 'Aplicar'}
               </button>
             </div>
           </div>

@@ -21,18 +21,27 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { ids, action, ad_account_id, level } = body
+  const { ids, action, ad_account_id, level, budget_amount } = body
 
   if (!ids || !Array.isArray(ids) || ids.length === 0 || !action || !ad_account_id || !level) {
     return NextResponse.json({ error: 'ids[], action, ad_account_id, level required' }, { status: 400 })
   }
 
-  if (!['pause', 'resume', 'delete'].includes(action)) {
-    return NextResponse.json({ error: 'action must be pause, resume, or delete' }, { status: 400 })
+  if (!['pause', 'resume', 'delete', 'increase_budget', 'decrease_budget', 'set_budget'].includes(action)) {
+    return NextResponse.json({ error: 'action must be pause, resume, delete, increase_budget, decrease_budget, or set_budget' }, { status: 400 })
   }
 
   if (!['campaign', 'adset', 'ad'].includes(level)) {
     return NextResponse.json({ error: 'level must be campaign, adset, or ad' }, { status: 400 })
+  }
+
+  if (['increase_budget', 'decrease_budget', 'set_budget'].includes(action)) {
+    if (!['campaign', 'adset'].includes(level)) {
+      return NextResponse.json({ error: 'Budget actions only support campaign or adset level' }, { status: 400 })
+    }
+    if (budget_amount === undefined || budget_amount === null) {
+      return NextResponse.json({ error: 'budget_amount required for budget actions' }, { status: 400 })
+    }
   }
 
   // Verify user owns this account
@@ -60,38 +69,9 @@ export async function POST(req: NextRequest) {
   console.log(`[Bulk] action=${action} level=${level} ids=`, ids)
   for (const id of ids) {
     try {
-      let metaStatus: string
       let localTable: string
       let localIdField: string
 
-      if (action === 'delete') {
-        // Delete from Meta
-        const metaRes = await fetch(`${GRAPH_API}/${id}?access_token=${accessToken}`, {
-          method: 'DELETE',
-        })
-        const metaData = await metaRes.json()
-        console.log(`[Bulk] DELETE ${id}:`, JSON.stringify(metaData))
-        if (metaData.error) {
-          errors.push(`${id}: ${metaData.error.message}`)
-          // Still delete from local DB even if Meta refuses
-        }
-        metaStatus = 'DELETED'
-      } else {
-        // Pause or resume
-        metaStatus = action === 'pause' ? 'PAUSED' : 'ACTIVE'
-        const metaRes = await fetch(`${GRAPH_API}/${id}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: metaStatus, access_token: accessToken }),
-        })
-        const metaData = await metaRes.json()
-        if (metaData.error) {
-          errors.push(`${id}: ${metaData.error.message}`)
-          continue
-        }
-      }
-
-      // Update local DB
       switch (level) {
         case 'campaign':
           localTable = 'campaigns'
@@ -110,16 +90,14 @@ export async function POST(req: NextRequest) {
       }
 
       if (action === 'delete') {
-        await adminSupabase
-          .from(localTable)
-          .delete()
-          .eq(localIdField, id)
-          .eq('ad_account_id', ad_account_id)
-          .eq('user_id', user.id)
+        const metaRes = await fetch(`${GRAPH_API}/${id}?access_token=${accessToken}`, { method: 'DELETE' })
+        const metaData = await metaRes.json()
+        console.log(`[Bulk] DELETE ${id}:`, JSON.stringify(metaData))
+        if (metaData.error) errors.push(`${id}: ${metaData.error.message}`)
 
+        await adminSupabase.from(localTable).delete().eq(localIdField, id).eq('ad_account_id', ad_account_id).eq('user_id', user.id)
         if (level === 'campaign') {
-          const { data: childAdSets } = await adminSupabase
-            .from('ad_sets').select('ad_set_id').eq('campaign_id', id).eq('ad_account_id', ad_account_id)
+          const { data: childAdSets } = await adminSupabase.from('ad_sets').select('ad_set_id').eq('campaign_id', id).eq('ad_account_id', ad_account_id)
           const childAdSetIds = (childAdSets || []).map(a => a.ad_set_id)
           if (childAdSetIds.length > 0) {
             await adminSupabase.from('ads').delete().in('ad_set_id', childAdSetIds).eq('ad_account_id', ad_account_id)
@@ -128,16 +106,60 @@ export async function POST(req: NextRequest) {
         } else if (level === 'adset') {
           await adminSupabase.from('ads').delete().eq('ad_set_id', id).eq('ad_account_id', ad_account_id)
         }
-      } else {
-        await adminSupabase
-          .from(localTable)
-          .update({ status: metaStatus, effective_status: metaStatus, updated_at: new Date().toISOString() })
-          .eq(localIdField, id)
-          .eq('ad_account_id', ad_account_id)
-          .eq('user_id', user.id)
-      }
+        results.push({ id, action: 'delete' })
 
-      results.push({ id, status: metaStatus })
+      } else if (action === 'increase_budget' || action === 'decrease_budget' || action === 'set_budget') {
+        const { data: currentItem } = await adminSupabase
+          .from(localTable).select('daily_budget,lifetime_budget').eq(localIdField, id).eq('ad_account_id', ad_account_id).single()
+
+        const currentBudget = Number(currentItem?.daily_budget || currentItem?.lifetime_budget || 0)
+        const isDaily = !!currentItem?.daily_budget && Number(currentItem.daily_budget) > 0
+        const budgetField = isDaily ? 'daily_budget' : 'lifetime_budget'
+
+        let newBudget: number
+        if (action === 'set_budget') {
+          newBudget = Math.round(Number(budget_amount) * 100)
+        } else if (action === 'increase_budget') {
+          newBudget = Math.round(currentBudget * (1 + Number(budget_amount) / 100))
+        } else {
+          newBudget = Math.round(currentBudget * (1 - Number(budget_amount) / 100))
+        }
+        newBudget = Math.max(newBudget, isDaily ? 100 : 100)
+
+        const metaRes = await fetch(`${GRAPH_API}/${id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [budgetField]: String(newBudget), access_token: accessToken }),
+        })
+        const metaData = await metaRes.json()
+        if (metaData.error) {
+          errors.push(`${id}: ${metaData.error.message}`)
+          continue
+        }
+
+        await adminSupabase.from(localTable).update({ [budgetField]: newBudget, updated_at: new Date().toISOString() })
+          .eq(localIdField, id).eq('ad_account_id', ad_account_id).eq('user_id', user.id)
+
+        results.push({ id, action: 'budget', new_budget: newBudget, field: budgetField })
+
+      } else {
+        const metaStatus = action === 'pause' ? 'PAUSED' : 'ACTIVE'
+        const metaRes = await fetch(`${GRAPH_API}/${id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: metaStatus, access_token: accessToken }),
+        })
+        const metaData = await metaRes.json()
+        if (metaData.error) {
+          errors.push(`${id}: ${metaData.error.message}`)
+          continue
+        }
+
+        await adminSupabase.from(localTable).update({ status: metaStatus, effective_status: metaStatus, updated_at: new Date().toISOString() })
+          .eq(localIdField, id).eq('ad_account_id', ad_account_id).eq('user_id', user.id)
+
+        results.push({ id, status: metaStatus })
+      }
     } catch (err: any) {
       errors.push(`${id}: ${err.message}`)
     }
