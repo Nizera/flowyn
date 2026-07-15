@@ -37,10 +37,10 @@ export async function materializeOrderAttributions(
     }
   }
 
-  // 2. Fetch orders that have utm_campaign but no attribution yet
+  // 2. Fetch orders that have tracking_params but no attribution yet
   let ordersQuery = supabase
     .from('orders')
-    .select('id, amount, tracking_params, created_at, product:products!inner(owner_id)')
+    .select('id, net_value, amount, tracking_params, created_at, product:products!inner(owner_id)')
     .eq('product.owner_id', userId)
     .not('tracking_params', 'is', null)
 
@@ -65,59 +65,102 @@ export async function materializeOrderAttributions(
   const orderIds = orders.map(o => o.id)
   const { data: existingAttrs } = await supabase
     .from('order_attributions')
-    .select('order_id')
+    .select('order_id, campaign_id')
     .in('order_id', orderIds)
 
-  const existingOrderIds = new Set((existingAttrs || []).map(a => a.order_id))
+  const existingKeys = new Set(
+    (existingAttrs || []).map(a => `${a.order_id}:${a.campaign_id}`)
+  )
 
   // 4. Match orders to campaigns and insert attributions
   for (const order of orders) {
-    if (existingOrderIds.has(order.id)) {
-      skipped++
-      continue
-    }
-
     const trackingParams = order.tracking_params as any
-    const utmCampaign = trackingParams?.utm_campaign
-    if (!utmCampaign) {
+    if (!trackingParams) {
       skipped++
       continue
     }
 
+    const utmCampaign = trackingParams.utm_campaign
+    const utmSource = trackingParams.utm_source || null
+    const utmMedium = trackingParams.utm_medium || null
+    const utmContent = trackingParams.utm_content || null
+    const utmTerm = trackingParams.utm_term || null
+
+    // Determine click ID
+    let clickIdType: string | null = null
+    let clickIdValue: string | null = null
+    if (trackingParams.fbclid) {
+      clickIdType = 'fbclid'
+      clickIdValue = trackingParams.fbclid
+    } else if (trackingParams.gclid) {
+      clickIdType = 'gclid'
+      clickIdValue = trackingParams.gclid
+    } else if (trackingParams.ttclid) {
+      clickIdType = 'ttclid'
+      clickIdValue = trackingParams.ttclid
+    }
+
+    // Try to match campaign
     let matchedCampaign: { campaign_id: string; ad_account_id: string } | null = null
     let matchField = ''
-    let matchValue = utmCampaign
+    let matchValue = ''
 
-    // Try matching by campaign ID first
-    if (campaignById[utmCampaign]) {
-      matchedCampaign = campaignById[utmCampaign]
-      matchField = 'campaign_id'
-    } else if (campaignByName[utmCampaign.toLowerCase()]) {
-      // Try matching by campaign name
-      matchedCampaign = campaignByName[utmCampaign.toLowerCase()]
-      matchField = 'campaign_name'
+    if (utmCampaign) {
+      if (campaignById[utmCampaign]) {
+        matchedCampaign = campaignById[utmCampaign]
+        matchField = 'campaign_id'
+        matchValue = utmCampaign
+      } else if (campaignByName[utmCampaign.toLowerCase()]) {
+        matchedCampaign = campaignByName[utmCampaign.toLowerCase()]
+        matchField = 'campaign_name'
+        matchValue = utmCampaign
+      }
     }
 
-    if (matchedCampaign) {
-      const { error: insertError } = await supabase.from('order_attributions').insert({
-        order_id: order.id,
-        user_id: userId,
-        ad_account_id: matchedCampaign.ad_account_id,
-        campaign_id: matchedCampaign.campaign_id,
-        attribution_type: 'utm',
-        match_field: matchField,
-        match_value: matchValue,
-        attributed_revenue: parseFloat(order.amount) || 0,
-        attributed_quantity: 1,
-      })
+    // If no campaign matched via utm_campaign, try click ID
+    if (!matchedCampaign && clickIdType) {
+      matchField = clickIdType
+      matchValue = clickIdValue || ''
+      // Click ID matching requires Meta attribution data (not available locally)
+      // For now, we still need a campaign match - skip if no campaign found
+    }
 
-      if (insertError) {
-        errors.push(`Order ${order.id}: ${insertError.message}`)
-      } else {
-        created++
-      }
-    } else {
+    if (!matchedCampaign) {
       skipped++
+      continue
+    }
+
+    const key = `${order.id}:${matchedCampaign.campaign_id}`
+    if (existingKeys.has(key)) {
+      skipped++
+      continue
+    }
+
+    const revenue = parseFloat(order.net_value ?? order.amount) || 0
+
+    const { error: insertError } = await supabase.from('order_attributions').insert({
+      order_id: order.id,
+      user_id: userId,
+      ad_account_id: matchedCampaign.ad_account_id,
+      campaign_id: matchedCampaign.campaign_id,
+      attribution_type: 'utm',
+      match_field: matchField,
+      match_value: matchValue,
+      utm_source: utmSource,
+      utm_medium: utmMedium,
+      utm_content: utmContent,
+      utm_term: utmTerm,
+      click_id_type: clickIdType,
+      click_id_value: clickIdValue,
+      attributed_revenue: revenue,
+      attributed_quantity: 1,
+    })
+
+    if (insertError) {
+      errors.push(`Order ${order.id}: ${insertError.message}`)
+    } else {
+      created++
+      existingKeys.add(key)
     }
   }
 

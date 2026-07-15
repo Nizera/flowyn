@@ -39,6 +39,18 @@ type AttributionResponse = {
   }
 }
 
+type UtmReportItem = {
+  name: string
+  revenue: number
+  orders: number
+}
+
+type UtmReportResponse = {
+  dimension: string
+  results: UtmReportItem[]
+  period: { start_date: string; end_date: string }
+}
+
 type CostConfig = {
   tax_percentage: number
   product_costs: { name: string; cost: number }[]
@@ -80,6 +92,11 @@ export default function AttributionPage() {
   })
   const [showCostModal, setShowCostModal] = useState(false)
   const [newCostName, setNewCostName] = useState('')
+
+  // UTM report state
+  const [utmData, setUtmData] = useState<UtmReportResponse | null>(null)
+  const [utmDimension, setUtmDimension] = useState<string>('utm_source')
+  const [utmLoading, setUtmLoading] = useState(false)
   const [newCostValue, setNewCostValue] = useState('')
 
   const fetchAttribution = () => {
@@ -118,9 +135,32 @@ export default function AttributionPage() {
       .catch(console.error)
   }
 
+  const fetchUtmReport = (dimension: string) => {
+    setUtmLoading(true)
+    setUtmDimension(dimension)
+
+    fetch('/api/meta-ads/attribution/utm-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ad_account_id: accountId,
+        start_date: startDate,
+        end_date: endDate,
+        group_by: dimension,
+      }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.error) setUtmData(data)
+      })
+      .catch(console.error)
+      .finally(() => setUtmLoading(false))
+  }
+
   useEffect(() => {
     fetchAttribution()
     fetchCostConfig()
+    fetchUtmReport('utm_source')
   }, [accountId])
 
   const handleSaveCostConfig = async () => {
@@ -303,6 +343,80 @@ export default function AttributionPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* UTM Report Section */}
+      {!loading && data && data.campaigns.length > 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="mb-4 text-lg font-black text-slate-950">Receita por Dimensao</h3>
+          <p className="mb-4 text-sm text-slate-500">Visualize a receita atribuida por diferentes dimensoes de rastreamento.</p>
+
+          <div className="mb-4 flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
+            {[
+              { key: 'utm_source', label: 'Fonte' },
+              { key: 'utm_medium', label: 'Medium' },
+              { key: 'utm_content', label: 'Conteudo' },
+              { key: 'campaign', label: 'Campanha' },
+              { key: 'click_id', label: 'Click ID' },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => fetchUtmReport(tab.key)}
+                className={`rounded-lg px-4 py-2 text-xs font-bold transition ${
+                  utmDimension === tab.key
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {utmLoading ? (
+            <div className="py-8 text-center text-sm text-slate-400">Carregando...</div>
+          ) : utmData?.results.length === 0 ? (
+            <div className="py-8 text-center text-sm text-slate-400">Nenhum dado encontrado</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-100">
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Dimensao</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase text-slate-500">Pedidos</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase text-slate-500">Receita</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase text-slate-500">% do Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {utmData?.results.map(item => {
+                    const totalRevenue = utmData.results.reduce((s, r) => s + r.revenue, 0)
+                    const pct = totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0
+                    return (
+                      <tr key={item.name} className="transition hover:bg-slate-50">
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
+                            {item.name}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right text-sm font-bold text-slate-900">{formatNumber(item.orders)}</td>
+                        <td className="px-4 py-3 text-right text-sm font-bold text-emerald-600">{formatBRL(item.revenue)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <div className="h-2 w-24 overflow-hidden rounded-full bg-slate-100">
+                              <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-xs font-bold text-slate-600">{pct.toFixed(1)}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Cost Config Modal */}
