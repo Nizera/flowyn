@@ -78,10 +78,25 @@ export function CheckoutForm({
       'utm_source', 'utm_campaign', 'utm_medium', 'utm_content', 'utm_term',
       'src', 'sck', 'gclid', 'fbclid', 'ttclid',
     ]
+
+    let hasUrlParams = false
     for (const key of knownParams) {
       const val = params.get(key)
-      if (val) result[key] = val
+      if (val) {
+        result[key] = val
+        hasUrlParams = true
+      }
     }
+
+    if (hasUrlParams) {
+      try { sessionStorage.setItem('flowyn_tracking', JSON.stringify(result)) } catch {}
+    } else {
+      try {
+        const stored = sessionStorage.getItem('flowyn_tracking')
+        if (stored) Object.assign(result, JSON.parse(stored))
+      } catch {}
+    }
+
     const cookies = document.cookie.split('; ')
     for (const c of cookies) {
       const [k, v] = c.split('=', 2) as [string, string | undefined]

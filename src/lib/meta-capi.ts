@@ -67,7 +67,12 @@ export async function sendCapiEvent(orderData: CapiOrderData) {
   }
 
   if (orderData.trackingParams?._fbp) userData.fbp = orderData.trackingParams._fbp
-  if (orderData.trackingParams?._fbc) userData.fbc = orderData.trackingParams._fbc
+  if (orderData.trackingParams?._fbc) {
+    userData.fbc = orderData.trackingParams._fbc
+  } else if (orderData.trackingParams?.fbclid) {
+    const ts = Math.floor(Date.now() / 1000)
+    userData.fbc = `fb.1.${ts}.${orderData.trackingParams.fbclid}`
+  }
 
   const payload = {
     data: [

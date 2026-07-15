@@ -41,8 +41,6 @@ type AttributionResponse = {
 
 type CostConfig = {
   tax_percentage: number
-  asaas_flat_fee: number
-  asaas_percent_fee: number
   product_costs: { name: string; cost: number }[]
 }
 
@@ -78,9 +76,7 @@ export default function AttributionPage() {
   // Cost config state
   const [costConfig, setCostConfig] = useState<CostConfig>({
     tax_percentage: 0,
-    asaas_flat_fee: 0,
-    asaas_percent_fee: 0,
-    product_costs: []
+    product_costs: [],
   })
   const [showCostModal, setShowCostModal] = useState(false)
   const [newCostName, setNewCostName] = useState('')
@@ -323,28 +319,6 @@ export default function AttributionPage() {
                   step="0.01"
                   value={costConfig.tax_percentage}
                   onChange={e => setCostConfig(prev => ({ ...prev, tax_percentage: parseFloat(e.target.value) || 0 }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-500">Taxa fixa Asaas (R$)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={costConfig.asaas_flat_fee}
-                  onChange={e => setCostConfig(prev => ({ ...prev, asaas_flat_fee: parseFloat(e.target.value) || 0 }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-500">Taxa percentual Asaas (%)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={costConfig.asaas_percent_fee}
-                  onChange={e => setCostConfig(prev => ({ ...prev, asaas_percent_fee: parseFloat(e.target.value) || 0 }))}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
