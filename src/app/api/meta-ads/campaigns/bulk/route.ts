@@ -115,10 +115,13 @@ export async function POST(req: NextRequest) {
           const { data: adSet } = await adminSupabase
             .from('ad_sets').select('campaign_id').eq('ad_set_id', id).eq('ad_account_id', ad_account_id).single()
           if (adSet?.campaign_id) {
-            const campaignRes = await fetch(`${GRAPH_API}/${adSet.campaign_id}?fields=is_adset_budget_sharing_enabled&access_token=${accessToken}`)
+            const campaignRes = await fetch(`${GRAPH_API}/${adSet.campaign_id}?fields=is_adset_budget_sharing_enabled,daily_budget,lifetime_budget&access_token=${accessToken}`)
             const campaignData = await campaignRes.json()
             if (campaignData.is_adset_budget_sharing_enabled === true) {
-              metaTargetId = adSet.campaign_id
+              const hasCampaignBudget = (Number(campaignData.daily_budget) > 0) || (Number(campaignData.lifetime_budget) > 0)
+              if (hasCampaignBudget) {
+                metaTargetId = adSet.campaign_id
+              }
             }
           }
         }

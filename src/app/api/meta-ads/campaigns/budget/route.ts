@@ -52,8 +52,11 @@ export async function POST(req: NextRequest) {
       const campaignData = await campaignRes.json()
 
       if (campaignData.is_adset_budget_sharing_enabled === true) {
-        targetId = adSet.campaign_id
-        targetLevel = 'campaign'
+        const hasCampaignBudget = (Number(campaignData.daily_budget) > 0) || (Number(campaignData.lifetime_budget) > 0)
+        if (hasCampaignBudget) {
+          targetId = adSet.campaign_id
+          targetLevel = 'campaign'
+        }
       }
     }
   }
