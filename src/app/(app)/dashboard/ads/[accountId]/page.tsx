@@ -111,6 +111,7 @@ export default function CampaignManagementPage() {
   const [loading, setLoading] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [selectedCampaignFilter, setSelectedCampaignFilter] = useState<Set<string>>(new Set())
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [bulkAction, setBulkAction] = useState<'PAUSED' | 'ACTIVE' | 'DELETED' | null>(null)
   const [search, setSearch] = useState('')
@@ -257,7 +258,7 @@ export default function CampaignManagementPage() {
   }
 
   function toggleSelectAll() {
-    const allItems = data[tab === 'campaigns' ? 'campaigns' : tab === 'adsets' ? 'ad_sets' : 'ads']
+    const allItems = tab === 'campaigns' ? data.campaigns : tab === 'adsets' ? rawAdSets : rawAds
     const filteredItems = allItems.filter(i => !search || i.name?.toLowerCase().includes(search.toLowerCase()))
     if (selected.size === filteredItems.length) setSelected(new Set())
     else setSelected(new Set(filteredItems.map(i => tab === 'campaigns' ? (i as CampaignItem).campaign_id : tab === 'adsets' ? (i as AdSetItem).ad_set_id : (i as AdItem).ad_id)))
@@ -291,23 +292,27 @@ export default function CampaignManagementPage() {
   useEffect(() => { fetchData() }, [fetchData])
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const items: (CampaignItem | AdSetItem | AdItem)[] = data[tab === 'campaigns' ? 'campaigns' : tab === 'adsets' ? 'ad_sets' : 'ads']
-  const filtered = items.filter(i => !search || i.name?.toLowerCase().includes(search.toLowerCase()))
+  const filterIds = tab !== 'campaigns' && selectedCampaignFilter.size > 0
+    ? [...selectedCampaignFilter]
+    : null
 
-  const selectedCampaignIds = tab === 'campaigns'
-    ? [...selected]
-    : data.campaigns.map(c => c.campaign_id)
-  const adsForSelected = data.ads.filter((a: AdItem & { campaign_id?: string }) =>
-    selectedCampaignIds.includes(a.campaign_id || '')
+  const allCampaignIds = data.campaigns.map(c => c.campaign_id)
+  const showAll = !filterIds || filterIds.length === allCampaignIds.length
+
+  const rawAdSets = showAll ? data.ad_sets : data.ad_sets.filter((a: AdSetItem & { campaign_id?: string }) =>
+    filterIds!.includes(a.campaign_id || '')
   )
-  const adSetsForSelected = data.ad_sets.filter((a: AdSetItem & { campaign_id?: string }) =>
-    selectedCampaignIds.includes(a.campaign_id || '')
+  const rawAds = showAll ? data.ads : data.ads.filter((a: AdItem & { campaign_id?: string }) =>
+    filterIds!.includes(a.campaign_id || '')
   )
+
+  const items: (CampaignItem | AdSetItem | AdItem)[] = tab === 'campaigns' ? data.campaigns : tab === 'adsets' ? rawAdSets : rawAds
+  const filtered = items.filter(i => !search || i.name?.toLowerCase().includes(search.toLowerCase()))
 
   const tabs = [
     { key: 'campaigns' as TabType, label: 'Campanhas', count: data.campaigns.length },
-    { key: 'adsets' as TabType, label: 'Conjuntos', count: selected.size > 0 && tab === 'campaigns' ? adSetsForSelected.length : data.ad_sets.length },
-    { key: 'ads' as TabType, label: 'Anuncios', count: selected.size > 0 && tab === 'campaigns' ? adsForSelected.length : data.ads.length },
+    { key: 'adsets' as TabType, label: 'Conjuntos', count: data.ad_sets.length },
+    { key: 'ads' as TabType, label: 'Anuncios', count: data.ads.length },
   ]
   const getId = (item: CampaignItem | AdSetItem | AdItem) => tab === 'campaigns' ? (item as CampaignItem).campaign_id : tab === 'adsets' ? (item as AdSetItem).ad_set_id : (item as AdItem).ad_id
   const level = tab === 'campaigns' ? 'campaign' : tab === 'adsets' ? 'adset' : 'ad'
@@ -376,7 +381,17 @@ export default function CampaignManagementPage() {
           <div className="flex gap-0">
             {tabs.map(t => (
               <button key={t.key}
-                onClick={() => { setTab(t.key); setSelected(new Set()); router.push(`?tab=${t.key}`) }}
+                onClick={() => {
+                  if (tab === 'campaigns' && t.key !== 'campaigns') {
+                    setSelectedCampaignFilter(new Set(selected))
+                  }
+                  if (t.key === 'campaigns') {
+                    setSelectedCampaignFilter(new Set())
+                  }
+                  setTab(t.key)
+                  setSelected(new Set())
+                  router.push(`?tab=${t.key}`)
+                }}
                 className={`px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
                   tab === t.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'
                 }`}>
@@ -509,6 +524,17 @@ export default function CampaignManagementPage() {
                 <input type="text" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)}
                   className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
               </div>
+              {tab !== 'campaigns' && selectedCampaignFilter.size > 0 && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+                  <span className="text-xs text-blue-600 font-medium">{selectedCampaignFilter.size} campanha(s) filtrada(s)</span>
+                  <button onClick={() => { setSelectedCampaignFilter(new Set()); setTab('campaigns') }}
+                    className="text-blue-400 hover:text-blue-600">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
               {selected.size > 0 && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-500">{selected.size} selecionado(s)</span>
