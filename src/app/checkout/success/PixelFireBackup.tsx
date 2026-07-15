@@ -1,7 +1,7 @@
 'use client'
 
-import Script from 'next/script'
 import { useEffect } from 'react'
+import Script from 'next/script'
 
 interface PixelConfig {
   platform: 'meta' | 'google' | 'tiktok'
@@ -10,87 +10,48 @@ interface PixelConfig {
 
 interface Props {
   pixels: PixelConfig[]
+  amount: number
+  orderId: string
 }
 
-type FbqFunction = (event: string, ...args: unknown[]) => void
-type GtagFunction = (...args: unknown[]) => void
-interface TiktokTtq {
-  track: (event: string, payload?: Record<string, unknown>) => void
-  load: (id: string) => void
-  page: () => void
-}
-
-// Expose global purchase fire function for checkout-form to call
-declare global {
-  interface Window {
-    firePixelPurchase?: (amount: number, eventId?: string) => void
-    fbq?: FbqFunction
-    gtag?: GtagFunction
-    ttq?: TiktokTtq
-    dataLayer?: unknown[]
-  }
-}
-
-export function PixelScripts({ pixels }: Props) {
-  const metaPixels   = pixels.filter(p => p.platform === 'meta')
+export function PixelFireBackup({ pixels, amount, orderId }: Props) {
+  const metaPixels = pixels.filter(p => p.platform === 'meta')
   const googlePixels = pixels.filter(p => p.platform === 'google')
   const tiktokPixels = pixels.filter(p => p.platform === 'tiktok')
 
-  // Fire PageView on mount and register global purchase handler
   useEffect(() => {
-    // Meta PageView
+    const eventId = `order_${orderId}`
+
     if (window.fbq) {
       metaPixels.forEach(p => {
         window.fbq!('init', p.pixel_id)
-        window.fbq!('track', 'PageView')
+        window.fbq!('track', 'Purchase', { value: amount, currency: 'BRL', eventID: eventId })
       })
     }
 
-    // Google page_view fires automatically via gtag config
+    if (window.gtag) {
+      googlePixels.forEach(p => {
+        window.gtag!('event', 'conversion', {
+          send_to: p.pixel_id,
+          value: amount,
+          currency: 'BRL',
+          transaction_id: eventId,
+        })
+      })
+    }
 
-    // TikTok ViewContent
     if (window.ttq) {
       tiktokPixels.forEach(p => {
         window.ttq!.load(p.pixel_id)
-        window.ttq!.page()
+        window.ttq!.track('CompletePayment', { value: amount, currency: 'BRL' })
       })
     }
-
-    // Register global purchase handler
-    window.firePixelPurchase = (amount: number, eventId?: string) => {
-      const eventData = { value: amount, currency: 'BRL', ...(eventId ? { eventID: eventId } : {}) }
-
-      // Meta Purchase
-      if (window.fbq) {
-        window.fbq('track', 'Purchase', eventData)
-      }
-
-      // Google conversion
-      if (window.gtag) {
-        googlePixels.forEach(p => {
-          window.gtag!('event', 'conversion', {
-            send_to: p.pixel_id,
-            value: amount,
-            currency: 'BRL',
-            ...(eventId ? { transaction_id: eventId } : {}),
-          })
-        })
-      }
-
-      // TikTok CompletePayment
-      if (window.ttq) {
-        window.ttq.track('CompletePayment', { value: amount, currency: 'BRL' })
-      }
-    }
-
-    return () => { delete window.firePixelPurchase }
-  }, [metaPixels, googlePixels, tiktokPixels])
+  }, [amount, orderId, metaPixels, googlePixels, tiktokPixels])
 
   return (
     <>
-      {/* ── META PIXEL ── */}
       {metaPixels.length > 0 && (
-        <Script id="meta-pixel" strategy="afterInteractive">
+        <Script id="meta-pixel-backup" strategy="afterInteractive">
           {`
             !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
             n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
@@ -98,22 +59,20 @@ export function PixelScripts({ pixels }: Props) {
             t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
             document,'script','https://connect.facebook.net/en_US/fbevents.js');
             ${metaPixels.map(p => `fbq('init','${p.pixel_id}');`).join('\n')}
-            fbq('track','PageView');
           `}
         </Script>
       )}
 
-      {/* ── GOOGLE ADS ── */}
       {googlePixels.map(p => (
         <Script
-          key={`gtag-${p.pixel_id}`}
-          id={`gtag-${p.pixel_id}`}
+          key={`gtag-backup-${p.pixel_id}`}
+          id={`gtag-backup-${p.pixel_id}`}
           strategy="afterInteractive"
           src={`https://www.googletagmanager.com/gtag/js?id=${p.pixel_id}`}
         />
       ))}
       {googlePixels.length > 0 && (
-        <Script id="google-gtag-init" strategy="afterInteractive">
+        <Script id="google-gtag-backup" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
@@ -124,9 +83,8 @@ export function PixelScripts({ pixels }: Props) {
         </Script>
       )}
 
-      {/* ── TIKTOK PIXEL ── */}
       {tiktokPixels.length > 0 && (
-        <Script id="tiktok-pixel" strategy="afterInteractive">
+        <Script id="tiktok-pixel-backup" strategy="afterInteractive">
           {`
             !function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];
             ttq.methods=["page","track","identify","instances","debug","on","off","once",
@@ -139,7 +97,7 @@ export function PixelScripts({ pixels }: Props) {
             ttq._o=ttq._o||{};ttq._o[e]=n||{};var o=document.createElement("script");
             o.type="text/javascript";o.async=!0;o.src=i+"?sdkid="+e+"&lib="+t;
             var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};
-            ${tiktokPixels.map(p => `ttq.load('${p.pixel_id}'); ttq.page();`).join('\n')}
+            ${tiktokPixels.map(p => `ttq.load('${p.pixel_id}');`).join('\n')}
             }(window,document,'ttq');
           `}
         </Script>

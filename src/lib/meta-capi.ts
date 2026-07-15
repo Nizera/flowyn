@@ -1,10 +1,12 @@
 import { createAdminClient } from '@/utils/supabase/admin'
+import { decryptApiKey } from '@/lib/encryption'
 
 const META_GRAPH_API = 'https://graph.facebook.com/v21.0'
 const ACCESS_TOKEN = process.env.META_CAPI_ACCESS_TOKEN || ''
 
 export interface CapiOrderData {
   orderId: string
+  planId: string
   productId: string
   producerId: string
   amount: number
@@ -33,13 +35,27 @@ export async function sendCapiEvent(orderData: CapiOrderData) {
     return
   }
 
-  const pixelId = process.env.META_CAPI_PIXEL_ID
-  if (!pixelId) {
-    console.warn('[Meta CAPI] META_CAPI_PIXEL_ID not configured — skipping')
+  const supabase = createAdminClient()
+
+  const { data: planPixel } = await supabase
+    .from('plan_pixels')
+    .select('pixel:pixels(pixel_id, platform, is_active)')
+    .eq('plan_id', orderData.planId)
+    .maybeSingle()
+
+  const pixelRow = (() => {
+    const raw = planPixel?.pixel
+    if (!raw) return null
+    return Array.isArray(raw) ? raw[0] : raw
+  })()
+  if (!pixelRow?.is_active || pixelRow.platform !== 'meta') {
+    console.warn('[Meta CAPI] No active Meta pixel linked to this plan — skipping')
     return
   }
 
-  const eventId = `purchase_${orderData.orderId}_${Date.now()}`
+  const pixelId = decryptApiKey(pixelRow.pixel_id)
+
+  const eventId = `order_${orderData.orderId}`
 
   const userData: Record<string, unknown> = {
     em: [sha256(orderData.customerEmail)],
@@ -72,8 +88,6 @@ export async function sendCapiEvent(orderData: CapiOrderData) {
     ],
     access_token: ACCESS_TOKEN,
   }
-
-  const supabase = createAdminClient()
 
   try {
     const response = await fetch(`${META_GRAPH_API}/${pixelId}/events`, {

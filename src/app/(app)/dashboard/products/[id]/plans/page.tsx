@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft, BookOpen, Building2, CreditCard, Palette, Save, ShoppingBag, Users } from 'lucide-react'
 import { revalidatePath } from 'next/cache'
 import { getPlatformAccess } from '@/lib/platform-access'
+import { decryptApiKey } from '@/lib/encryption'
 import { EditablePlanCard } from './EditablePlanCard'
 import { PlanPixelSection } from './PlanPixelSection'
 
@@ -53,7 +54,7 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
     .eq('is_active', true)
     .order('name')
 
-  const userPixels = (userPixelsData ?? []) as PixelRow[]
+  const userPixels = (userPixelsData ?? []).map(p => ({ ...p, pixel_id: decryptApiKey(p.pixel_id) })) as PixelRow[]
   const planIds = ((plans ?? []) as PlanRow[]).map(p => p.id)
   const { data: allPlanPixels } = planIds.length > 0
     ? await supabase
@@ -143,7 +144,7 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
                 {plans.map(plan => {
                   const planPixels = ((allPlanPixels ?? []) as unknown as Array<{ id: string; plan_id: string; pixel: PixelRow | null }>)
                     .filter((pp): pp is { id: string; plan_id: string; pixel: PixelRow } => pp.plan_id === plan.id && pp.pixel != null)
-                    .map((pp) => ({ id: pp.id, pixel: pp.pixel }))
+                    .map((pp) => ({ id: pp.id, pixel: { ...pp.pixel, pixel_id: decryptApiKey(pp.pixel.pixel_id) } }))
                   return (
                     <div key={plan.id} className="border-b border-slate-100 last:border-b-0">
                       <EditablePlanCard plan={plan} productId={productId} />

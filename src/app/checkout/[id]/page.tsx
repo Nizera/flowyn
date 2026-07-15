@@ -5,6 +5,7 @@ import { PixelScripts } from '@/components/PixelScripts'
 import { getPlatformAccess } from '@/lib/platform-access'
 import { normalizeCheckoutConfig } from '@/lib/checkout-customization'
 import { UrgencyCarousel } from '@/components/UrgencyCarousel'
+import { decryptApiKey } from '@/lib/encryption'
 
 interface CheckoutPageProps {
   params: Promise<{ id: string }>
@@ -111,9 +112,12 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
     .eq('plan_id', plan.id)
 
   const producerPixels = (planPixelRows ?? [])
-    .map((r: { pixel: { platform: string; pixel_id: string; is_active: boolean }[] }) => r.pixel?.[0])
+    .map((r: any) => {
+      const px = Array.isArray(r.pixel) ? r.pixel[0] : r.pixel
+      return px as { platform: string; pixel_id: string; is_active: boolean } | undefined
+    })
     .filter((p): p is { platform: string; pixel_id: string; is_active: boolean } => Boolean(p?.is_active))
-    .map(p => ({ platform: p.platform, pixel_id: p.pixel_id }))
+    .map(p => ({ platform: p.platform, pixel_id: decryptApiKey(p.pixel_id) }))
 
   const seenPixelIds = new Set<string>()
   const allPixels = producerPixels.filter(p => {

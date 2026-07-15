@@ -156,6 +156,7 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
   // ── Meta CAPI (server-side) ──
   sendCapiEvent({
     orderId,
+    planId: orderData.plan_id,
     productId: orderData.product_id,
     producerId: orderData.product?.owner_id || '',
     amount: Number(orderData.amount) || 0,
@@ -163,8 +164,8 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
     customerPhone: privateCustomer?.phone || '',
     customerName: privateCustomer?.customer_name || orderData.customer_name,
     customerDocument: privateCustomer?.document_number || '',
-    clientIp: '127.0.0.1',
-    userAgent: 'Flowyn/1.0',
+    clientIp: orderData.client_ip || '127.0.0.1',
+    userAgent: orderData.user_agent || 'Unknown',
     eventSourceUrl: `${getAppUrl()}/checkout/${orderData.plan_id}`,
     trackingParams: orderData.tracking_params as Record<string, string> | null | undefined,
   })

@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const clientIp = getClientIp(req)
+    const userAgent = req.headers.get('user-agent') || 'Unknown'
     const { data: withinRateLimit, error: rateLimitError } = await supabase.rpc('consume_rate_limit', {
       requested_bucket: 'checkout',
       requested_identifier_hash: await hashIdentifier(clientIp),
@@ -219,6 +220,8 @@ export async function POST(req: NextRequest) {
         asaas_customer_id: asaasCustomer.id,
         payment_provider: 'asaas',
         tracking_params: trackingParams && Object.keys(trackingParams).length > 0 ? trackingParams : null,
+        client_ip: clientIp,
+        user_agent: userAgent,
         includes_order_bump: orderBumpAmount > 0,
         order_bump_amount: orderBumpAmount,
         billing_type: plan.billing_type === 'recurring' ? 'recurring' : 'one_time',

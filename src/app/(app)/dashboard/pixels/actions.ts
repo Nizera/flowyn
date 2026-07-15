@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { encryptApiKey } from '@/lib/encryption'
 
 export async function createPixel(formData: FormData) {
   const supabase = await createClient()
@@ -28,7 +29,7 @@ export async function createPixel(formData: FormData) {
     user_id: user.id,
     name,
     platform,
-    pixel_id,
+    pixel_id: encryptApiKey(pixel_id),
     is_active: true,
   })
 

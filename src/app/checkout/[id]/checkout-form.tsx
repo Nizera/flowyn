@@ -139,6 +139,8 @@ export function CheckoutForm({
 
       if (data.paid) {
         setPaymentStatusMessage('Pagamento confirmado! Redirecionando...')
+        window.firePixelPurchase?.(totalAmount, `order_${pixPaymentId}`)
+        await new Promise(r => setTimeout(r, 500))
         window.location.href = `/checkout/success?order_id=${pixPaymentId}`
         return
       }
@@ -240,6 +242,8 @@ export function CheckoutForm({
         return
       }
 
+      window.firePixelPurchase?.(totalAmount, `order_${data.order_id}`)
+      await new Promise(r => setTimeout(r, 500))
       window.location.href = `/checkout/success?order_id=${data.order_id}`
     } catch {
       setError('Erro de conexao. Verifique sua internet e tente novamente.')

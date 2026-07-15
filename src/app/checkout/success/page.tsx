@@ -2,7 +2,9 @@ import Link from 'next/link'
 import { ArrowRight, BookOpen, CheckCircle2, Mail, ShieldCheck } from 'lucide-react'
 import { ResendDeliveryButton } from './ResendDeliveryButton'
 import { PaymentPolling } from './PaymentPolling'
+import { PixelFireBackup } from './PixelFireBackup'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { decryptApiKey } from '@/lib/encryption'
 
 type Product = {
   id: string
@@ -59,7 +61,7 @@ export default async function CheckoutSuccessPage(props: {
   const supabase = createAdminClient()
   const { data: order } = await supabase
     .from('orders')
-    .select('id, status, product:products(id, name, product_type, delivery_type)')
+    .select('id, status, plan_id, amount, product:products(id, name, product_type, delivery_type)')
     .eq('id', orderId)
     .maybeSingle()
 
@@ -89,6 +91,20 @@ export default async function CheckoutSuccessPage(props: {
     return <UnavailableState title="Compra confirmada" message="Seu pedido foi pago, mas não foi possível carregar os detalhes da entrega." />
   }
 
+  const { data: planPixels } = await supabase
+    .from('plan_pixels')
+    .select('pixel:pixels(platform, pixel_id, is_active)')
+    .eq('plan_id', order.plan_id)
+
+  const activePixels = (planPixels ?? [])
+    .map((pp: any) => {
+      const px = Array.isArray(pp.pixel) ? pp.pixel[0] : pp.pixel
+      return px
+    })
+    .filter((p: any) => p?.is_active)
+    .filter((p: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.pixel_id === p.pixel_id) === i)
+    .map((p: any) => ({ ...p, pixel_id: decryptApiKey(p.pixel_id) }))
+
   const isPlatformProduct = product.delivery_type === 'platform'
   const typeLabel = productTypeLabel(product.product_type)
   const maskedEmail = maskEmail(customer.customer_email)
@@ -98,6 +114,7 @@ export default async function CheckoutSuccessPage(props: {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-orange-50 p-4">
+      {activePixels.length > 0 && <PixelFireBackup pixels={activePixels} amount={Number(order.amount)} orderId={orderId} />}
       <section className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl sm:p-10">
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
           <CheckCircle2 className="h-10 w-10 text-emerald-600" />
