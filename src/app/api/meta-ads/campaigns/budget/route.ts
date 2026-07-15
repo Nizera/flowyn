@@ -65,32 +65,36 @@ export async function POST(req: NextRequest) {
   if (daily_budget !== undefined) updatePayload.daily_budget = String(daily_budget)
   if (lifetime_budget !== undefined) updatePayload.lifetime_budget = String(lifetime_budget)
 
-  const metaRes = await fetch(`${GRAPH_API}/${targetId}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updatePayload),
-  })
-  const metaData = await metaRes.json()
+  try {
+    const metaRes = await fetch(`${GRAPH_API}/${targetId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatePayload),
+    })
+    const metaData = await metaRes.json()
 
-  if (metaData.error) {
-    return NextResponse.json({ error: metaData.error.message }, { status: 500 })
+    if (metaData.error) {
+      return NextResponse.json({ error: metaData.error.message }, { status: 500 })
+    }
+
+    const localTable = targetLevel === 'campaign' ? 'campaigns' : 'ad_sets'
+    const localIdField = targetLevel === 'campaign' ? 'campaign_id' : 'ad_set_id'
+
+    const updateDb: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (daily_budget !== undefined) updateDb.daily_budget = daily_budget
+    if (lifetime_budget !== undefined) updateDb.lifetime_budget = lifetime_budget
+
+    await admin.from(localTable).update(updateDb).eq(localIdField, targetId).eq('ad_account_id', ad_account_id).eq('user_id', user.id)
+
+    return NextResponse.json({
+      success: true,
+      id: targetId,
+      level: targetLevel,
+      applied_to: targetId !== id ? 'campaign' : level,
+      daily_budget,
+      lifetime_budget,
+    })
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Internal server error' }, { status: 500 })
   }
-
-  const localTable = targetLevel === 'campaign' ? 'campaigns' : 'ad_sets'
-  const localIdField = targetLevel === 'campaign' ? 'campaign_id' : 'ad_set_id'
-
-  const updateDb: Record<string, unknown> = { updated_at: new Date().toISOString() }
-  if (daily_budget !== undefined) updateDb.daily_budget = daily_budget
-  if (lifetime_budget !== undefined) updateDb.lifetime_budget = lifetime_budget
-
-  await admin.from(localTable).update(updateDb).eq(localIdField, targetId).eq('ad_account_id', ad_account_id).eq('user_id', user.id)
-
-  return NextResponse.json({
-    success: true,
-    id: targetId,
-    level: targetLevel,
-    applied_to: targetId !== id ? 'campaign' : level,
-    daily_budget,
-    lifetime_budget,
-  })
 }

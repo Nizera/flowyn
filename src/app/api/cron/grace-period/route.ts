@@ -21,17 +21,21 @@ export async function GET(req: NextRequest) {
 
   let suspendedCount = 0
   for (const sub of expiredGrace || []) {
-    await supabase
-      .from('platform_subscriptions')
-      .update({ status: 'suspended', updated_at: new Date().toISOString() })
-      .eq('id', sub.id)
+    try {
+      await supabase
+        .from('platform_subscriptions')
+        .update({ status: 'suspended', updated_at: new Date().toISOString() })
+        .eq('id', sub.id)
 
-    await supabase
-      .from('profiles')
-      .update({ plan: 'free', updated_at: new Date().toISOString() })
-      .eq('id', sub.user_id)
+      await supabase
+        .from('profiles')
+        .update({ plan: 'free', updated_at: new Date().toISOString() })
+        .eq('id', sub.user_id)
 
-    suspendedCount++
+      suspendedCount++
+    } catch {
+      continue
+    }
   }
 
   return NextResponse.json({

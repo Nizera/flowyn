@@ -83,8 +83,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ campaigns: [] })
     }
 
+    const now = new Date()
+    const since = new Date(now)
+    since.setDate(now.getDate() - 90)
+    const until = now.toISOString().slice(0, 10)
+    const sinceStr = since.toISOString().slice(0, 10)
+
     const insightsRes = await fetch(
-      `${GRAPH_API}/act_${adAccountId}/insights?fields=campaign_id,impressions,clicks,spend,actions,ctr,cpc,cpm&level=campaign&time_range={'since':'2026-01-01','until':'2026-12-31'}&access_token=${accessToken}`
+      `${GRAPH_API}/act_${adAccountId}/insights?fields=campaign_id,impressions,clicks,spend,actions,ctr,cpc,cpm&level=campaign&time_range={'since':'${sinceStr}','until':'${until}'}&access_token=${accessToken}`
     )
     const insightsData = await insightsRes.json()
 

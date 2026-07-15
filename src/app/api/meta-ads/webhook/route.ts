@@ -9,7 +9,6 @@ export async function GET(req: NextRequest) {
   const challenge = searchParams.get('hub.challenge')
 
   if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-    console.log('[Meta Webhook] Verified successfully')
     return new NextResponse(challenge, { status: 200 })
   }
 
@@ -19,17 +18,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
-    const { object, entry } = body
-
-    if (object === 'page') {
-      for (const event of entry || []) {
-        console.log('[Meta Webhook] Event received:', {
-          id: event.id,
-          time: event.time,
-        })
-      }
-    }
+    await req.json()
 
     return NextResponse.json({ status: 'ok' })
   } catch {

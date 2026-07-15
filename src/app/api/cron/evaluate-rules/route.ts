@@ -8,11 +8,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  console.log('[AutoRules Cron] Starting evaluation...')
-
   const result = await evaluateAllRules()
 
-  console.log(`[AutoRules Cron] Evaluated ${result.rulesEvaluated} rules, triggered ${result.actionsTriggered} actions`)
   if (result.errors.length > 0) {
     console.error('[AutoRules Cron] Errors:', result.errors)
   }

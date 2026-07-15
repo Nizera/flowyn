@@ -66,7 +66,6 @@ export async function POST(req: NextRequest) {
   const errors: string[] = []
 
   // Process in batches to respect rate limits
-  console.log(`[Bulk] action=${action} level=${level} ids=`, ids)
   for (const id of ids) {
     try {
       let localTable: string
@@ -92,7 +91,6 @@ export async function POST(req: NextRequest) {
       if (action === 'delete') {
         const metaRes = await fetch(`${GRAPH_API}/${id}?access_token=${accessToken}`, { method: 'DELETE' })
         const metaData = await metaRes.json()
-        console.log(`[Bulk] DELETE ${id}:`, JSON.stringify(metaData))
         if (metaData.error) errors.push(`${id}: ${metaData.error.message}`)
 
         await adminSupabase.from(localTable).delete().eq(localIdField, id).eq('ad_account_id', ad_account_id).eq('user_id', user.id)
