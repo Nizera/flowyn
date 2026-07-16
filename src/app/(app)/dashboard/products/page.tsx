@@ -3,6 +3,7 @@ import Link from 'next/link'
 import type { LucideIcon } from 'lucide-react'
 import { BookOpen, Box, ExternalLink, FileText, Layers, Plus, Search, Users } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
+import { CopyUtmButton } from '@/components/CopyUtmButton'
 
 type ProductPlanRow = {
   price: string | number | null
@@ -153,6 +154,7 @@ export default async function ProductsPage() {
                       <td className="px-5 py-4 text-slate-500">{date(product.created_at)}</td>
                       <td className="px-5 py-4">
                         <div className="flex justify-end gap-2">
+                          <CopyUtmButton productId={product.id} />
                           <Link href={`/dashboard/products/${product.id}`} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600">
                             Editar
                           </Link>

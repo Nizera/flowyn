@@ -55,12 +55,24 @@ utm_source=facebook&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={
 
 O webhook recebe notificações de pagamento do Asaas e atualiza automaticamente o status dos pedidos.
 
-1. Faça login no painel do Asaas (asaas.com)
+### Como funciona
+
+Quando você conecta sua conta Asaas na FlowynPay, o webhook é configurado automaticamente. Não é necessário criar manualmente no painel do Asaas.
+
+### Configuração automática (standalone)
+
+Se você conectou sua conta Asaas usando a API key (modo standalone), o webhook é registrado automaticamente quando você acessa **Pagamentos** pela primeira vez.
+
+### Configuração manual (se necessário)
+
+Se o webhook não estiver funcionando, você pode configurar manualmente:
+
+1. Acesse o painel do Asaas (asaas.com)
 2. Vá em **Configurações > Integrações > Webhooks**
 3. Clique em **Adicionar Webhook**
 4. Configure:
    - **URL**: `https://flowyn.com.br/api/webhooks/asaas`
-   - **Eventos**: marque todos (criação, atualização, pagamento, etc.)
+   - **Evento**: marque todos (criação, atualização, pagamento, etc.)
 5. Clique em **Salvar**
 
 ---
