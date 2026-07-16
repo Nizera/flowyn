@@ -37,11 +37,11 @@ export async function GET(req: NextRequest) {
   if (ownedAccountIds.length === 0) {
     return NextResponse.json({
       stages: [
-        { name: 'Cliques', value: 0, color: '#3b82f6' },
-        { name: 'Vis. Pagina', value: 0, color: '#6366f1' },
-        { name: 'Initiate Checkout', value: 0, color: '#8b5cf6' },
-        { name: 'Vendas Iniciadas', value: 0, color: '#a78bfa' },
-        { name: 'Vendas Aprovadas', value: 0, color: '#10b981' },
+        { name: 'Cliques', value: 0 },
+        { name: 'Visita na Página', value: 0 },
+        { name: 'Initiate Checkout', value: 0 },
+        { name: 'Vendas Iniciadas', value: 0 },
+        { name: 'Vendas Aprovadas', value: 0 },
       ],
       conversion_rates: [],
       period: { start_date: startDate, end_date: endDate },
@@ -70,11 +70,11 @@ export async function GET(req: NextRequest) {
   if (productIds.length === 0) {
     return NextResponse.json({
       stages: [
-        { name: 'Cliques', value: totalClicks, color: '#3b82f6' },
-        { name: 'Vis. Pagina', value: 0, color: '#6366f1' },
-        { name: 'Initiate Checkout', value: 0, color: '#8b5cf6' },
-        { name: 'Vendas Iniciadas', value: 0, color: '#a78bfa' },
-        { name: 'Vendas Aprovadas', value: 0, color: '#10b981' },
+        { name: 'Cliques', value: totalClicks },
+        { name: 'Visita na Página', value: 0 },
+        { name: 'Initiate Checkout', value: 0 },
+        { name: 'Vendas Iniciadas', value: 0 },
+        { name: 'Vendas Aprovadas', value: 0 },
       ],
       conversion_rates: [],
       period: { start_date: startDate, end_date: endDate },
@@ -125,20 +125,28 @@ export async function GET(req: NextRequest) {
   const salesApproved = approvedCount || 0
 
   const stages = [
-    { name: 'Cliques', value: totalClicks, color: '#3b82f6' },
-    { name: 'Vis. Pagina', value: pageViews, color: '#6366f1' },
-    { name: 'Initiate Checkout', value: initiateCheckouts, color: '#8b5cf6' },
-    { name: 'Vendas Iniciadas', value: salesInitiated, color: '#a78bfa' },
-    { name: 'Vendas Aprovadas', value: salesApproved, color: '#10b981' },
+    { name: 'Cliques', value: totalClicks },
+    { name: 'Visita na Página', value: pageViews },
+    { name: 'Initiate Checkout', value: initiateCheckouts },
+    { name: 'Vendas Iniciadas', value: salesInitiated },
+    { name: 'Vendas Aprovadas', value: salesApproved },
   ]
 
-  // 6. Calculate conversion rates between stages
+  // 6. Calculate conversion rates between adjacent stages
   const conversionRates: { from: string; to: string; rate: number }[] = []
   for (let i = 0; i < stages.length - 1; i++) {
     const from = stages[i]
     const to = stages[i + 1]
     const rate = from.value > 0 ? (to.value / from.value) * 100 : 0
     conversionRates.push({ from: from.name, to: to.name, rate })
+  }
+
+  // 7. Add overall conversion (first → last)
+  if (stages.length >= 2) {
+    const first = stages[0]
+    const last = stages[stages.length - 1]
+    const overallRate = first.value > 0 ? (last.value / first.value) * 100 : 0
+    conversionRates.push({ from: first.name, to: last.name, rate: overallRate })
   }
 
   return NextResponse.json({
