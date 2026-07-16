@@ -109,7 +109,7 @@ export async function GET(req: NextRequest) {
           .from('orders')
           .update({
             asaas_status: payment.status,
-            net_value: typeof (payment as any).netValue === 'number' ? (payment as any).netValue : null,
+            net_value: typeof payment.netValue === 'number' ? payment.netValue : null,
             updated_at: new Date().toISOString(),
           })
           .eq('id', orderId)

@@ -193,6 +193,7 @@ export async function createCreditCardPayment(
     id: string
     status: string
     value: number
+    netValue?: number
     invoiceUrl?: string
     creditCard?: { creditCardNumber?: string; creditCardBrand?: string }
     creditCardToken?: string
