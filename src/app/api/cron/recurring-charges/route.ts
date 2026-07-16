@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { createPixAutomaticCharge } from '@/lib/asaas'
 import { decryptApiKey } from '@/lib/encryption'
+import { safeBearerCompare } from '@/lib/safe-bearer-compare'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,7 +36,8 @@ export async function GET(request: NextRequest) {
     console.error('[Cron] CRON_SECRET not configured')
     return NextResponse.json({ error: 'CRON_SECRET not configured.' }, { status: 503 })
   }
-  if (request.headers.get('authorization') !== `Bearer ${secret}`) {
+  const authHeader = request.headers.get('authorization') || ''
+  if (!safeBearerCompare(authHeader, secret)) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
   }
 
@@ -61,6 +63,12 @@ export async function GET(request: NextRequest) {
   let failed = 0
 
   for (const auth of activeAuths) {
+    if (!Number.isFinite(auth.value) || auth.value < 5) {
+      console.error(`[Cron] Invalid value for auth ${auth.authorization_id}:`, auth.value)
+      failed++
+      continue
+    }
+
     // Check if we already created a charge for this authorization THIS MONTH
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
     const { data: existingCharge } = await supabase
@@ -153,6 +161,15 @@ export async function GET(request: NextRequest) {
       created++
     } catch (err: unknown) {
       console.error(`[Cron] Error creating charge for auth ${auth.authorization_id}:`, err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200))
+      // If the error suggests the authorization is expired/invalid, mark it locally
+      const errMsg = err instanceof Error ? err.message.toLowerCase() : ''
+      if (errMsg.includes('expired') || errMsg.includes('inactive') || errMsg.includes('invalid authorization') || errMsg.includes('cancelled')) {
+        await supabase
+          .from('pix_automatic_authorizations')
+          .update({ status: 'EXPIRED', updated_at: new Date().toISOString() })
+          .eq('authorization_id', auth.authorization_id)
+        console.log(`[Cron] Marked authorization ${auth.authorization_id} as EXPIRED due to: ${errMsg}`)
+      }
       failed++
     }
   }

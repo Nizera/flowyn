@@ -95,7 +95,9 @@ export async function GET() {
       asaas_wallet_id: paymentAccount?.wallet_id || (profile as Profile).asaas_wallet_id,
       asaas_account_status: paymentAccount?.status || (profile as Profile).asaas_account_status,
     },
-    remoteAccount,
+    remoteAccount: remoteAccount
+      ? { id: remoteAccount.id, name: remoteAccount.name, email: remoteAccount.email, walletId: remoteAccount.walletId ?? null }
+      : null,
   })
 }
 
@@ -250,6 +252,21 @@ export async function POST(request: NextRequest) {
     }
 
     if (!remoteAccount) {
+      // Mark all pending orders as failed (producer disconnected Asaas)
+      const { data: producerProducts } = await admin
+        .from('products')
+        .select('id')
+        .eq('owner_id', user.id)
+      const producerProductIds = (producerProducts || []).map((p: { id: string }) => p.id)
+
+      if (producerProductIds.length > 0) {
+        await admin
+          .from('orders')
+          .update({ status: 'failed', asaas_status: 'PRODUCER_DISCONNECTED', updated_at: new Date().toISOString() })
+          .in('product_id', producerProductIds)
+          .eq('status', 'pending')
+      }
+
       await admin.from('payment_accounts').delete().eq('user_id', user.id).eq('provider', 'asaas')
       await admin.from('profiles').update({
         asaas_account_id: null,

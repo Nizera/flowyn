@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { safeTokenEqual } from '@/lib/safe-bearer-compare'
 
 const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN
 
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest) {
   const token = searchParams.get('hub.verify_token')
   const challenge = searchParams.get('hub.challenge')
 
-  if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+  if (mode === 'subscribe' && token && safeTokenEqual(token, VERIFY_TOKEN)) {
     return new NextResponse(challenge, { status: 200 })
   }
 

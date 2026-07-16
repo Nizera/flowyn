@@ -22,10 +22,6 @@ type PlanRow = {
   product: PlanProduct
 }
 
-function getBody<T extends Record<string, unknown>>(req: NextRequest) {
-  return req.json() as Promise<T>
-}
-
 const PAID_STATUSES = new Set(['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'])
 
 function today() {
@@ -33,9 +29,19 @@ function today() {
 }
 
 function getClientIp(req: NextRequest) {
+  // Prefer Vercel's verified header (cannot be spoofed by client)
+  const vercelIp = req.headers.get('x-vercel-forwarded-for')
+  if (vercelIp) return vercelIp.split(',')[0].trim()
+  // Fall back to x-real-ip (set by reverse proxy)
+  const realIp = req.headers.get('x-real-ip')
+  if (realIp) return realIp.trim()
+  // Last resort: rightmost of x-forwarded-for (least client-controlled)
   const forwardedFor = req.headers.get('x-forwarded-for')
-  if (forwardedFor) return forwardedFor.split(',')[0].trim()
-  return req.headers.get('x-real-ip') || '127.0.0.1'
+  if (forwardedFor) {
+    const ips = forwardedFor.split(',').map(s => s.trim()).filter(Boolean)
+    return ips[ips.length - 1] || '127.0.0.1'
+  }
+  return '127.0.0.1'
 }
 
 function maskEmail(email: string) {
@@ -52,9 +58,15 @@ function sameWallet(left?: string | null, right?: string | null) {
 }
 
 export async function POST(req: NextRequest) {
-  const contentLength = Number(req.headers.get('content-length') || 0)
-  if (contentLength > 16_384) {
+  const rawBody = await req.text()
+  if (rawBody.length > 16_384) {
     return NextResponse.json({ error: 'Requisição inválida.' }, { status: 413 })
+  }
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse(rawBody)
+  } catch {
+    return NextResponse.json({ error: 'JSON inválido.' }, { status: 400 })
   }
 
   let step = 'init'
@@ -81,7 +93,6 @@ export async function POST(req: NextRequest) {
 
     step = 'validate'
 
-    const body = await getBody<Record<string, unknown>>(req)
     const planId = String(body.plan_id || '')
     const customerName = String(body.customer_name || '').trim()
     const customerEmail = String(body.customer_email || '').trim()
@@ -90,6 +101,18 @@ export async function POST(req: NextRequest) {
     const addOrderBump = Boolean(body.add_order_bump)
     const billingType = String(body.billing_type || 'CREDIT_CARD')
     const trackingParams = body.tracking_params as Record<string, string> | undefined
+
+    if (trackingParams) {
+      const keys = Object.keys(trackingParams)
+      if (keys.length > 10) {
+        return NextResponse.json({ error: 'Tracking params inválidos.' }, { status: 400 })
+      }
+      for (const k of keys) {
+        if (k.length > 50 || String(trackingParams[k]).length > 256) {
+          return NextResponse.json({ error: 'Tracking params inválidos.' }, { status: 400 })
+        }
+      }
+    }
 
     if (billingType !== 'PIX' && billingType !== 'CREDIT_CARD') {
       return NextResponse.json({ error: 'Forma de pagamento invalida.' }, { status: 400 })

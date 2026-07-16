@@ -294,6 +294,24 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true })
       }
 
+      if (!Number.isFinite(verifiedValue)) {
+        await supabase.from('security_audit_log').insert({
+          action: 'WEBHOOK_PAYMENT_VERIFICATION_FAILED',
+          entity_type: 'order',
+          entity_id: orderId,
+          metadata: { payment_id: paymentId, reason: 'invalid_value_type', verified_value: verifiedValue },
+        })
+        await supabase
+          .from('asaas_webhook_events')
+          .update({
+            status: 'done',
+            processed_at: new Date().toISOString(),
+            attempt_count: Number(claimedEvent.attempt_count || 0) + 1,
+          })
+          .eq('event_id', eventId)
+        return NextResponse.json({ received: true })
+      }
+
       if (!verifiedStatus || !PAID_EVENTS.has(verifiedStatus)) {
         await supabase.from('security_audit_log').insert({
           action: 'WEBHOOK_PAYMENT_VERIFICATION_FAILED',
@@ -355,19 +373,15 @@ export async function POST(req: NextRequest) {
       if (platformSub) {
         await supabase
           .from('platform_subscriptions')
-          .update({ status: 'suspended', updated_at: new Date().toISOString() })
+          .update({ status: 'cancelled', updated_at: new Date().toISOString() })
           .eq('id', platformSub.id)
 
-        await supabase
-          .from('profiles')
-          .update({ plan: 'free', updated_at: new Date().toISOString() })
-          .eq('id', platformSub.user_id)
-
+        // Don't downgrade plan immediately — let grace-period cron handle it when current_period_ends_at passes
         await supabase.from('security_audit_log').insert({
           action: eventType,
           entity_type: 'platform_subscription',
           entity_id: platformSub.id,
-          metadata: { subscription_id: subscriptionId, user_id: platformSub.user_id },
+          metadata: { subscription_id: subscriptionId, user_id: platformSub.user_id, deferred_revocation: true },
         })
       }
 

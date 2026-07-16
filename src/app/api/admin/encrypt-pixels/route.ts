@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { encryptApiKey, isEncrypted } from '@/lib/encryption'
+import { safeTokenEqual } from '@/lib/safe-bearer-compare'
 
 export async function POST(req: Request) {
   const secret = req.headers.get('x-cron-secret')
-  if (secret !== process.env.CRON_SECRET) {
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret || !safeTokenEqual(secret || '', cronSecret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

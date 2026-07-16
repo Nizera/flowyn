@@ -3,6 +3,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { getResendClient } from '@/lib/resend'
 import { learningNotificationEmail } from '@/lib/email-templates'
 import { getAppUrl } from '@/lib/app-url'
+import { safeBearerCompare } from '@/lib/safe-bearer-compare'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +15,8 @@ export async function GET(request: NextRequest) {
     console.error('[Cron] CRON_SECRET não configurado — cron desabilitado')
     return NextResponse.json({ error: 'CRON_SECRET não configurado.' }, { status: 503 })
   }
-  if (request.headers.get('authorization') !== `Bearer ${secret}`) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+  const authHeader = request.headers.get('authorization') || ''
+  if (!safeBearerCompare(authHeader, secret)) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
 
   const admin = createAdminClient()
   const resend = getResendClient()

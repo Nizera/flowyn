@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { evaluateAllRules } from '@/lib/auto-rules'
+import { safeBearerCompare } from '@/lib/safe-bearer-compare'
 
 export async function POST(req: NextRequest) {
-  const authHeader = req.headers.get('Authorization')
+  const authHeader = req.headers.get('Authorization') || ''
   const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || !safeBearerCompare(authHeader, cronSecret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -25,9 +26,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('Authorization')
+  const authHeader = req.headers.get('Authorization') || ''
   const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || !safeBearerCompare(authHeader, cronSecret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

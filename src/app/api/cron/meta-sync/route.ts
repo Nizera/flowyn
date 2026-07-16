@@ -9,14 +9,15 @@ import {
   trackAdAccountUsage,
   APP_LEVEL_CALLS_LIMIT_PER_HOUR,
 } from '@/lib/meta-rate-limit'
+import { safeBearerCompare } from '@/lib/safe-bearer-compare'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const accountId = searchParams.get('account_id')
 
-  const authHeader = req.headers.get('Authorization')
+  const authHeader = req.headers.get('Authorization') || ''
   const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || !safeBearerCompare(authHeader, cronSecret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

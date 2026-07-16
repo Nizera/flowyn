@@ -30,11 +30,13 @@ async function sendEmailWithRetry(
   supabase: SupabaseAdmin,
   orderId: string,
   eventType: string,
+  maxAttempts = 4,
 ) {
   const resend = getResendClient()
   if (!resend) return false
 
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let sendError: string | null = null
     try {
       const { error } = await resend.emails.send(params)
       if (!error) {
@@ -47,9 +49,16 @@ async function sendEmailWithRetry(
         })
         return true
       }
-      if (attempt === 0) await new Promise(r => setTimeout(r, 2000))
-    } catch {
-      if (attempt === 0) await new Promise(r => setTimeout(r, 2000))
+      sendError = error.message || 'unknown'
+    } catch (err) {
+      sendError = err instanceof Error ? err.message : 'unknown'
+    }
+
+    console.error(`[email-retry] Attempt ${attempt}/${maxAttempts} failed:`, sendError, { orderId, eventType })
+
+    if (attempt < maxAttempts) {
+      const delayMs = Math.pow(2, attempt) * 1000
+      await new Promise(resolve => setTimeout(resolve, delayMs))
     }
   }
 
@@ -66,17 +75,34 @@ async function sendEmailWithRetry(
 
 async function buildFileLinks(product: Product, supabase: SupabaseAdmin) {
   const links: { label: string; url: string; isFile: boolean }[] = []
+  const failedPaths: string[] = []
 
   if (Array.isArray(product.deliverable_file_paths)) {
     for (const path of product.deliverable_file_paths) {
-      const { data: signed } = await supabase.storage
+      const { data: signed, error: storageError } = await supabase.storage
         .from('product-files')
         .createSignedUrl(path, 60 * 60 * 48)
 
       if (signed?.signedUrl) {
         links.push({ label: path.split('/').pop() || 'Baixar Arquivo', url: signed.signedUrl, isFile: true })
+      } else {
+        console.error(
+          `[buildFileLinks] Failed to create signed URL for ${path}:`,
+          storageError?.message || 'unknown',
+        )
+        failedPaths.push(path)
       }
     }
+  }
+
+  if (failedPaths.length > 0) {
+    console.warn(`[buildFileLinks] ${failedPaths.length} file(s) failed for product — links will be empty`)
+    await supabase.from('security_audit_log').insert({
+      action: 'STORAGE_SIGNED_URL_FAILED',
+      entity_type: 'product',
+      entity_id: product.id,
+      metadata: { failed_paths: failedPaths },
+    })
   }
 
   return links
@@ -84,6 +110,7 @@ async function buildFileLinks(product: Product, supabase: SupabaseAdmin) {
 
 async function buildOrderBumpLinks(orderData: { includes_order_bump?: boolean; product_id?: string }, product: Product, supabase: SupabaseAdmin) {
   const links: { label: string; url: string; isFile: boolean }[] = []
+  const failedPaths: string[] = []
 
   if (orderData.includes_order_bump) {
     const { data: orderBumps } = await supabase
@@ -97,17 +124,33 @@ async function buildOrderBumpLinks(orderData: { includes_order_bump?: boolean; p
         const paths = bump.file_paths as string[] | null
         if (Array.isArray(paths)) {
           for (const path of paths) {
-            const { data: signed } = await supabase.storage
+            const { data: signed, error: storageError } = await supabase.storage
               .from('product-files')
               .createSignedUrl(path, 60 * 60 * 48)
 
             if (signed?.signedUrl) {
               links.push({ label: path.split('/').pop() || 'Baixar Order Bump', url: signed.signedUrl, isFile: true })
+            } else {
+              console.error(
+                `[buildOrderBumpLinks] Failed to create signed URL for ${path}:`,
+                storageError?.message || 'unknown',
+              )
+              failedPaths.push(path)
             }
           }
         }
       }
     }
+  }
+
+  if (failedPaths.length > 0) {
+    console.warn(`[buildOrderBumpLinks] ${failedPaths.length} file(s) failed for order bump — links will be empty`)
+    await supabase.from('security_audit_log').insert({
+      action: 'STORAGE_SIGNED_URL_FAILED',
+      entity_type: 'product',
+      entity_id: product.id,
+      metadata: { failed_paths: failedPaths, source: 'order_bump' },
+    })
   }
 
   return links
@@ -137,6 +180,16 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
   }
 
   const product = orderData.product as Product | null
+  if (!product) {
+    console.error(`[fulfillPaidOrder] Product not found for order ${orderId} — product may have been deleted`)
+    await supabase.from('security_audit_log').insert({
+      action: 'FULFILLMENT_NO_PRODUCT',
+      entity_type: 'order',
+      entity_id: orderId,
+      metadata: { reason: 'product_deleted_or_missing' },
+    })
+    return { skipped: false, error: 'missing_product' }
+  }
   const { data: privateCustomer } = await supabase
     .from('order_customer_private')
     .select('customer_name, customer_email, document_number, phone')
