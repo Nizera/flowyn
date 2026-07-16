@@ -35,10 +35,17 @@ interface Sale {
   status: string
 }
 
+interface PaymentBreakdown {
+  status: string
+  count: number
+  total: number
+}
+
 interface DashboardData {
   summary: Summary
   recent_sales?: Sale[]
   spend_over_time: Array<{ date: string; spend: number; revenue: number }>
+  payment_breakdown?: PaymentBreakdown[]
 }
 
 const EMPTY_SUMMARY: Summary = {
@@ -74,6 +81,43 @@ export default function DashboardPage() {
   }, [])
 
   const s = useMemo<Summary>(() => data?.summary || EMPTY_SUMMARY, [data])
+
+  useEffect(() => {
+    if (!data) return
+    const tooltip = document.getElementById('donut-tooltip')
+    if (!tooltip) return
+
+    const segments = document.querySelectorAll('.donut-segment')
+    function onEnter(this: Element) {
+      const el = this as HTMLElement
+      if (!tooltip) return
+      tooltip.textContent = `${el.dataset.label}: ${el.dataset.value}`
+      tooltip.style.opacity = '1'
+    }
+    function onLeave() {
+      if (!tooltip) return
+      tooltip.style.opacity = '0'
+    }
+    function onMove(this: Element, e: Event) {
+      const me = e as MouseEvent
+      if (!tooltip) return
+      tooltip.style.left = `${me.clientX + 12}px`
+      tooltip.style.top = `${me.clientY - 10}px`
+    }
+
+    segments.forEach(seg => {
+      seg.addEventListener('mouseenter', onEnter)
+      seg.addEventListener('mouseleave', onLeave)
+      seg.addEventListener('mousemove', onMove)
+    })
+    return () => {
+      segments.forEach(seg => {
+        seg.removeEventListener('mouseenter', onEnter)
+        seg.removeEventListener('mouseleave', onLeave)
+        seg.removeEventListener('mousemove', onMove)
+      })
+    }
+  }, [data])
 
   if (loading) {
     return (
@@ -191,19 +235,32 @@ export default function DashboardPage() {
         <section className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col items-center">
           <h3 className="text-lg font-bold text-slate-900 mb-6 self-start w-full">Receita por Status</h3>
           {(() => {
-            const paid = s.total_revenue
-            const pending = s.pending_revenue
-            const refunded = s.refunded_revenue
-            const others = Math.max(0, (s.total_spend || 0) - paid - pending - refunded)
-            const total = paid + pending + refunded + others || 1
-            const circumference = 251.2
+            const statusColors: Record<string, string> = {
+              paid: '#10b981',
+              pending: '#fcd34d',
+              refunded: '#94a3b8',
+              chargeback: '#f87171',
+            }
+            const statusLabels: Record<string, string> = {
+              paid: 'Pago',
+              pending: 'Pendente',
+              refunded: 'Reembolsado',
+              chargeback: 'Chargeback',
+            }
 
-            const segments = [
-              { label: 'Pago', value: paid, color: '#10b981' },
-              { label: 'Pendente', value: pending, color: '#fcd34d' },
-              { label: 'Reembolsado', value: refunded, color: '#94a3b8' },
-              { label: 'Outros', value: others, color: '#cbd5e1' },
-            ]
+            const breakdown = data?.payment_breakdown || []
+            const segments = breakdown
+              .filter(b => b.total > 0)
+              .map(b => ({
+                status: b.status,
+                label: statusLabels[b.status] || b.status,
+                value: b.total,
+                count: b.count,
+                color: statusColors[b.status] || '#cbd5e1',
+              }))
+
+            const total = segments.reduce((sum, seg) => sum + seg.value, 0) || 1
+            const circumference = 251.2
 
             let offset = 0
             const arcs = segments.map((seg) => {
@@ -227,16 +284,17 @@ export default function DashboardPage() {
                         strokeWidth="16"
                         strokeDasharray={arc.strokeDasharray}
                         strokeDashoffset={arc.strokeDashoffset}
-                        className="transition-all duration-200 hover:opacity-80 hover:stroke-[18]"
+                        className="donut-segment transition-all duration-200"
                         style={{ cursor: 'pointer' }}
-                      >
-                        <title>{arc.label}: {currency(arc.value)}</title>
-                      </circle>
+                        data-label={arc.label}
+                        data-value={currency(arc.value)}
+                      />
                     ))}
                   </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <CreditCard className="w-8 h-8 text-slate-400" />
                   </div>
+                  <div id="donut-tooltip" className="fixed px-3 py-2 text-sm font-bold text-white bg-slate-900 rounded-xl shadow-lg opacity-0 pointer-events-none transition-opacity z-50" />
                 </div>
                 <div className="w-full grid grid-cols-2 gap-y-3 mt-auto">
                   {segments.map((seg, i) => (
@@ -249,6 +307,9 @@ export default function DashboardPage() {
                     </div>
                   ))}
                 </div>
+                {segments.length === 0 && (
+                  <p className="text-sm text-slate-400 mt-4">Nenhum dado de receita disponível.</p>
+                )}
               </>
             )
           })()}
