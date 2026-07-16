@@ -5,6 +5,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { DollarSign, Megaphone, Users, PackageCheck, CreditCard, TrendingUp, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { RevenueSpendChart } from './RevenueSpendChart'
+import { FunnelChart } from './FunnelChart'
 
 function currency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
@@ -76,6 +77,8 @@ export default function DashboardPage() {
           <RevenueSpendChart data={data?.spend_over_time || []} period={data?.period || { start_date: '', end_date: '' }} />
         </div>
       </div>
+
+      <FunnelChart />
     </div>
   )
 }
