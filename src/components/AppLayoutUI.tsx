@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Sidebar } from '@/components/Sidebar'
-import { SalesGoalCard } from '@/components/SalesGoalCard'
 import Link from 'next/link'
 import { Bell, CalendarClock, DollarSign, Clock, AlertTriangle, Menu, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -25,8 +24,6 @@ type Notification = {
 interface AppLayoutUIProps {
   children: React.ReactNode
   profile: UserProfile | null
-  user: UserProfile | null
-  totalSales: number
   subscription?: {
     status: string
     trial_ends_at: string | null
@@ -109,7 +106,7 @@ function notifBg(id: string) {
   return 'bg-orange-50'
 }
 
-export function AppLayoutUI({ children, profile, user, totalSales, subscription, notifications }: AppLayoutUIProps) {
+export function AppLayoutUI({ children, profile, subscription, notifications }: AppLayoutUIProps) {
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isNotifOpen, setIsNotifOpen] = useState(false)
@@ -187,7 +184,6 @@ export function AppLayoutUI({ children, profile, user, totalSales, subscription,
           </div>
 
           <div className="flex items-center gap-3 md:gap-4">
-            <SalesGoalCard totalSales={totalSales} variant="compact" />
             <div className="relative" ref={notifRef}>
               <button
                 onClick={() => setIsNotifOpen(prev => !prev)}
@@ -256,10 +252,6 @@ export function AppLayoutUI({ children, profile, user, totalSales, subscription,
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
-            <div className="hidden min-w-0 text-right sm:block">
-              <p className="truncate text-sm font-black text-orange-600">{profile?.full_name || user?.email || 'Conta'}</p>
-              <p className="text-xs text-slate-400">Sua conta</p>
             </div>
           </div>
         </header>

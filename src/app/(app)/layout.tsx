@@ -11,15 +11,6 @@ type ProductRow = {
   name: string
 }
 
-type OrderRow = {
-  id: string
-  amount: string | number | null
-  status: string
-  created_at: string
-  customer_name: string
-  product_id: string
-}
-
 type Notification = {
   id: string
   title: string
@@ -60,7 +51,6 @@ export default async function AppLayout({
 
   const productIds = products?.map((p: ProductRow) => p.id) ?? []
 
-  let totalSales = 0
   const notifications: Notification[] = []
 
   if (productIds.length > 0) {
@@ -75,9 +65,6 @@ export default async function AppLayout({
       .limit(20)
 
     const orders = recentOrders ?? []
-
-    const paid = orders.filter((o: OrderRow) => o.status === 'paid')
-    totalSales = paid.reduce((sum: number, o: OrderRow) => sum + Number(o.amount), 0)
 
     const productMap = new Map(products!.map((p: ProductRow) => [p.id, p.name]))
 
@@ -151,8 +138,6 @@ export default async function AppLayout({
   return (
     <AppLayoutUI
       profile={profile}
-      user={user}
-      totalSales={totalSales}
       subscription={subscription}
       notifications={notifications}
     >
