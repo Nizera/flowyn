@@ -35,11 +35,12 @@ export async function checkSubscription(userId: string): Promise<SubscriptionChe
 
   const isGracePeriod = subscription?.status === 'grace_period'
 
-  const isActive =
+  const hasActiveRow =
     subscription?.status === 'active' ||
     isTrialing ||
-    isGracePeriod ||
-    (plan !== 'free')
+    isGracePeriod
+
+  const isActive = hasActiveRow && plan !== 'free'
 
   return {
     plan,
@@ -51,7 +52,7 @@ export async function checkSubscription(userId: string): Promise<SubscriptionChe
 
 export async function requireProPlan(userId: string): Promise<SubscriptionCheck> {
   const check = await checkSubscription(userId)
-  if (!check.isActive && check.plan === 'free') {
+  if (!check.isActive) {
     throw new Error('SUBSCRIPTION_REQUIRED')
   }
   return check

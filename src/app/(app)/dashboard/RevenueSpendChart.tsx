@@ -1,8 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
-import { Calendar } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+
+interface TooltipEntry {
+  dataKey: string
+  color: string
+  value: number
+}
 
 interface DataPoint {
   date: string
@@ -12,14 +17,13 @@ interface DataPoint {
 
 interface Props {
   data: DataPoint[]
-  period: { start_date: string; end_date: string }
 }
 
 const PERIODS = [
-  { label: '7 dias', days: 7 },
-  { label: '14 dias', days: 14 },
-  { label: '30 dias', days: 30 },
-  { label: '90 dias', days: 90 },
+  { label: '7d', days: 7 },
+  { label: '14d', days: 14 },
+  { label: '30d', days: 30 },
+  { label: '90d', days: 90 },
   { label: 'Ano', days: 365 },
 ]
 
@@ -32,23 +36,23 @@ function formatDate(dateStr: string) {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 }
 
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipEntry[]; label?: string | number }) {
   if (!active || !payload?.length) return null
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
-      <p className="mb-2 text-xs font-semibold text-slate-500">{formatDate(label)}</p>
-      {payload.map((entry: any) => (
-        <div key={entry.dataKey} className="flex items-center gap-2 text-sm">
+      <p className="mb-2 text-xs font-semibold text-slate-500">{formatDate(label as string)}</p>
+      {payload.map((entry: TooltipEntry) => (
+        <div key={entry.dataKey as string} className="flex items-center gap-2 text-sm">
           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
           <span className="text-slate-600">{entry.dataKey === 'revenue' ? 'Receita' : 'Gasto'}:</span>
-          <span className="font-bold text-slate-900">{currency(entry.value)}</span>
+          <span className="font-bold text-slate-900">{currency(entry.value as number)}</span>
         </div>
       ))}
       {payload.length === 2 && (
         <div className="mt-2 border-t border-slate-100 pt-2 text-xs font-bold">
           <span className="text-slate-500">Lucro: </span>
-          <span className={payload[0].value - payload[1].value >= 0 ? 'text-emerald-600' : 'text-red-600'}>
-            {currency(payload[0].value - payload[1].value)}
+          <span className={(payload[0].value as number) - (payload[1].value as number) >= 0 ? 'text-emerald-600' : 'text-red-600'}>
+            {currency((payload[0].value as number) - (payload[1].value as number))}
           </span>
         </div>
       )}
@@ -56,37 +60,35 @@ function CustomTooltip({ active, payload, label }: any) {
   )
 }
 
-export function RevenueSpendChart({ data, period }: Props) {
+export function RevenueSpendChart({ data }: Props) {
   const [selectedPeriod, setSelectedPeriod] = useState(30)
 
-  const filteredData = (() => {
+  const filteredData = useMemo(() => {
     if (!data?.length) return []
     const cutoff = new Date()
     cutoff.setDate(cutoff.getDate() - selectedPeriod)
     cutoff.setHours(0, 0, 0, 0)
     return data.filter(d => new Date(d.date + 'T12:00:00') >= cutoff)
-  })()
+  }, [data, selectedPeriod])
 
-  const totalRevenue = filteredData.reduce((s, d) => s + (d.revenue || 0), 0)
-  const totalSpend = filteredData.reduce((s, d) => s + (d.spend || 0), 0)
-  const netProfit = totalRevenue - totalSpend
-  const roas = totalSpend > 0 ? totalRevenue / totalSpend : 0
+  const { totalRevenue, totalSpend, roas } = useMemo(() => {
+    const rev = filteredData.reduce((s, d) => s + (d.revenue || 0), 0)
+    const spd = filteredData.reduce((s, d) => s + (d.spend || 0), 0)
+    return { totalRevenue: rev, totalSpend: spd, roas: spd > 0 ? rev / spd : 0 }
+  }, [filteredData])
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="font-bold text-slate-900">Receita vs Gasto</h3>
-          <p className="mt-1 text-sm text-slate-400">Comparativo diario ao longo do tempo</p>
-        </div>
-        <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
+    <div>
+      <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
+        <h4 className="text-lg font-bold text-slate-900">Receita vs Investimento</h4>
+        <div className="flex bg-slate-100 rounded-lg p-1">
           {PERIODS.map(p => (
             <button
               key={p.days}
               onClick={() => setSelectedPeriod(p.days)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              className={`px-3 py-1 rounded-md text-xs font-medium transition ${
                 selectedPeriod === p.days
-                  ? 'bg-white text-slate-900 shadow-sm'
+                  ? 'bg-white shadow-sm text-slate-900'
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -96,44 +98,39 @@ export function RevenueSpendChart({ data, period }: Props) {
         </div>
       </div>
 
-      {filteredData.length > 0 && (
-        <div className="mt-4 grid grid-cols-3 gap-4 rounded-xl bg-slate-50 p-4">
-          <div>
-            <p className="text-xs font-semibold text-slate-500">Receita</p>
-            <p className="text-lg font-black text-emerald-600">{currency(totalRevenue)}</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500">Gasto</p>
-            <p className="text-lg font-black text-red-500">{currency(totalSpend)}</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500">ROAS</p>
-            <p className={`text-lg font-black ${roas >= 1 ? 'text-emerald-600' : 'text-red-500'}`}>
-              {roas.toFixed(2)}x
-            </p>
-          </div>
+      <div className="flex gap-8 mb-6">
+        <div>
+          <p className="text-xs font-bold text-slate-500">Receita Total</p>
+          <p className="text-xl font-black text-emerald-600">{currency(totalRevenue)}</p>
         </div>
-      )}
+        <div>
+          <p className="text-xs font-bold text-slate-500">Gasto Total</p>
+          <p className="text-xl font-black text-rose-600">{currency(totalSpend)}</p>
+        </div>
+        <div>
+          <p className="text-xs font-bold text-slate-500">ROAS Médio</p>
+          <p className="text-xl font-black text-slate-900">{roas.toFixed(1)}x</p>
+        </div>
+      </div>
 
-      <div className="mt-6" style={{ height: 320 }}>
+      <div className="h-64">
         {filteredData.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-slate-400">
-            Nenhum dado disponivel para este periodo
+            Nenhum dado disponível para este período
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={filteredData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorSpend" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#e11d48" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#e11d48" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis
                 dataKey="date"
                 tickFormatter={formatDate}
@@ -149,11 +146,6 @@ export function RevenueSpendChart({ data, period }: Props) {
                 width={70}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Legend
-                formatter={(value) => value === 'revenue' ? 'Receita' : 'Gasto'}
-                iconType="circle"
-                iconSize={8}
-              />
               <Area
                 type="monotone"
                 dataKey="revenue"
@@ -166,7 +158,7 @@ export function RevenueSpendChart({ data, period }: Props) {
               <Area
                 type="monotone"
                 dataKey="spend"
-                stroke="#ef4444"
+                stroke="#e11d48"
                 strokeWidth={2}
                 fill="url(#colorSpend)"
                 dot={false}

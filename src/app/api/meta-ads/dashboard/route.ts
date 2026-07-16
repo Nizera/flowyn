@@ -17,9 +17,27 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url)
-  const startDate = searchParams.get('start_date') || `${new Date().getFullYear()}-01-01`
-  const endDate = searchParams.get('end_date') || new Date().toISOString().slice(0, 10)
-  const adAccountId = searchParams.get('ad_account_id') // optional: filter by account
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+  const today = new Date().toISOString().slice(0, 10)
+  const defaultStart = `${new Date().getFullYear()}-01-01`
+
+  const startDate = searchParams.get('start_date') || defaultStart
+  const endDate = searchParams.get('end_date') || today
+  if (!DATE_RE.test(startDate) || !DATE_RE.test(endDate)) {
+    return NextResponse.json({ error: 'Invalid date format' }, { status: 400 })
+  }
+  if (startDate > endDate) {
+    return NextResponse.json({ error: 'start_date must be <= end_date' }, { status: 400 })
+  }
+  const spanDays = (new Date(endDate).getTime() - new Date(startDate).getTime()) / 86_400_000
+  if (spanDays > 365) {
+    return NextResponse.json({ error: 'Date range cannot exceed 365 days' }, { status: 400 })
+  }
+
+  const adAccountId = searchParams.get('ad_account_id')
+  if (adAccountId && !/^\d+$/.test(adAccountId)) {
+    return NextResponse.json({ error: 'Invalid ad_account_id' }, { status: 400 })
+  }
 
   // 1. Fetch cost configuration
   const { data: costConfig } = await supabase
@@ -30,7 +48,7 @@ export async function GET(req: NextRequest) {
 
   const taxPercentage = costConfig?.tax_percentage || 0
   const productCosts = costConfig?.product_costs || []
-  const totalProductionCost = productCosts.reduce((sum: number, item: any) => sum + (parseFloat(item.cost) || 0), 0)
+  const totalProductionCost = productCosts.reduce((sum: number, item: { cost?: string | number }) => sum + (parseFloat(String(item.cost)) || 0), 0)
 
   // 2. Fetch campaign-level insights (not adset/ad to avoid double-counting)
   let insightsQuery = supabase
@@ -50,7 +68,7 @@ export async function GET(req: NextRequest) {
     .select('ad_account_id')
     .eq('user_id', user.id)
 
-  const ownedAccountIds = (ownedAccounts || []).map((a: any) => a.ad_account_id)
+  const ownedAccountIds = (ownedAccounts || []).map((a: { ad_account_id: string }) => a.ad_account_id)
   if (ownedAccountIds.length === 0) {
     return NextResponse.json({
       summary: { total_spend: 0, total_revenue: 0, net_profit: 0, total_orders: 0, roas: 0 },
@@ -60,12 +78,18 @@ export async function GET(req: NextRequest) {
     })
   }
 
+  // Defensive: if adAccountId was provided, explicitly verify ownership
+  if (adAccountId && !ownedAccountIds.includes(adAccountId)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   insightsQuery = insightsQuery.in('ad_account_id', ownedAccountIds)
 
   const { data: insights, error: insightsError } = await insightsQuery
 
   if (insightsError) {
-    return NextResponse.json({ error: insightsError.message }, { status: 500 })
+    console.error('[dashboard] insights fetch failed', insightsError.message)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 
   // 3. Aggregate spend by campaign
@@ -87,7 +111,7 @@ export async function GET(req: NextRequest) {
   }
 
   // 4. Fetch orders with tracking_params for this user in date range
-  let ordersQuery = supabase
+  const ordersQuery = supabase
     .from('orders')
     .select('*, product:products!inner(owner_id)')
     .eq('product.owner_id', user.id)
@@ -97,7 +121,8 @@ export async function GET(req: NextRequest) {
   const { data: orders, error: ordersError } = await ordersQuery
 
   if (ordersError) {
-    return NextResponse.json({ error: ordersError.message }, { status: 500 })
+    console.error('[dashboard] orders fetch failed', ordersError.message)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 
   // 5. Build payment breakdown for donut chart
@@ -117,7 +142,7 @@ export async function GET(req: NextRequest) {
 
   for (const order of orders || []) {
     if (order.status !== 'paid') continue
-    const trackingParams = order.tracking_params as any
+    const trackingParams = order.tracking_params as Record<string, string> | null
     if (!trackingParams?.utm_campaign) continue
 
     const utmCampaign = trackingParams.utm_campaign
@@ -128,7 +153,7 @@ export async function GET(req: NextRequest) {
       matched = true
     } else {
       // Try matching by campaign name
-      for (const [id, camp] of Object.entries(campaignSpendMap)) {
+      for (const camp of Object.values(campaignSpendMap)) {
         if (camp.campaign_name?.toLowerCase() === utmCampaign.toLowerCase()) {
           matched = true
           break
@@ -167,7 +192,7 @@ export async function GET(req: NextRequest) {
   }
   for (const order of orders || []) {
     if (order.status !== 'paid') continue
-    const trackingParams = order.tracking_params as any
+    const trackingParams = order.tracking_params as Record<string, string> | null
     if (!trackingParams?.utm_campaign) continue
 
     const utmCampaign = trackingParams.utm_campaign
@@ -176,7 +201,7 @@ export async function GET(req: NextRequest) {
     if (campaignSpendMap[utmCampaign]) {
       matched = true
     } else {
-      for (const [id, camp] of Object.entries(campaignSpendMap)) {
+      for (const camp of Object.values(campaignSpendMap)) {
         if (camp.campaign_name?.toLowerCase() === utmCampaign.toLowerCase()) {
           matched = true
           break

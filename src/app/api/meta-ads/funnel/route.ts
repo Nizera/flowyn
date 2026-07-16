@@ -17,9 +17,27 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url)
-  const startDate = searchParams.get('start_date') || `${new Date().getFullYear()}-01-01`
-  const endDate = searchParams.get('end_date') || new Date().toISOString().slice(0, 10)
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+  const today = new Date().toISOString().slice(0, 10)
+  const defaultStart = `${new Date().getFullYear()}-01-01`
+
+  const startDate = searchParams.get('start_date') || defaultStart
+  const endDate = searchParams.get('end_date') || today
+  if (!DATE_RE.test(startDate) || !DATE_RE.test(endDate)) {
+    return NextResponse.json({ error: 'Invalid date format' }, { status: 400 })
+  }
+  if (startDate > endDate) {
+    return NextResponse.json({ error: 'start_date must be <= end_date' }, { status: 400 })
+  }
+  const spanDays = (new Date(endDate).getTime() - new Date(startDate).getTime()) / 86_400_000
+  if (spanDays > 365) {
+    return NextResponse.json({ error: 'Date range cannot exceed 365 days' }, { status: 400 })
+  }
+
   const adAccountId = searchParams.get('ad_account_id')
+  if (adAccountId && !/^\d+$/.test(adAccountId)) {
+    return NextResponse.json({ error: 'Invalid ad_account_id' }, { status: 400 })
+  }
 
   // 1. Get user's owned ad accounts
   let accountsQuery = supabase
@@ -32,7 +50,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { data: ownedAccounts } = await accountsQuery
-  const ownedAccountIds = (ownedAccounts || []).map((a: any) => a.ad_account_id)
+  const ownedAccountIds = (ownedAccounts || []).map((a: { ad_account_id: string }) => a.ad_account_id)
 
   if (ownedAccountIds.length === 0) {
     return NextResponse.json({
@@ -49,7 +67,7 @@ export async function GET(req: NextRequest) {
   }
 
   // 2. Get total clicks from ad_insights_cache (campaign level)
-  let insightsQuery = supabase
+  const insightsQuery = supabase
     .from('ad_insights_cache')
     .select('clicks')
     .eq('insight_level', 'campaign')
@@ -58,14 +76,14 @@ export async function GET(req: NextRequest) {
     .in('ad_account_id', ownedAccountIds)
 
   const { data: insights } = await insightsQuery
-  const totalClicks = (insights || []).reduce((sum: number, i: any) => sum + (i.clicks || 0), 0)
+  const totalClicks = (insights || []).reduce((sum: number, i: { clicks?: number }) => sum + (i.clicks || 0), 0)
 
   // 3. Get user's products
   const { data: products } = await supabase
     .from('products')
     .select('id')
     .eq('owner_id', user.id)
-  const productIds = (products || []).map((p: any) => p.id)
+  const productIds = (products || []).map((p: { id: string }) => p.id)
 
   if (productIds.length === 0) {
     return NextResponse.json({
