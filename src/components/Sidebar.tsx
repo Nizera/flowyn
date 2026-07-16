@@ -86,6 +86,12 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
                     key={item.href}
                     href={item.href}
                     title={item.label}
+                    onContextMenu={item.href === '/dashboard' ? (e) => {
+                      e.preventDefault()
+                      window.dispatchEvent(new CustomEvent('dashboard-contextmenu', {
+                        detail: { x: e.clientX, y: e.clientY }
+                      }))
+                    } : undefined}
                     className={`group relative flex h-11 items-center justify-center rounded-xl text-sm font-semibold transition lg:justify-start lg:gap-3 lg:px-3 ${
                       active
                         ? 'bg-orange-50 text-orange-600'
