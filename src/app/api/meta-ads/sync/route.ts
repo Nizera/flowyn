@@ -9,8 +9,7 @@ import {
   trackAdAccountUsage,
   APP_LEVEL_CALLS_LIMIT_PER_HOUR,
 } from '@/lib/meta-rate-limit'
-
-const GRAPH_API = 'https://graph.facebook.com/v21.0'
+import { GRAPH_API } from '@/lib/meta-graph-api'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()

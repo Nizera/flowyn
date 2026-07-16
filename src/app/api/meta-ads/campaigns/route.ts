@@ -3,8 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { getDecryptedToken } from '@/lib/meta-oauth'
 import { requireProPlan } from '@/lib/subscription'
-
-const GRAPH_API = 'https://graph.facebook.com/v21.0'
+import { GRAPH_API } from '@/lib/meta-graph-api'
 
 type Campaign = {
   id: string

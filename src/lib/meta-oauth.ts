@@ -1,14 +1,13 @@
 import { createAdminClient } from '@/utils/supabase/admin'
 import { decryptApiKey, encryptApiKey } from '@/lib/encryption'
 import crypto from 'crypto'
+import { GRAPH_API } from '@/lib/meta-graph-api'
 
 const META_APP_ID = process.env.META_APP_ID || ''
 const META_APP_SECRET = process.env.META_APP_SECRET || ''
 const META_REDIRECT_URI = process.env.NEXT_PUBLIC_APP_URL
   ? `${process.env.NEXT_PUBLIC_APP_URL}/api/meta-ads/callback`
   : 'https://flowyn.com.br/api/meta-ads/callback'
-
-const GRAPH_API = 'https://graph.facebook.com/v21.0'
 
 function getMetaSecret(): string {
   if (!META_APP_SECRET) throw new Error('META_APP_SECRET is not configured')

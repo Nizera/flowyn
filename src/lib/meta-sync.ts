@@ -1,6 +1,5 @@
 import { createAdminClient } from '@/utils/supabase/admin'
-
-const GRAPH_API = 'https://graph.facebook.com/v21.0'
+import { GRAPH_API } from '@/lib/meta-graph-api'
 
 function extractActions(actions: any[] | undefined, type: string): number {
   if (!actions) return 0

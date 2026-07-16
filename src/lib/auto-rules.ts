@@ -2,8 +2,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { getDecryptedToken } from '@/lib/meta-oauth'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
-
-const GRAPH_API = 'https://graph.facebook.com/v21.0'
+import { GRAPH_API } from '@/lib/meta-graph-api'
 
 export type RuleMetric = 'roas' | 'spend' | 'cpa' | 'ctr' | 'cpc' | 'conversions' | 'purchase_value' | 'impressions' | 'cpm'
 export type RuleOperator = 'lt' | 'lte' | 'gt' | 'gte' | 'eq'

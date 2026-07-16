@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || 'flowyn_webhook_verify_token'
+const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN
 
 export async function GET(req: NextRequest) {
+  if (!VERIFY_TOKEN) {
+    return new NextResponse('Service Unavailable', { status: 503 })
+  }
+
   const { searchParams } = new URL(req.url)
   const mode = searchParams.get('hub.mode')
   const token = searchParams.get('hub.verify_token')

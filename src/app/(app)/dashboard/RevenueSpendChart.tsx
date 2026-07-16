@@ -27,9 +27,7 @@ const PERIODS = [
   { label: 'Ano', days: 365 },
 ]
 
-function currency(value: number) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
-}
+import { currency } from '@/lib/format'
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr + 'T12:00:00')

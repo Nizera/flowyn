@@ -7,10 +7,7 @@ import { FunnelChart } from './FunnelChart'
 import { SalesGoalCard } from '@/components/SalesGoalCard'
 import { TrendingUp, CreditCard, CheckCircle, Undo, Clock, AlertCircle } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-
-function currency(value: number) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
-}
+import { currency } from '@/lib/format'
 
 interface Summary {
   total_revenue: number
@@ -82,42 +79,7 @@ export default function DashboardPage() {
 
   const s = useMemo<Summary>(() => data?.summary || EMPTY_SUMMARY, [data])
 
-  useEffect(() => {
-    if (!data) return
-    const tooltip = document.getElementById('donut-tooltip')
-    if (!tooltip) return
-
-    const segments = document.querySelectorAll('.donut-segment')
-    function onEnter(this: Element) {
-      const el = this as HTMLElement
-      if (!tooltip) return
-      tooltip.textContent = `${el.dataset.label}: ${el.dataset.value}`
-      tooltip.style.opacity = '1'
-    }
-    function onLeave() {
-      if (!tooltip) return
-      tooltip.style.opacity = '0'
-    }
-    function onMove(this: Element, e: Event) {
-      const me = e as MouseEvent
-      if (!tooltip) return
-      tooltip.style.left = `${me.clientX + 12}px`
-      tooltip.style.top = `${me.clientY - 10}px`
-    }
-
-    segments.forEach(seg => {
-      seg.addEventListener('mouseenter', onEnter)
-      seg.addEventListener('mouseleave', onLeave)
-      seg.addEventListener('mousemove', onMove)
-    })
-    return () => {
-      segments.forEach(seg => {
-        seg.removeEventListener('mouseenter', onEnter)
-        seg.removeEventListener('mouseleave', onLeave)
-        seg.removeEventListener('mousemove', onMove)
-      })
-    }
-  }, [data])
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string; value: string } | null>(null)
 
   if (loading) {
     return (
@@ -218,7 +180,7 @@ export default function DashboardPage() {
 
       {/* Performance Strip */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <MetricPill label="Faturamento Líquido" value={currency(s.total_revenue)} />
+        <MetricPill label="Faturamento Líquido" value={currency(s.total_revenue - s.refunded_revenue)} />
         <MetricPill label="Gasto com Anúncios" value={currency(s.total_spend)} />
         <MetricPill label="ROAS" value={`${s.roas.toFixed(1)}x`} />
         <MetricPill label="Lucro Líquido" value={currency(s.net_profit)} positive={s.net_profit >= 0} />
@@ -284,17 +246,25 @@ export default function DashboardPage() {
                         strokeWidth="16"
                         strokeDasharray={arc.strokeDasharray}
                         strokeDashoffset={arc.strokeDashoffset}
-                        className="donut-segment transition-all duration-200"
+                        className="transition-all duration-200"
                         style={{ cursor: 'pointer' }}
-                        data-label={arc.label}
-                        data-value={currency(arc.value)}
+                        onMouseEnter={(e) => setTooltip({ x: e.clientX + 12, y: e.clientY - 10, label: arc.label, value: currency(arc.value) })}
+                        onMouseMove={(e) => setTooltip(prev => prev ? { ...prev, x: e.clientX + 12, y: e.clientY - 10 } : null)}
+                        onMouseLeave={() => setTooltip(null)}
                       />
                     ))}
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <CreditCard className="w-8 h-8 text-slate-400" />
                   </div>
-                  <div id="donut-tooltip" className="fixed px-3 py-2 text-sm font-bold text-white bg-slate-900 rounded-xl shadow-lg opacity-0 pointer-events-none transition-opacity z-50" />
+                  {tooltip && (
+                    <div
+                      className="fixed px-3 py-2 text-sm font-bold text-white bg-slate-900 rounded-xl shadow-lg pointer-events-none z-50"
+                      style={{ left: tooltip.x, top: tooltip.y }}
+                    >
+                      {tooltip.label}: {tooltip.value}
+                    </div>
+                  )}
                 </div>
                 <div className="w-full grid grid-cols-2 gap-y-3 mt-auto">
                   {segments.map((seg, i) => (

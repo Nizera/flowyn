@@ -254,6 +254,16 @@ export async function GET(req: NextRequest) {
       count: data.count,
       total: data.total,
     })),
+    recent_sales: (orders || [])
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 5)
+      .map(o => ({
+        id: o.id,
+        customer_name: o.customer_name,
+        product_name: (o.product as { name?: string })?.name || null,
+        amount: parseFloat(o.amount) || 0,
+        status: o.status,
+      })),
     spend_over_time: spendOverTime,
     campaigns: campaignBreakdown,
     period: { start_date: startDate, end_date: endDate },
