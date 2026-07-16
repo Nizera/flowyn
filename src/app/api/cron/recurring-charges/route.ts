@@ -5,6 +5,11 @@ import { decryptApiKey } from '@/lib/encryption'
 
 export const dynamic = 'force-dynamic'
 
+function maskEmailForOrders(email: string) {
+  const [local, domain] = email.split('@')
+  return local && domain ? `${local.charAt(0)}***@${domain}` : '***'
+}
+
 function isBusinessDay(date: Date): boolean {
   const day = date.getDay()
   return day !== 0 && day !== 6
@@ -37,7 +42,6 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient()
   const now = new Date()
   const minDueDate = formatDate(addBusinessDays(now, 2))
-  const maxDueDate = formatDate(addBusinessDays(now, 10))
 
   const { data: activeAuths, error: authError } = await supabase
     .from('pix_automatic_authorizations')
@@ -57,12 +61,13 @@ export async function GET(request: NextRequest) {
   let failed = 0
 
   for (const auth of activeAuths) {
+    // Check if we already created a charge for this authorization THIS MONTH
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
     const { data: existingCharge } = await supabase
       .from('orders')
       .select('id')
       .eq('pix_authorization_id', auth.authorization_id)
-      .gte('created_at', minDueDate)
-      .lte('created_at', maxDueDate)
+      .gte('created_at', currentMonthStart)
       .maybeSingle()
 
     if (existingCharge) continue
@@ -106,7 +111,7 @@ export async function GET(request: NextRequest) {
           plan_id: null,
           affiliate_id: null,
           customer_name: (auth.buyer_email || 'Cliente').split('@')[0] || 'Cliente',
-          customer_email: auth.buyer_email,
+          customer_email: auth.buyer_email ? maskEmailForOrders(auth.buyer_email) : 'cliente@***',
           amount: auth.value,
           commission_rate: 0,
           commission_amount: 0,

@@ -41,7 +41,15 @@ export async function processPlatformSubscriptionPayment(eventType: string, paym
   const paymentId = payment.id ? String(payment.id) : null
   const now = new Date()
 
+  let existingInvoice: { paid_at: string | null } | null = null
   if (paymentId) {
+    const { data: invoice } = await admin
+      .from('platform_subscription_invoices')
+      .select('paid_at')
+      .eq('asaas_payment_id', paymentId)
+      .maybeSingle()
+    existingInvoice = invoice
+
     await admin.from('platform_subscription_invoices').upsert({
       platform_subscription_id: subscription.id,
       asaas_payment_id: paymentId,
@@ -56,6 +64,14 @@ export async function processPlatformSubscriptionPayment(eventType: string, paym
   }
 
   if (PAID_EVENTS.has(eventType)) {
+    if (existingInvoice?.paid_at) {
+      return true
+    }
+
+    if (subscription.status === 'cancelled' || subscription.status === 'suspended') {
+      return true
+    }
+
     await admin
       .from('platform_subscriptions')
       .update({

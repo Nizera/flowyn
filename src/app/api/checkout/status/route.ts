@@ -24,6 +24,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Pedido invalido.' }, { status: 400 })
   }
 
+  const customerEmail = req.nextUrl.searchParams.get('customer_email') || ''
+  if (!customerEmail) {
+    return NextResponse.json({ error: 'E-mail do cliente é obrigatório.' }, { status: 400 })
+  }
+
   const supabase = createAdminClient()
   const clientIp = getClientIp(req)
   const { data: withinRateLimit, error: rateLimitError } = await supabase.rpc('consume_rate_limit', {
@@ -45,6 +50,16 @@ export async function GET(req: NextRequest) {
 
   if (!order) {
     return NextResponse.json({ error: 'Pedido nao encontrado.' }, { status: 404 })
+  }
+
+  const { data: privateCustomer } = await supabase
+    .from('order_customer_private')
+    .select('customer_email')
+    .eq('order_id', orderId)
+    .maybeSingle()
+
+  if (!privateCustomer || privateCustomer.customer_email.trim().toLowerCase() !== customerEmail.trim().toLowerCase()) {
+    return NextResponse.json({ error: 'Pedido não encontrado.' }, { status: 404 })
   }
 
   if (order.status === 'paid') {

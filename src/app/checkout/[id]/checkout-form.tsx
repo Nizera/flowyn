@@ -166,7 +166,7 @@ export function CheckoutForm({
     setCheckingPayment(true)
 
     try {
-      const response = await fetch(`/api/checkout/status?order_id=${encodeURIComponent(pixPaymentId)}`, {
+      const response = await fetch(`/api/checkout/status?order_id=${encodeURIComponent(pixPaymentId)}&customer_email=${encodeURIComponent(customerEmail)}`, {
         cache: 'no-store',
       })
       const data = await response.json()
@@ -195,7 +195,7 @@ export function CheckoutForm({
       statusCheckInFlight.current = false
       setCheckingPayment(false)
     }
-  }, [pixPaymentId])
+  }, [pixPaymentId, customerEmail])
 
   useEffect(() => {
     if (!pixPaymentId) return

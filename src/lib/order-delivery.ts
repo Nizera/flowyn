@@ -120,6 +120,17 @@ export async function resendOrderDelivery(supabase: SupabaseClient, orderId: str
     }
 
     if (!access?.user_id) {
+      const { data: revokedAccess } = await supabase
+        .from('student_access')
+        .select('user_id, revoked_at')
+        .eq('order_id', orderId)
+        .not('revoked_at', 'is', null)
+        .maybeSingle()
+
+      if (revokedAccess?.revoked_at) {
+        return { sent: false, reason: 'access_revoked' as const }
+      }
+
       let userId = await findAuthUserIdByEmail(supabase, customer.customer_email)
       if (!userId) {
         const { data: createdUser, error: createUserError } = await supabase.auth.admin.createUser({

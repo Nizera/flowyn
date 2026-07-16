@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'node:crypto'
 import { fulfillPaidOrder, revokePaidOrder } from '@/lib/order-fulfillment'
 import { processPlatformSubscriptionPayment } from '@/lib/platform-subscription'
+import { retrievePayment } from '@/lib/asaas'
 import { createAdminClient } from '@/utils/supabase/admin'
 
 function safeTokenEqual(a: string, b: string) {
@@ -221,9 +222,7 @@ export async function POST(req: NextRequest) {
         .maybeSingle()
 
       if (auth?.order_id) {
-        if (authStatus === 'ACTIVE') {
-          await fulfillPaidOrder(supabase, auth.order_id, eventType)
-        } else if (['CANCELLED', 'EXPIRED', 'REFUSED', 'TERMINATED'].includes(authStatus)) {
+        if (['CANCELLED', 'EXPIRED', 'REFUSED', 'TERMINATED'].includes(authStatus)) {
           await revokePaidOrder(supabase, auth.order_id, eventType)
         }
       }
@@ -266,7 +265,60 @@ export async function POST(req: NextRequest) {
         .maybeSingle()
 
       const expectedAmount = orderAmountRow ? Number(orderAmountRow.amount) : null
-      const paidAmount = typeof payment.value === 'number' ? payment.value : null
+
+      let verifiedValue: number | null = null
+      let verifiedStatus: string | null = null
+      try {
+        const asaasPayment = await retrievePayment(paymentId!, process.env.ASAAS_API_KEY!)
+        verifiedValue = Number(asaasPayment.value)
+        verifiedStatus = asaasPayment.status ? String(asaasPayment.status) : null
+      } catch (verificationError) {
+        await supabase.from('security_audit_log').insert({
+          action: 'WEBHOOK_PAYMENT_VERIFICATION_FAILED',
+          entity_type: 'order',
+          entity_id: orderId,
+          metadata: {
+            payment_id: paymentId,
+            event_type: eventType,
+            error: verificationError instanceof Error ? verificationError.message.slice(0, 500) : 'Unexpected verification error',
+          },
+        })
+        await supabase
+          .from('asaas_webhook_events')
+          .update({
+            status: 'done',
+            processed_at: new Date().toISOString(),
+            attempt_count: Number(claimedEvent.attempt_count || 0) + 1,
+          })
+          .eq('event_id', eventId)
+        return NextResponse.json({ received: true })
+      }
+
+      if (!verifiedStatus || !PAID_EVENTS.has(verifiedStatus)) {
+        await supabase.from('security_audit_log').insert({
+          action: 'WEBHOOK_PAYMENT_VERIFICATION_FAILED',
+          entity_type: 'order',
+          entity_id: orderId,
+          metadata: {
+            payment_id: paymentId,
+            event_type: eventType,
+            webhook_status: eventType,
+            verified_status: verifiedStatus,
+            reason: 'verified_status_not_paid',
+          },
+        })
+        await supabase
+          .from('asaas_webhook_events')
+          .update({
+            status: 'done',
+            processed_at: new Date().toISOString(),
+            attempt_count: Number(claimedEvent.attempt_count || 0) + 1,
+          })
+          .eq('event_id', eventId)
+        return NextResponse.json({ received: true })
+      }
+
+      const paidAmount = verifiedValue
 
       if (expectedAmount === null || paidAmount === null || Math.abs(expectedAmount - paidAmount) > 0.01) {
         await supabase.from('security_audit_log').insert({
@@ -276,7 +328,7 @@ export async function POST(req: NextRequest) {
           metadata: { payment_id: paymentId, expected_amount: expectedAmount, paid_amount: paidAmount },
         })
       } else {
-        await fulfillPaidOrder(supabase, orderId, payment.status ? String(payment.status) : eventType)
+        await fulfillPaidOrder(supabase, orderId, verifiedStatus)
       }
     }
 

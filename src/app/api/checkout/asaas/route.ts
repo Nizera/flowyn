@@ -103,6 +103,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Informe um e-mail, CPF/CNPJ e telefone válidos.' }, { status: 400 })
     }
 
+    // Idempotency: check for existing pending order from same customer/plan in last 5 min
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+    const { data: existingPending } = await supabase
+      .from('orders')
+      .select('id, asaas_payment_id, asaas_status, pix_authorization_id')
+      .eq('plan_id', planId)
+      .eq('status', 'pending')
+      .eq('customer_email', maskEmail(customerEmail))
+      .gte('created_at', fiveMinutesAgo)
+      .maybeSingle()
+
+    if (existingPending?.asaas_payment_id) {
+      // Return existing pending payment instead of creating a new one
+      return NextResponse.json({
+        success: false,
+        status: 'PENDING',
+        order_id: existingPending.id,
+        payment_id: existingPending.asaas_payment_id,
+        message: 'Você já tem um pagamento em andamento.',
+      })
+    }
+
     const cardNumber = onlyDigits(String((body.card as Record<string, unknown> | undefined)?.number || ''))
     const cardCcv = onlyDigits(String((body.card as Record<string, unknown> | undefined)?.ccv || ''))
     const cardHolderName = String((body.card as Record<string, unknown> | undefined)?.holderName || '').trim()
@@ -289,7 +311,7 @@ export async function POST(req: NextRequest) {
 
         await supabase
           .from('pix_automatic_authorizations')
-          .insert({
+          .upsert({
             authorization_id: authorization.id,
             customer_id: authorization.customerId,
             order_id: order.id,
@@ -300,7 +322,8 @@ export async function POST(req: NextRequest) {
             frequency: 'MONTHLY',
             value: totalAmount,
             start_date: today(),
-          })
+            asaas_account_id: product.owner_id,
+          }, { onConflict: 'authorization_id' })
 
         return NextResponse.json({
           success: false,
@@ -448,6 +471,7 @@ export async function POST(req: NextRequest) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', order.id)
+      .neq('status', 'paid')
 
     if (PAID_STATUSES.has(payment.status)) {
       await fulfillPaidOrder(supabase, order.id, payment.status)

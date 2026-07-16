@@ -114,16 +114,6 @@ async function buildOrderBumpLinks(orderData: { includes_order_bump?: boolean; p
 }
 
 export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string, providerStatus?: string) {
-  const { data: existingOrder } = await supabase
-    .from('orders')
-    .select('id, status')
-    .eq('id', orderId)
-    .single()
-
-  if (!existingOrder || existingOrder.status === 'paid') {
-    return { skipped: true }
-  }
-
   const { data: orderData, error: orderError } = await supabase
     .from('orders')
     .update({
@@ -133,7 +123,7 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
       updated_at: new Date().toISOString(),
     })
     .eq('id', orderId)
-    .neq('status', 'paid')
+    .in('status', ['pending', 'failed'])
     .select(`
       *,
       product:products(
@@ -154,21 +144,25 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
     .single()
 
   // ── Meta CAPI (server-side) ──
-  sendCapiEvent({
-    orderId,
-    planId: orderData.plan_id,
-    productId: orderData.product_id,
-    producerId: orderData.product?.owner_id || '',
-    amount: Number(orderData.amount) || 0,
-    customerEmail: privateCustomer?.customer_email || orderData.customer_email,
-    customerPhone: privateCustomer?.phone || '',
-    customerName: privateCustomer?.customer_name || orderData.customer_name,
-    customerDocument: privateCustomer?.document_number || '',
-    clientIp: orderData.client_ip || '127.0.0.1',
-    userAgent: orderData.user_agent || 'Unknown',
-    eventSourceUrl: `${getAppUrl()}/checkout/${orderData.plan_id}`,
-    trackingParams: orderData.tracking_params as Record<string, string> | null | undefined,
-  })
+  try {
+    await sendCapiEvent({
+      orderId,
+      planId: orderData.plan_id,
+      productId: orderData.product_id,
+      producerId: orderData.product?.owner_id || '',
+      amount: Number(orderData.amount) || 0,
+      customerEmail: privateCustomer?.customer_email || orderData.customer_email,
+      customerPhone: privateCustomer?.phone || '',
+      customerName: privateCustomer?.customer_name || orderData.customer_name,
+      customerDocument: privateCustomer?.document_number || '',
+      clientIp: orderData.client_ip || '127.0.0.1',
+      userAgent: orderData.user_agent || 'Unknown',
+      eventSourceUrl: `${getAppUrl()}/checkout/${orderData.plan_id}`,
+      trackingParams: orderData.tracking_params as Record<string, string> | null | undefined,
+    })
+  } catch (capiError) {
+    console.error('[fulfillPaidOrder] CAPI event failed:', capiError)
+  }
 
   const deliveryCustomerName = privateCustomer?.customer_name || orderData.customer_name
   const deliveryCustomerEmail = privateCustomer?.customer_email || orderData.customer_email
@@ -326,10 +320,12 @@ export async function revokePaidOrder(supabase: SupabaseAdmin, orderId: string, 
   const { data: orderData, error: orderError } = await supabase
     .from('orders')
     .update({
+      status: 'refunded',
       asaas_status: reason,
       updated_at: new Date().toISOString(),
     })
     .eq('id', orderId)
+    .eq('status', 'paid')
     .select('*, product:products(id, delivery_type)')
     .single()
 
