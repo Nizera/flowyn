@@ -170,11 +170,9 @@ export function AppLayoutUI({ children, profile, user, totalSales, subscription,
 
   return (
     <div className="relative flex min-h-screen flex-col bg-[#f6f7f9] text-slate-950 md:flex-row">
-      {/* Sidebar spacer (mantém largura no fluxo) */}
-      <div className="hidden shrink-0 md:block w-[86px] lg:w-64" />
+      <div className="hidden shrink-0 md:block w-64" />
 
-      {/* Sidebar fixa */}
-      <div className="fixed inset-y-0 left-0 z-40 hidden md:flex w-[86px] lg:w-64">
+      <div className="fixed inset-y-0 left-0 z-40 hidden md:flex w-64">
         <Sidebar profile={profile} />
       </div>
 

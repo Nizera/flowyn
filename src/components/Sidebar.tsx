@@ -68,15 +68,21 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
   }
 
   return (
-    <aside className="sidebar-scrollbar flex h-screen w-full flex-col overflow-y-auto border-r border-slate-200 bg-white text-slate-950 md:w-[86px] lg:w-64">
-      <Link href="/dashboard" className="flex h-20 items-center justify-center border-b border-slate-200 px-4 lg:justify-start">
-        <img src="/brand/logo-light.png" alt="Flowyn" className="h-10 w-auto lg:h-11" />
+    <aside className="flex h-screen w-full flex-col overflow-y-auto border-r border-slate-200 bg-white">
+      <Link href="/dashboard" className="flex h-20 items-center gap-3 border-b border-slate-200 px-6">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-sm font-black text-white">
+          F
+        </div>
+        <div>
+          <h1 className="text-lg font-black text-slate-900">FlowynPay</h1>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Empresarial</p>
+        </div>
       </Link>
 
-      <nav className="sidebar-scrollbar flex-1 space-y-7 overflow-y-auto px-3 py-5">
+      <nav className="flex-1 space-y-6 overflow-y-auto px-4 py-5">
         {sections.map(section => (
           <div key={section.label}>
-            <p className="mb-2 hidden px-3 text-[11px] font-black uppercase tracking-wide text-slate-400 lg:block">{section.label}</p>
+            <p className="mb-2 px-2 text-[11px] font-black uppercase tracking-wide text-slate-400">{section.label}</p>
             <div className="space-y-1">
               {section.items.map(item => {
                 const Icon = item.icon
@@ -86,21 +92,15 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
                     key={item.href}
                     href={item.href}
                     title={item.label}
-                    onContextMenu={item.href === '/dashboard' ? (e) => {
-                      e.preventDefault()
-                      window.dispatchEvent(new CustomEvent('dashboard-contextmenu', {
-                        detail: { x: e.clientX, y: e.clientY }
-                      }))
-                    } : undefined}
-                    className={`group relative flex h-11 items-center justify-center rounded-xl text-sm font-semibold transition lg:justify-start lg:gap-3 lg:px-3 ${
+                    className={`group relative flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition ${
                       active
                         ? 'bg-orange-50 text-orange-600'
                         : 'text-slate-500 hover:bg-slate-50 hover:text-slate-950'
                     }`}
                   >
-                    {active && <span className="absolute left-0 hidden h-6 w-1 rounded-r-full bg-gradient-to-r from-orange-500 to-amber-500 lg:block" />}
+                    {active && <span className="absolute left-0 h-6 w-1 rounded-r-full bg-gradient-to-r from-orange-500 to-amber-500" />}
                     <Icon className="h-5 w-5 shrink-0" />
-                    <span className="hidden lg:inline">{item.label}</span>
+                    <span>{item.label}</span>
                   </Link>
                 )
               })}
@@ -109,9 +109,9 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
         ))}
       </nav>
 
-      <div className="border-t border-slate-200 p-3">
+      <div className="border-t border-slate-200 p-4">
         {profile && (
-          <div className="mb-2 hidden items-center gap-3 rounded-xl px-3 py-2 lg:flex">
+          <div className="mb-3 flex items-center gap-3 rounded-xl px-3 py-2">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-sm font-black text-white">
               {profile.full_name?.charAt(0)?.toUpperCase() || '?'}
             </div>
@@ -122,9 +122,9 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
           </div>
         )}
         <form action={signOutAction}>
-          <button type="submit" className="flex h-11 w-full items-center justify-center rounded-xl text-slate-500 transition hover:bg-red-50 hover:text-red-600 lg:justify-start lg:gap-3 lg:px-3">
+          <button type="submit" className="flex h-11 w-full items-center justify-center gap-3 rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-red-50 hover:text-red-600">
             <LogOut className="h-5 w-5" />
-            <span className="hidden text-sm font-semibold lg:inline">Sair da Conta</span>
+            <span>Sair da Conta</span>
           </button>
         </form>
       </div>
