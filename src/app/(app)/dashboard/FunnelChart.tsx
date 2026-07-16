@@ -42,48 +42,100 @@ export function FunnelChart({ adAccountId }: { adAccountId?: string }) {
   }
 
   const maxValue = Math.max(...stages.map(s => s.value), 1)
+  const stageWidths = stages.map(s => Math.max((s.value / maxValue) * 100, 6))
+
+  const svgW = 520
+  const stageH = 56
+  const gap = 6
+  const svgH = stages.length * (stageH + gap)
+
+  // Build all horizontal Y positions and X boundaries
+  const rows = stages.map((stage, i) => {
+    const topW = i === 0 ? 100 : stageWidths[i - 1]
+    const botW = stageWidths[i]
+    const y1 = i * (stageH + gap)
+    const y2 = y1 + stageH
+    return { topW, botW, y1, y2 }
+  })
 
   return (
     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
       <h3 className="font-bold mb-1 text-slate-900">Funil de Conversão</h3>
       <p className="text-xs text-slate-500 mb-6">Taxas de conversão entre cada etapa</p>
 
-      <div className="space-y-3">
-        {stages.map((stage, i) => {
-          const width = (stage.value / maxValue) * 100
-          const prevStage = i > 0 ? stages[i - 1] : null
-          const convRate = prevStage && prevStage.value > 0 ? (stage.value / prevStage.value) * 100 : null
+      <div className="flex justify-center overflow-hidden">
+        <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full" style={{ maxWidth: '520px' }}>
+          <defs>
+            {stages.map((stage, i) => (
+              <linearGradient key={i} id={`fg${i}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={stage.color} stopOpacity={0.95} />
+                <stop offset="100%" stopColor={stage.color} stopOpacity={1} />
+              </linearGradient>
+            ))}
+          </defs>
 
-          return (
-            <div key={stage.name}>
-              {convRate !== null && (
-                <div className="flex items-center gap-2 mb-1 pl-1">
-                  <span className="text-[10px] font-bold text-slate-400">
-                    {convRate.toFixed(1)}% conversão
-                  </span>
-                  <div className="h-px flex-1 bg-slate-100" />
-                </div>
-              )}
-              <div className="flex items-center gap-3">
-                <div
-                  className="flex items-center justify-between rounded-lg px-4 py-3 transition-all min-h-[52px]"
-                  style={{
-                    width: `${Math.max(width, 15)}%`,
-                    backgroundColor: `${stage.color}15`,
-                    borderLeft: `4px solid ${stage.color}`,
-                  }}
+          {stages.map((stage, i) => {
+            const r = rows[i]
+            const tl = ((100 - r.topW) / 200) * svgW
+            const tr = ((100 + r.topW) / 200) * svgW
+            const bl = ((100 - r.botW) / 200) * svgW
+            const br = ((100 + r.botW) / 200) * svgW
+
+            const path = `M ${tl} ${r.y1} L ${tr} ${r.y1} L ${br} ${r.y2} L ${bl} ${r.y2} Z`
+            const cx = svgW / 2
+            const cy = (r.y1 + r.y2) / 2
+
+            const convRate = i > 0 && stages[i - 1].value > 0
+              ? ((stage.value / stages[i - 1].value) * 100).toFixed(1)
+              : null
+
+            return (
+              <g key={stage.name}>
+                {/* Funnel segment */}
+                <path d={path} fill={`url(#fg${i})`} className="transition-all" />
+
+                {/* Percentage label - top right inside the funnel */}
+                <text
+                  x={tr - 14}
+                  y={cy + 1}
+                  textAnchor="end"
+                  dominantBaseline="middle"
+                  fill="white"
+                  style={{ fontSize: '11px', fontWeight: 900, opacity: 0.9 }}
                 >
-                  <span className="text-sm font-bold text-slate-700 whitespace-nowrap">{stage.name}</span>
-                  <span className="text-sm font-black ml-2" style={{ color: stage.color }}>
-                    {stage.value.toLocaleString('pt-BR')}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )
-        })}
+                  {convRate !== null ? `${convRate}%` : '100%'}
+                </text>
+
+                {/* Stage name - left side inside funnel */}
+                <text
+                  x={tl + 16}
+                  y={cy + 1}
+                  textAnchor="start"
+                  dominantBaseline="middle"
+                  fill="white"
+                  style={{ fontSize: '12px', fontWeight: 900 }}
+                >
+                  {stage.name}
+                </text>
+
+                {/* Value - center-right */}
+                <text
+                  x={cx + 20}
+                  y={cy + 1}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill="white"
+                  style={{ fontSize: '13px', fontWeight: 900, opacity: 0.95 }}
+                >
+                  {stage.value.toLocaleString('pt-BR')}
+                </text>
+              </g>
+            )
+          })}
+        </svg>
       </div>
 
+      {/* Conversion rates grid */}
       {stages.length > 0 && stages[0].value > 0 && (
         <div className="mt-6 grid grid-cols-2 gap-3">
           {rates.map((r, i) => (
