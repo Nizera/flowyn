@@ -113,24 +113,29 @@ export default function DashboardPage() {
           <div className="absolute right-0 top-0 w-64 h-64 bg-orange-50 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Faturamento (período)</span>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Faturamento</span>
+              {s.total_revenue > 0 && (
+                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                  +{s.total_orders} vendas
+                </span>
+              )}
             </div>
             <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
               {currency(s.total_revenue)}
             </h2>
           </div>
-          <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100 relative z-10">
+          <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100 relative z-10">
             <div>
               <p className="text-xs font-bold text-slate-500">Vendas</p>
-              <p className="text-lg md:text-xl font-black text-slate-900">{s.total_orders}</p>
+              <p className="text-lg font-black text-slate-900">{s.total_orders}</p>
             </div>
             <div>
               <p className="text-xs font-bold text-slate-500">Ticket Médio</p>
-              <p className="text-lg md:text-xl font-black text-slate-900">{currency(s.arpu)}</p>
+              <p className="text-lg font-black text-slate-900">{currency(s.arpu)}</p>
             </div>
             <div>
               <p className="text-xs font-bold text-slate-500">ROI</p>
-              <p className="text-lg md:text-xl font-black text-emerald-600">{s.roi.toFixed(1)}%</p>
+              <p className="text-lg font-black text-emerald-600">{s.roi.toFixed(1)}%</p>
             </div>
           </div>
         </section>
