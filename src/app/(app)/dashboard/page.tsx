@@ -190,35 +190,68 @@ export default function DashboardPage() {
 
         <section className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col items-center">
           <h3 className="text-lg font-bold text-slate-900 mb-6 self-start w-full">Receita por Status</h3>
-          <div className="relative w-48 h-48 mb-6" role="img" aria-label="Distribuição de vendas por status">
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" fill="none" r="40" stroke="#cbd5e1" strokeDasharray="251.2" strokeDashoffset="0" strokeWidth="16" />
-              <circle cx="50" cy="50" fill="none" r="40" stroke="#94a3b8" strokeDasharray="251.2" strokeDashoffset="5.0" strokeWidth="16" />
-              <circle cx="50" cy="50" fill="none" r="40" stroke="#fcd34d" strokeDasharray="251.2" strokeDashoffset="25.1" strokeWidth="16" />
-              <circle cx="50" cy="50" fill="none" r="40" stroke="#10b981" strokeDasharray="251.2" strokeDashoffset="100.4" strokeWidth="16" />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <CreditCard className="w-8 h-8 text-slate-400" />
-            </div>
-          </div>
-          <div className="w-full grid grid-cols-2 gap-y-3 mt-auto">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-emerald-500" />
-              <span className="text-sm text-slate-600">Pago</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-yellow-400" />
-              <span className="text-sm text-slate-600">Pendente</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-slate-400" />
-              <span className="text-sm text-slate-600">Reembolsado</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-slate-300" />
-              <span className="text-sm text-slate-600">Outros</span>
-            </div>
-          </div>
+          {(() => {
+            const paid = s.total_revenue
+            const pending = s.pending_revenue
+            const refunded = s.refunded_revenue
+            const others = Math.max(0, (s.total_spend || 0) - paid - pending - refunded)
+            const total = paid + pending + refunded + others || 1
+            const circumference = 251.2
+
+            const segments = [
+              { label: 'Pago', value: paid, color: '#10b981' },
+              { label: 'Pendente', value: pending, color: '#fcd34d' },
+              { label: 'Reembolsado', value: refunded, color: '#94a3b8' },
+              { label: 'Outros', value: others, color: '#cbd5e1' },
+            ]
+
+            let offset = 0
+            const arcs = segments.map((seg) => {
+              const pct = seg.value / total
+              const dash = circumference * pct
+              const gap = circumference - dash
+              const arc = { ...seg, strokeDasharray: `${dash} ${gap}`, strokeDashoffset: -offset }
+              offset += dash
+              return arc
+            })
+
+            return (
+              <>
+                <div className="relative w-48 h-48 mb-6" role="img" aria-label="Distribuição de vendas por status">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    {arcs.map((arc, i) => (
+                      <circle
+                        key={i}
+                        cx="50" cy="50" fill="none" r="40"
+                        stroke={arc.color}
+                        strokeWidth="16"
+                        strokeDasharray={arc.strokeDasharray}
+                        strokeDashoffset={arc.strokeDashoffset}
+                        className="transition-all duration-200 hover:opacity-80 hover:stroke-[18]"
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <title>{arc.label}: {currency(arc.value)}</title>
+                      </circle>
+                    ))}
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <CreditCard className="w-8 h-8 text-slate-400" />
+                  </div>
+                </div>
+                <div className="w-full grid grid-cols-2 gap-y-3 mt-auto">
+                  {segments.map((seg, i) => (
+                    <div key={i} className="flex items-center gap-2 group relative">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: seg.color }} />
+                      <span className="text-sm text-slate-600">{seg.label}</span>
+                      <div className="absolute bottom-full left-0 mb-1 px-2 py-1 text-xs font-bold text-white bg-slate-900 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                        {seg.label}: {currency(seg.value)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )
+          })()}
         </section>
       </div>
 
