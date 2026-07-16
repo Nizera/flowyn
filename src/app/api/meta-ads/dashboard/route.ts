@@ -169,6 +169,11 @@ export async function GET(req: NextRequest) {
   const roas = totalSpend > 0 ? totalAttributedRevenue / totalSpend : 0
   const roi = totalSpend > 0 ? (netProfit / totalSpend) * 100 : 0
   
+  // Total sales (all paid orders, not just attributed)
+  const totalSalesAllOrders = (orders || [])
+    .filter(o => o.status === 'paid')
+    .reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0)
+  
   // Novos cálculos
   const pendingRevenue = orders.filter(o => o.status === 'pending').reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0)
   const refundedRevenue = orders.filter(o => o.status === 'refunded').reduce((sum, o) => sum + (parseFloat(o.net_value ?? o.amount) || 0), 0)
@@ -231,6 +236,7 @@ export async function GET(req: NextRequest) {
     summary: {
       total_spend: totalSpend,
       total_revenue: totalAttributedRevenue,
+      total_sales: totalSalesAllOrders,
       total_taxes: totalTaxes,
       total_production_costs: totalProductionCost,
       net_profit: netProfit,

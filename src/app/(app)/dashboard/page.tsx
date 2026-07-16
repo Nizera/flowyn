@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { RevenueSpendChart } from './RevenueSpendChart'
 import { FunnelChart } from './FunnelChart'
+import { SalesGoalCard } from '@/components/SalesGoalCard'
 import { TrendingUp, CreditCard, CheckCircle, Undo, Clock, AlertCircle } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -14,6 +15,7 @@ function currency(value: number) {
 interface Summary {
   total_revenue: number
   total_spend: number
+  total_sales: number
   roas: number
   net_profit: number
   total_orders: number
@@ -40,12 +42,10 @@ interface DashboardData {
 }
 
 const EMPTY_SUMMARY: Summary = {
-  total_revenue: 0, total_spend: 0, roas: 0, net_profit: 0,
+  total_revenue: 0, total_spend: 0, total_sales: 0, roas: 0, net_profit: 0,
   total_orders: 0, pending_revenue: 0, refunded_revenue: 0,
   profit_margin: 0, arpu: 0, chargeback_rate: 0, roi: 0,
 }
-
-const SALES_GOAL = 20000
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
@@ -74,7 +74,6 @@ export default function DashboardPage() {
   }, [])
 
   const s = useMemo<Summary>(() => data?.summary || EMPTY_SUMMARY, [data])
-  const goalProgress = SALES_GOAL > 0 ? Math.min((s.total_revenue / SALES_GOAL) * 100, 100) : 0
 
   if (loading) {
     return (
@@ -136,27 +135,9 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="lg:col-span-4 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col items-center justify-center relative">
-          <span className="text-xs font-bold text-slate-500 absolute top-6 left-6 uppercase tracking-wider">Meta Diária</span>
-          <div className="relative w-40 h-40 mt-4" role="img" aria-label={`Meta diária: ${goalProgress.toFixed(0)}% de ${currency(SALES_GOAL)}`}>
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" fill="none" r="45" stroke="#f1f5f9" strokeWidth="8" />
-              <circle
-                className="transition-all duration-1000 ease-out"
-                cx="50" cy="50" fill="none" r="45"
-                stroke="#f97316"
-                strokeDasharray="282.7"
-                strokeDashoffset={282.7 - (282.7 * goalProgress) / 100}
-                strokeLinecap="round"
-                strokeWidth="8"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-2xl font-black text-slate-900">{goalProgress.toFixed(0)}%</span>
-              <span className="text-xs font-bold text-slate-500">{currency(SALES_GOAL)}</span>
-            </div>
-          </div>
-        </section>
+        <div className="lg:col-span-4">
+          <SalesGoalCard totalSales={s.total_sales} variant="full" />
+        </div>
       </div>
 
       {/* Performance Strip */}

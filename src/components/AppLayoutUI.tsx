@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Sidebar } from '@/components/Sidebar'
+import { SalesGoalCard } from '@/components/SalesGoalCard'
 import Link from 'next/link'
-import { Bell, CalendarClock, DollarSign, Clock, AlertTriangle, Menu, Target, X } from 'lucide-react'
+import { Bell, CalendarClock, DollarSign, Clock, AlertTriangle, Menu, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { usePathname } from 'next/navigation'
 
@@ -46,41 +47,6 @@ const pageTitles: { match: string; title: string; subtitle: string }[] = [
   { match: '/learn', title: 'Meus acessos', subtitle: 'Cursos, arquivos e mentorias comprados.' },
   { match: '/dashboard', title: 'Visao geral', subtitle: 'Acompanhe sua operacao de vendas.' },
 ]
-
-function formatCurrency(value: number) {
-  if (value >= 1_000_000) return `R$ ${(value / 1_000_000).toFixed(1)}M`
-  if (value >= 1_000) return `R$ ${(value / 1_000).toFixed(0)}k`
-  return `R$ ${value.toFixed(0)}`
-}
-
-function SalesGoal({ totalSales }: { totalSales: number }) {
-  const step = 10_000
-  const goalStart = Math.floor(totalSales / step) * step
-  const goalEnd = goalStart + step
-  const progressPct = Math.min(((totalSales - goalStart) / step) * 100, 100)
-  const remaining = Math.max(0, goalEnd - totalSales)
-
-  return (
-    <div className="hidden min-w-[190px] rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm md:block">
-      <div className="mb-1.5 flex items-center justify-between">
-        <span className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
-          <Target className="h-3.5 w-3.5 text-orange-600" />
-          Meta
-        </span>
-        <span className="text-xs font-black text-orange-600">{formatCurrency(totalSales)} / {formatCurrency(goalEnd)}</span>
-      </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-        <motion.div
-          className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-500"
-          initial={{ width: 0 }}
-          animate={{ width: `${progressPct}%` }}
-          transition={{ duration: 0.7, ease: 'easeOut' }}
-        />
-      </div>
-      <p className="mt-1 text-[10px] text-slate-400">Faltam {formatCurrency(remaining)} para a proxima meta</p>
-    </div>
-  )
-}
 
 function formatShortDate(value: string | null | undefined) {
   if (!value) return ''
@@ -221,7 +187,7 @@ export function AppLayoutUI({ children, profile, user, totalSales, subscription,
           </div>
 
           <div className="flex items-center gap-3 md:gap-4">
-            <SalesGoal totalSales={totalSales} />
+            <SalesGoalCard totalSales={totalSales} variant="compact" />
             <div className="relative" ref={notifRef}>
               <button
                 onClick={() => setIsNotifOpen(prev => !prev)}
