@@ -73,30 +73,38 @@ export async function GET() {
     ? Boolean(paymentAccount?.status === 'connected')
     : Boolean(paymentAccount?.wallet_id || (profile as Profile).asaas_wallet_id)
 
-  // Auto-fetch walletId for standalone connections that are missing it
-  if (connectionMode === 'standalone' && isConnected && !paymentAccount?.wallet_id && !(profile as Profile).asaas_wallet_id) {
-    console.log('[Asaas Account] Auto-fetching walletId for standalone connection')
-    try {
-      const decryptedKey = decryptApiKey(paymentAccount!.api_key!)
-      const walletId = await retrieveWalletId(decryptedKey)
-      console.log('[Asaas Account] walletId from API:', walletId)
-      if (walletId) {
-        await admin
-          .from('payment_accounts')
-          .update({ wallet_id: walletId, updated_at: new Date().toISOString() })
-          .eq('user_id', user.id)
-          .eq('provider', 'asaas')
-        await admin
-          .from('profiles')
-          .update({ asaas_wallet_id: walletId, updated_at: new Date().toISOString() })
-          .eq('id', user.id)
-        ;(paymentAccount as Record<string, unknown>).wallet_id = walletId
-        console.log('[Asaas Account] walletId saved successfully')
-      } else {
-        console.warn('[Asaas Account] No walletId returned from API')
+  // Auto-fetch walletId and accountId for standalone connections that are missing them
+  if (connectionMode === 'standalone' && isConnected) {
+    const missingWallet = !paymentAccount?.wallet_id && !(profile as Profile).asaas_wallet_id
+    const missingAccount = !paymentAccount?.provider_account_id && !(profile as Profile).asaas_account_id
+    if (missingWallet || missingAccount) {
+      console.log('[Asaas Account] Auto-fetching missing data for standalone connection')
+      try {
+        const decryptedKey = decryptApiKey(paymentAccount!.api_key!)
+        const [walletId, accountInfo] = await Promise.all([
+          missingWallet ? retrieveWalletId(decryptedKey) : Promise.resolve(null),
+          missingAccount ? retrieveAccountInfo(decryptedKey) : Promise.resolve(null),
+        ])
+        const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() }
+        const profilePayload: Record<string, unknown> = { updated_at: new Date().toISOString() }
+        if (walletId) {
+          updatePayload.wallet_id = walletId
+          profilePayload.asaas_wallet_id = walletId
+          ;(paymentAccount as Record<string, unknown>).wallet_id = walletId
+        }
+        if (accountInfo?.id) {
+          updatePayload.provider_account_id = accountInfo.id
+          profilePayload.asaas_account_id = accountInfo.id
+          ;(paymentAccount as Record<string, unknown>).provider_account_id = accountInfo.id
+        }
+        if (Object.keys(updatePayload).length > 1) {
+          await admin.from('payment_accounts').update(updatePayload).eq('user_id', user.id).eq('provider', 'asaas')
+          await admin.from('profiles').update(profilePayload).eq('id', user.id)
+          console.log('[Asaas Account] Updated:', updatePayload)
+        }
+      } catch (err) {
+        console.error('[Asaas Account] Auto-fetch failed:', err)
       }
-    } catch (err) {
-      console.error('[Asaas Account] Auto-fetch walletId failed:', err)
     }
   }
 

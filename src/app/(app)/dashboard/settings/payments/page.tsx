@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useEffect, useState } from 'react'
-import { AlertCircle, CheckCircle2, ExternalLink, Loader2, RefreshCw, ShieldCheck, KeyRound, Building2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2, ExternalLink, Loader2, RefreshCw, ShieldCheck, KeyRound, Building2, Eye, EyeOff } from 'lucide-react'
 
 type AccountType = 'cpf' | 'cnpj'
 type ConnectionMode = 'subaccount' | 'standalone'
@@ -198,8 +198,8 @@ function PaymentsContent() {
                 tone={connected ? 'success' : 'muted'}
               />
               <StatusItem label="Modo" value={mode === 'standalone' ? 'Conta propria' : 'Subconta Flowyn'} />
-              <StatusItem label="Wallet ID" value={walletId || '-'} mono />
-              <StatusItem label="Conta Asaas" value={accountId || '-'} mono />
+              <StatusItem label="Wallet ID" value={walletId || '-'} mono sensitive />
+              <StatusItem label="Conta Asaas" value={accountId || '-'} mono sensitive />
             </div>
             <div className="mt-5 flex items-start gap-3 rounded-xl bg-orange-50 px-4 py-3 text-sm leading-6 text-orange-900 ring-1 ring-orange-100">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" />
@@ -451,13 +451,20 @@ function SubaccountForm({
   )
 }
 
-function StatusItem({ label, value, tone = 'muted', mono = false }: { label: string; value: string; tone?: 'success' | 'muted'; mono?: boolean }) {
+function StatusItem({ label, value, tone = 'muted', mono = false, sensitive = false }: { label: string; value: string; tone?: 'success' | 'muted'; mono?: boolean; sensitive?: boolean }) {
+  const [visible, setVisible] = useState(false)
+  const masked = value && value !== '-' ? '••••••••••••' : value
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
       <div className="mt-2 flex items-start gap-2">
-        {tone === 'success' ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> : <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />}
-        <p className={`break-all text-sm font-semibold text-slate-950 ${mono ? 'font-mono' : ''}`}>{value}</p>
+        {tone === 'success' ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> : <AlertCircle className="mt-0.5 h-4 w-0 shrink-0 text-slate-300" />}
+        <p className={`break-all text-sm font-semibold text-slate-950 ${mono ? 'font-mono' : ''}`}>{sensitive && value && value !== '-' ? (visible ? value : masked) : value}</p>
+        {sensitive && value && value !== '-' && (
+          <button type="button" onClick={() => setVisible(!visible)} className="mt-0.5 shrink-0 text-slate-400 hover:text-slate-600 transition">
+            {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        )}
       </div>
     </div>
   )
