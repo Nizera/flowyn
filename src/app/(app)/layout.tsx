@@ -41,6 +41,7 @@ export default async function AppLayout({
   // ── Referral resolution: check user metadata for referral_code ──
   const referralCodeFromMeta = user.user_metadata?.referral_code
   if (referralCodeFromMeta && profile) {
+    let metadataCleared = false
     try {
       const { createAdminClient } = await import('@/utils/supabase/admin')
       const admin = createAdminClient()
@@ -53,40 +54,57 @@ export default async function AppLayout({
         .maybeSingle()
 
       if (existingProfile && !existingProfile.referred_by) {
-        // Look up referrer by code
-        const { data: referrer } = await admin
-          .from('profiles')
-          .select('id')
-          .eq('referral_code', referralCodeFromMeta)
-          .maybeSingle()
-
-        if (referrer && referrer.id !== user.id) {
-          // Create referral record + update profile
-          const { data: newReferral } = await admin
-            .from('referrals')
-            .insert({
-              referral_code: referralCodeFromMeta,
-              referrer_id: referrer.id,
-              referred_id: user.id,
-            })
+        // Validate code format (prevents arbitrary injection)
+        if (!/^IND-[A-F0-9]{8}$/i.test(String(referralCodeFromMeta))) {
+          metadataCleared = true
+        } else {
+          // Look up referrer by code
+          const { data: referrer } = await admin
+            .from('profiles')
             .select('id')
+            .eq('referral_code', referralCodeFromMeta)
             .maybeSingle()
 
-          if (newReferral) {
-            await admin
-              .from('profiles')
-              .update({ referred_by: referrer.id })
-              .eq('id', user.id)
+          if (referrer && referrer.id !== user.id) {
+            // Create referral record + update profile
+            const { data: newReferral, error: insertError } = await admin
+              .from('referrals')
+              .insert({
+                referral_code: referralCodeFromMeta,
+                referrer_id: referrer.id,
+                referred_id: user.id,
+              })
+              .select('id')
+              .maybeSingle()
+
+            if (newReferral) {
+              await admin
+                .from('profiles')
+                .update({ referred_by: referrer.id })
+                .eq('id', user.id)
+              metadataCleared = true
+            } else if (insertError) {
+              // Duplicate referral (UNIQUE constraint on referred_id) — already resolved
+              metadataCleared = true
+            }
+          } else {
+            // Code invalid or self-referral — clear metadata
+            metadataCleared = true
           }
         }
+      } else {
+        // Already resolved — clear stale metadata
+        metadataCleared = true
       }
 
-      // Clear referral_code from user metadata (one-time)
-      await admin.auth.admin.updateUserById(user.id, {
-        user_metadata: { ...user.user_metadata, referral_code: undefined },
-      })
+      // Only clear metadata on success/invalid, preserving audit trail on failure
+      if (metadataCleared) {
+        await admin.auth.admin.updateUserById(user.id, {
+          user_metadata: { ...user.user_metadata, referral_code: undefined },
+        })
+      }
     } catch (referralError) {
-      console.error('[Referral] Resolution error (non-blocking):', referralError)
+      console.error('[Referral] Resolution error:', referralError)
     }
   }
 

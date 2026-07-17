@@ -13,7 +13,7 @@ export async function GET() {
     .single()
 
   if (!profile?.referral_code) {
-    return NextResponse.json({ code: null, wallet_connected: false, stats: { total_referred: 0, total_commission: 0, paid_commission: 0, pending_commission: 0 }, commissions: [] })
+    return NextResponse.json({ code: null, wallet_connected: false, stats: { total_referred: 0, total_commission: 0, paid_commission: 0, pending_commission: 0 }, commissions: [], referrals: [] })
   }
 
   const { data: referrals } = await supabase
@@ -21,6 +21,7 @@ export async function GET() {
     .select('id, referred_id, referral_code, first_payment_at, created_at')
     .eq('referrer_id', user.id)
     .order('created_at', { ascending: false })
+    .limit(200)
 
   const referralIds = (referrals ?? []).map(r => r.id)
 
@@ -33,20 +34,35 @@ export async function GET() {
     payment_id: string
   }> = []
 
+  // Stats: aggregate over ALL commissions (not truncated)
+  let totalCommission = 0
+  let paidCommission = 0
+  let pendingCommission = 0
+
   if (referralIds.length > 0) {
-    const { data } = await supabase
+    // Fetch all commissions for stats (no limit)
+    const { data: allCommissions } = await supabase
+      .from('referral_commissions')
+      .select('amount, status')
+      .in('referral_id', referralIds)
+
+    for (const c of allCommissions ?? []) {
+      const amt = Number(c.amount) || 0
+      totalCommission += amt
+      if (c.status === 'paid' || c.status === 'split') paidCommission += amt
+      if (c.status === 'pending') pendingCommission += amt
+    }
+
+    // Fetch recent 50 for display
+    const { data: recent } = await supabase
       .from('referral_commissions')
       .select('id, amount, status, created_at, paid_at, payment_id')
       .in('referral_id', referralIds)
       .order('created_at', { ascending: false })
       .limit(50)
 
-    commissions = data ?? []
+    commissions = recent ?? []
   }
-
-  const totalCommission = commissions.reduce((sum, c) => sum + Number(c.amount), 0)
-  const paidCommission = commissions.filter(c => c.status === 'paid' || c.status === 'split').reduce((sum, c) => sum + Number(c.amount), 0)
-  const pendingCommission = commissions.filter(c => c.status === 'pending').reduce((sum, c) => sum + Number(c.amount), 0)
 
   return NextResponse.json({
     code: profile.referral_code,

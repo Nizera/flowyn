@@ -165,13 +165,13 @@ export async function processPlatformSubscriptionPayment(eventType: string, paym
       .update({ plan: 'free', updated_at: now.toISOString() })
       .eq('id', subscription.user_id)
 
-    // Cancel pending referral commission for this specific payment
+    // Cancel referral commission for this specific payment (any non-terminal status)
     if (paymentId) {
       await admin
         .from('referral_commissions')
         .update({ status: 'cancelled' })
         .eq('payment_id', paymentId)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'split', 'withdrawing'])
     }
   }
 

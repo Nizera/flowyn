@@ -367,7 +367,10 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
 
       if (referral) {
         if (!referral.first_payment_at) {
-          const netValue = typeof orderData.net_value === 'number' ? Number(orderData.net_value) : Number(orderData.amount)
+          // Prefer net_value (post-Asaas-fee) if available; fallback to gross only if net is genuinely unknown
+          const netValue = typeof orderData.net_value === 'number' && orderData.net_value > 0
+            ? Number(orderData.net_value)
+            : Number(orderData.amount) * 0.9  // approximate net as 90% of gross if net_value not yet set
           const commissionAmount = Math.round(netValue * 20) / 100
 
           if (commissionAmount > 0) {
@@ -451,12 +454,12 @@ export async function revokePaidOrder(supabase: SupabaseAdmin, orderId: string, 
     }
   }
 
-  // Cancel any pending referral commission for this payment
+  // Cancel any non-terminal referral commission for this payment
   await supabase
     .from('referral_commissions')
     .update({ status: 'cancelled' })
     .eq('payment_id', orderId)
-    .eq('status', 'pending')
+    .in('status', ['pending', 'split', 'withdrawing'])
 
   return { skipped: false }
 }

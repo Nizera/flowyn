@@ -87,12 +87,26 @@ export default function ReferralsPage() {
     }
   }
 
-  function copyCode() {
+  async function copyCode() {
     if (!data?.code) return
     const url = `${window.location.origin}/register?ref=${data.code}`
-    navigator.clipboard.writeText(url)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Fallback for browsers where clipboard API is not available
+      const textarea = document.createElement('textarea')
+      textarea.value = url
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      try { document.execCommand('copy') } catch { /* give up */ }
+      document.body.removeChild(textarea)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
   }
 
   if (loading) {
@@ -228,9 +242,11 @@ export default function ReferralsPage() {
                           ? 'bg-emerald-50 text-emerald-700'
                           : c.status === 'pending'
                             ? 'bg-amber-50 text-amber-700'
-                            : 'bg-red-50 text-red-700'
+                            : c.status === 'withdrawing'
+                              ? 'bg-sky-50 text-sky-700'
+                              : 'bg-red-50 text-red-700'
                       }`}>
-                        {c.status === 'paid' ? 'Pago' : c.status === 'split' ? 'Split' : c.status === 'pending' ? 'Pendente' : 'Cancelado'}
+                        {c.status === 'paid' ? 'Pago' : c.status === 'split' ? 'Split' : c.status === 'pending' ? 'Pendente' : c.status === 'withdrawing' ? 'Saque em andamento' : 'Cancelado'}
                       </span>
                     </td>
                   </tr>

@@ -10,6 +10,7 @@ import {
 } from '@/lib/asaas'
 import { isValidCardExpiry, isValidCpfCnpj, isValidEmail, isValidPhone, isValidCardNumber, isValidCvv, isValidPostalCode } from '@/lib/validation'
 import { hashIdentifier } from '@/lib/hash'
+import { encryptApiKey } from '@/lib/encryption'
 
 const FLOWYN_PRO_PRICE = 97
 
@@ -163,7 +164,7 @@ export async function POST(req: NextRequest) {
   const trialEndsAt = localSubscription.trial_ends_at as string | null
   const nextDueDate = isoDate(isFuture(trialEndsAt) ? trialEndsAt : new Date().toISOString())
 
-  // ── Referral split: 20% to referrer's Asaas wallet ──
+  // ── Referral split: 20% to referrer's Asaas wallet (fail-closed) ──
   let split: Array<{ walletId: string; percentualValue: number }> | undefined
   try {
     const { data: subscriberProfile } = await admin
@@ -175,7 +176,7 @@ export async function POST(req: NextRequest) {
     if (subscriberProfile?.referred_by) {
       const { data: referrer } = await admin
         .from('profiles')
-        .select('id, full_name, email, document_number, asaas_wallet_id, asaas_account_id')
+        .select('id, full_name, email, document_number, asaas_wallet_id, asaas_account_id, asaas_account_status')
         .eq('id', subscriberProfile.referred_by)
         .maybeSingle()
 
@@ -183,7 +184,10 @@ export async function POST(req: NextRequest) {
         let walletId = referrer.asaas_wallet_id
 
         // Create subaccount if referrer doesn't have one
-        if (!walletId && referrer.email && referrer.document_number) {
+        if (!walletId) {
+          if (!referrer.email || !referrer.document_number) {
+            return NextResponse.json({ error: 'Indicação requer dados completos do indicador. Contate o suporte.' }, { status: 400 })
+          }
           try {
             const subaccount = await createSubaccount({
               name: referrer.full_name || referrer.email,
@@ -191,17 +195,19 @@ export async function POST(req: NextRequest) {
               cpfCnpj: referrer.document_number.replace(/\D/g, ''),
             })
             walletId = subaccount.walletId
-            // Save wallet and account IDs
+            // Save wallet, account IDs, and apiKey (encrypted for referrer's future access)
             await admin
               .from('profiles')
               .update({
                 asaas_wallet_id: walletId,
                 asaas_account_id: subaccount.id,
+                asaas_api_key: encryptApiKey(subaccount.apiKey),
                 updated_at: new Date().toISOString(),
               })
               .eq('id', referrer.id)
           } catch (subaccountError) {
             console.error('[Platform Subscription] Failed to create referrer subaccount:', subaccountError)
+            return NextResponse.json({ error: 'Não foi possível configurar a carteira do seu indicador. Tente novamente.' }, { status: 503 })
           }
         }
 
@@ -213,7 +219,8 @@ export async function POST(req: NextRequest) {
       }
     }
   } catch (splitError) {
-    console.error('[Platform Subscription] Split lookup error (non-blocking):', splitError)
+    console.error('[Platform Subscription] Split lookup error:', splitError)
+    return NextResponse.json({ error: 'Erro ao processar indicação. Tente novamente.' }, { status: 500 })
   }
 
   const asaasSubscription = await createCreditCardSubscription({

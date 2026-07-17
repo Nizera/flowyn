@@ -1,34 +1,46 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { createTransfer } from '@/lib/asaas'
+import { hashIdentifier } from '@/lib/hash'
 
 const MIN_WITHDRAWAL = 10
 
-export async function POST() {
+function getClientIp(req: NextRequest) {
+  const forwarded = req.headers.get('x-forwarded-for')
+  if (forwarded) return forwarded.split(',')[0].trim()
+  return req.headers.get('x-real-ip') || '127.0.0.1'
+}
+
+export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
 
   const admin = createAdminClient()
 
-  // Get referrer profile
+  // Rate limit: financial operation
+  const clientIp = getClientIp(req)
+  const { data: withinRateLimit, error: rateLimitError } = await admin.rpc('consume_rate_limit', {
+    requested_bucket: 'referral-withdraw',
+    requested_identifier_hash: await hashIdentifier(clientIp),
+    max_requests: 3,
+    window_seconds: 60 * 60,
+  })
+  if (rateLimitError || !withinRateLimit) {
+    return NextResponse.json({ error: 'Muitas tentativas. Tente novamente em 1 hora.' }, { status: 429 })
+  }
+
+  // Get referrer profile (single query)
   const { data: profile } = await admin
     .from('profiles')
-    .select('id, full_name, document_number')
+    .select('id, full_name, document_number, referral_code')
     .eq('id', user.id)
     .maybeSingle()
 
   if (!profile) return NextResponse.json({ error: 'Perfil não encontrado.' }, { status: 404 })
 
-  // Get referral code
-  const { data: referral } = await admin
-    .from('profiles')
-    .select('referral_code')
-    .eq('id', user.id)
-    .maybeSingle()
-
-  if (!referral?.referral_code) {
+  if (!profile?.referral_code) {
     return NextResponse.json({ error: 'Você não tem código de indicação.' }, { status: 400 })
   }
 
@@ -98,7 +110,7 @@ export async function POST() {
       pixAddressKey: documentNumber,
       pixAddressKeyType: documentNumber.length === 11 ? 'CPF' : 'CNPJ',
       description: `Comissão indicação Flowyn - ${profile.full_name || user.id}`,
-      externalReference: `ref-${user.id.slice(0, 8)}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      externalReference: `ref-${crypto.randomUUID()}`,
     }, platformApiKey)
 
     // Mark commissions as paid

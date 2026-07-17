@@ -42,6 +42,7 @@ const pageTitles: { match: string; title: string; subtitle: string }[] = [
   { match: '/dashboard/settings/subscription', title: 'Assinatura', subtitle: 'Plano Flowyn e cobranca mensal.' },
   { match: '/dashboard/settings/profile', title: 'Minha conta', subtitle: 'Dados do usuario e preferencias.' },
   { match: '/learn', title: 'Meus acessos', subtitle: 'Cursos, arquivos e mentorias comprados.' },
+  { match: '/dashboard/referrals', title: 'Indicar', subtitle: 'Ganhe 20% comissao em cada cliente indicado.' },
   { match: '/dashboard', title: 'Visao geral', subtitle: 'Acompanhe sua operacao de vendas.' },
 ]
 
