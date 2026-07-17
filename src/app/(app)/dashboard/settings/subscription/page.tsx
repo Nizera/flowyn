@@ -69,10 +69,23 @@ export default async function SubscriptionPage() {
 
     if (subscription.status === 'active' || subscription.status === 'grace_period') {
       metricLabel = 'Proxima cobranca'
-      if (periodEnds && periodEnds > now) {
-        const days = Math.ceil((periodEnds - now) / (1000 * 60 * 60 * 24))
+      
+      let nextBillingDate = subscription.current_period_ends_at ? new Date(subscription.current_period_ends_at) : null
+      
+      // Inteligência de recuperação se current_period_ends_at for nulo
+      if (!nextBillingDate && subscription.trial_ends_at) {
+        const trialDate = new Date(subscription.trial_ends_at)
+        // Adiciona meses iterativamente até que a data de vencimento seja no futuro
+        while (trialDate.getTime() <= now) {
+          trialDate.setMonth(trialDate.getMonth() + 1)
+        }
+        nextBillingDate = trialDate
+      }
+
+      if (nextBillingDate && nextBillingDate.getTime() > now) {
+        const days = Math.ceil((nextBillingDate.getTime() - now) / (1000 * 60 * 60 * 24))
         metricValue = `${days} ${days === 1 ? 'dia' : 'dias'}`
-        metricDescription = `Renovacao em ${formatDate(subscription.current_period_ends_at)}.`
+        metricDescription = `Renovacao em ${formatDate(nextBillingDate.toISOString())}.`
       } else {
         metricValue = 'Mensal'
         metricDescription = 'Renovacao automatica.'
