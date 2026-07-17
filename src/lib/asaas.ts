@@ -288,12 +288,11 @@ export async function retrieveBalance(apiKey: string) {
 export async function retrieveAccountInfo(apiKey: string) {
   return asaasRequest<{
     id: string
-    name: string
-    email: string
-    cpfCnpj?: string
-    walletId?: string
-    status?: string
-  }>('/myAccount', { apiKey })
+    commercialInfo?: string
+    bankAccountInfo?: string
+    documentation?: string
+    general?: string
+  }>('/myAccount/status/', { apiKey })
 }
 
 export async function retrieveWalletId(apiKey: string): Promise<string | null> {
