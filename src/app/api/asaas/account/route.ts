@@ -4,7 +4,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { createSubaccount, listSubaccounts, onlyDigits, retrieveSubaccount, retrieveAccountInfo } from '@/lib/asaas'
 import { isValidCpfCnpj, isValidEmail, isValidPhone } from '@/lib/validation'
 import { hashIdentifier } from '@/lib/hash'
-import { encryptApiKey } from '@/lib/encryption'
+import { encryptApiKey, decryptApiKey } from '@/lib/encryption'
 
 type Profile = {
   asaas_account_id: string | null
@@ -63,7 +63,7 @@ export async function GET() {
   const admin = getAdminClient()
   const { data: paymentAccount } = await admin
     .from('payment_accounts')
-    .select('provider_account_id, wallet_id, status, connection_mode')
+    .select('provider_account_id, wallet_id, api_key, status, connection_mode')
     .eq('user_id', user.id)
     .eq('provider', 'asaas')
     .single()
@@ -72,6 +72,29 @@ export async function GET() {
   const isConnected = connectionMode === 'standalone'
     ? Boolean(paymentAccount?.status === 'connected')
     : Boolean(paymentAccount?.wallet_id || (profile as Profile).asaas_wallet_id)
+
+  // Auto-fetch walletId for standalone connections that are missing it
+  if (connectionMode === 'standalone' && isConnected && !paymentAccount?.wallet_id && !(profile as Profile).asaas_wallet_id) {
+    try {
+      const decryptedKey = decryptApiKey(paymentAccount!.api_key!)
+      const accountInfo = await retrieveAccountInfo(decryptedKey)
+      if (accountInfo.walletId) {
+        await admin
+          .from('payment_accounts')
+          .update({ wallet_id: accountInfo.walletId, updated_at: new Date().toISOString() })
+          .eq('user_id', user.id)
+          .eq('provider', 'asaas')
+        await admin
+          .from('profiles')
+          .update({ asaas_wallet_id: accountInfo.walletId, updated_at: new Date().toISOString() })
+          .eq('id', user.id)
+        // Update local vars for response
+        ;(paymentAccount as Record<string, unknown>).wallet_id = accountInfo.walletId
+      }
+    } catch (err) {
+      console.warn('[Asaas Account] Could not auto-fetch walletId:', err)
+    }
+  }
 
   let remoteAccount = null
   if (connectionMode === 'subaccount') {
@@ -145,6 +168,8 @@ export async function POST(request: NextRequest) {
     await admin
       .from('profiles')
       .update({
+        asaas_account_id: accountInfo.id || null,
+        asaas_wallet_id: accountInfo.walletId || null,
         asaas_account_status: 'connected',
         updated_at: new Date().toISOString(),
       })
@@ -156,7 +181,7 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         provider: 'asaas',
         provider_account_id: accountInfo.id || null,
-        wallet_id: null,
+        wallet_id: accountInfo.walletId || null,
         api_key: encryptApiKey(apiKey),
         status: 'connected',
         connection_mode: 'standalone',
