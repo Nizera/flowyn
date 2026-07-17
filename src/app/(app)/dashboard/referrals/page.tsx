@@ -106,7 +106,7 @@ export default function ReferralsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-600 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-200 border-t-orange-500" />
       </div>
     )
   }
@@ -116,7 +116,7 @@ export default function ReferralsPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Programa de Indicação</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Compartilhe seu código e ganhe 20% de comissão sobre a primeira venda de cada cliente indicado.
+          Compartilhe seu código e ganhe 20% de comissão sobre cada pagamento de clientes indicados.
         </p>
       </div>
 
@@ -130,7 +130,7 @@ export default function ReferralsPage() {
             <button
               onClick={generateCode}
               disabled={generating}
-              className="rounded-xl bg-violet-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-7 text-sm font-semibold text-white transition hover:from-orange-600 hover:to-amber-600 disabled:opacity-50"
             >
               {generating ? 'Gerando...' : 'Gerar Código'}
             </button>
@@ -142,9 +142,9 @@ export default function ReferralsPage() {
             </div>
             <button
               onClick={copyCode}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
             >
-              {copied ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+              {copied ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
               {copied ? 'Copiado!' : 'Copiar Link'}
             </button>
           </div>
@@ -177,7 +177,7 @@ export default function ReferralsPage() {
             <button
               onClick={handleWithdraw}
               disabled={withdrawing}
-              className="flex items-center gap-2 rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-7 text-sm font-semibold text-white transition hover:from-orange-600 hover:to-amber-600 disabled:opacity-50"
             >
               {withdrawing ? (
                 <>
@@ -193,7 +193,7 @@ export default function ReferralsPage() {
             </button>
           </div>
           {withdrawResult?.success && (
-            <p className="mt-3 rounded-lg bg-green-50 px-4 py-2 text-sm text-green-700">
+            <p className="mt-3 rounded-lg bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
               {currency(withdrawResult.amount!)} transferido com sucesso!
             </p>
           )}
@@ -232,9 +232,9 @@ export default function ReferralsPage() {
                     <td className="px-6 py-3">
                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                         c.status === 'paid'
-                          ? 'bg-green-50 text-green-700'
+                          ? 'bg-emerald-50 text-emerald-700'
                           : c.status === 'pending'
-                            ? 'bg-yellow-50 text-yellow-700'
+                            ? 'bg-amber-50 text-amber-700'
                             : 'bg-red-50 text-red-700'
                       }`}>
                         {c.status === 'paid' ? 'Pago' : c.status === 'pending' ? 'Pendente' : 'Cancelado'}
@@ -265,8 +265,8 @@ function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50">
-          <Icon className="h-5 w-5 text-violet-600" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50">
+          <Icon className="h-5 w-5 text-orange-500" />
         </div>
         <div>
           <p className="text-xs font-medium text-slate-400">{label}</p>
