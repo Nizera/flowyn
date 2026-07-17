@@ -58,6 +58,43 @@ export default async function SubscriptionPage() {
     || (subscription?.status === 'scheduled' && isFuture(subscription.trial_ends_at))
     || (subscription?.status === 'trialing' && isFuture(subscription.trial_ends_at))
 
+  let metricLabel = 'Teste gratis'
+  let metricValue = '7 dias'
+  let metricDescription = 'Experimente 7 dias sem compromisso.'
+
+  if (subscription) {
+    const now = Date.now()
+    const trialEnds = subscription.trial_ends_at ? new Date(subscription.trial_ends_at).getTime() : 0
+    const periodEnds = subscription.current_period_ends_at ? new Date(subscription.current_period_ends_at).getTime() : 0
+
+    if (subscription.status === 'active' || subscription.status === 'grace_period') {
+      metricLabel = 'Proxima cobranca'
+      if (periodEnds && periodEnds > now) {
+        const days = Math.ceil((periodEnds - now) / (1000 * 60 * 60 * 24))
+        metricValue = `${days} ${days === 1 ? 'dia' : 'dias'}`
+        metricDescription = `Renovacao em ${formatDate(subscription.current_period_ends_at)}.`
+      } else {
+        metricValue = 'Mensal'
+        metricDescription = 'Renovacao automatica.'
+      }
+    } else if (trialEnds > now) {
+      metricLabel = 'Teste gratis'
+      const days = Math.ceil((trialEnds - now) / (1000 * 60 * 60 * 24))
+      metricValue = `${days} ${days === 1 ? 'dia' : 'dias'}`
+      metricDescription = `Termina em ${formatDate(subscription.trial_ends_at)}.`
+    } else if (subscription.status === 'cancelled') {
+      metricLabel = 'Acesso'
+      if (periodEnds && periodEnds > now) {
+        const days = Math.ceil((periodEnds - now) / (1000 * 60 * 60 * 24))
+        metricValue = `${days} ${days === 1 ? 'dia' : 'dias'}`
+        metricDescription = `Expira em ${formatDate(subscription.current_period_ends_at)}.`
+      } else {
+        metricValue = 'Expirado'
+        metricDescription = 'Assinatura cancelada.'
+      }
+    }
+  }
+
   return (
     <section className="overflow-hidden rounded-[10px] bg-white px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -78,7 +115,7 @@ export default async function SubscriptionPage() {
         <div className="grid gap-6 py-6 md:grid-cols-3">
           <Metric label="Taxa Flowyn por venda" value="R$0" description="Sem percentual da plataforma." />
           <Metric label="Mensalidade" value="R$97" description="Cobrada mensalmente." />
-          <Metric label="Teste gratis" value="7 dias" description={`Termina em ${formatDate(subscription?.trial_ends_at)}.`} />
+          <Metric label={metricLabel} value={metricValue} description={metricDescription} />
         </div>
       </div>
 
