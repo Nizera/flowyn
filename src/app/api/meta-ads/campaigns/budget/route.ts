@@ -26,11 +26,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 })
   }
 
-  const { data: allowed, error: rlErr } = await supabase.rpc('consume_rate_limit', {
-    p_user_id: user.id,
-    p_action: 'meta_budget',
-    p_max: 20,
-    p_window_seconds: 60,
+  const admin = createAdminClient()
+  const { data: allowed, error: rlErr } = await admin.rpc('consume_rate_limit', {
+    requested_bucket: `meta_budget:${user.id}`,
+    requested_identifier_hash: id,
+    max_requests: 20,
+    window_seconds: 60,
   })
   if (rlErr || !allowed) {
     return NextResponse.json({ error: 'Rate limit exceeded. Try again later.' }, { status: 429 })
@@ -51,7 +52,6 @@ export async function POST(req: NextRequest) {
   const accessToken = await getDecryptedToken(ad_account_id, user.id)
   if (!accessToken) return NextResponse.json({ error: 'Token not found' }, { status: 404 })
 
-  const admin = createAdminClient()
   let targetId = id
   let targetLevel = level
 

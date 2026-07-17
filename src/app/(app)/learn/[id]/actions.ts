@@ -9,9 +9,8 @@ import { getAppUrl } from '@/lib/app-url'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-async function verifyStudentAccess(_supabase: SupabaseClient, userId: string, productId: string) {
-  const admin = createAdminClient()
-  const { data } = await admin
+async function verifyStudentAccess(supabase: SupabaseClient, userId: string, productId: string) {
+  const { data } = await supabase
     .from('student_access')
     .select('id')
     .eq('user_id', userId)

@@ -41,11 +41,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 })
   }
 
-  const { data: allowed, error: rlErr } = await supabase.rpc('consume_rate_limit', {
-    p_user_id: user.id,
-    p_action: 'meta_bulk',
-    p_max: 10,
-    p_window_seconds: 60,
+  const admin = createAdminClient()
+  const { data: allowed, error: rlErr } = await admin.rpc('consume_rate_limit', {
+    requested_bucket: `meta_bulk:${user.id}`,
+    requested_identifier_hash: ad_account_id,
+    max_requests: 10,
+    window_seconds: 60,
   })
   if (rlErr || !allowed) {
     return NextResponse.json({ error: 'Rate limit exceeded. Try again later.' }, { status: 429 })
@@ -85,7 +86,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Token not found' }, { status: 404 })
   }
 
-  const adminSupabase = createAdminClient()
   const results: any[] = []
   const errors: string[] = []
 
@@ -117,16 +117,16 @@ export async function POST(req: NextRequest) {
         const metaData = await metaRes.json()
         if (metaData.error) errors.push(`${id}: ${metaData.error.message}`)
 
-        await adminSupabase.from(localTable).delete().eq(localIdField, id).eq('ad_account_id', ad_account_id).eq('user_id', user.id)
+        await admin.from(localTable).delete().eq(localIdField, id).eq('ad_account_id', ad_account_id).eq('user_id', user.id)
         if (level === 'campaign') {
-          const { data: childAdSets } = await adminSupabase.from('ad_sets').select('ad_set_id').eq('campaign_id', id).eq('ad_account_id', ad_account_id)
+          const { data: childAdSets } = await admin.from('ad_sets').select('ad_set_id').eq('campaign_id', id).eq('ad_account_id', ad_account_id)
           const childAdSetIds = (childAdSets || []).map(a => a.ad_set_id)
           if (childAdSetIds.length > 0) {
-            await adminSupabase.from('ads').delete().in('ad_set_id', childAdSetIds).eq('ad_account_id', ad_account_id)
+            await admin.from('ads').delete().in('ad_set_id', childAdSetIds).eq('ad_account_id', ad_account_id)
           }
-          await adminSupabase.from('ad_sets').delete().eq('campaign_id', id).eq('ad_account_id', ad_account_id)
+          await admin.from('ad_sets').delete().eq('campaign_id', id).eq('ad_account_id', ad_account_id)
         } else if (level === 'adset') {
-          await adminSupabase.from('ads').delete().eq('ad_set_id', id).eq('ad_account_id', ad_account_id)
+          await admin.from('ads').delete().eq('ad_set_id', id).eq('ad_account_id', ad_account_id)
         }
         results.push({ id, action: 'delete' })
 
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
         let metaTargetId = id
 
         if (level === 'adset') {
-          const { data: adSet } = await adminSupabase
+          const { data: adSet } = await admin
             .from('ad_sets').select('campaign_id').eq('ad_set_id', id).eq('ad_account_id', ad_account_id).single()
           if (adSet?.campaign_id) {
             const campaignRes = await fetch(`${GRAPH_API}/${adSet.campaign_id}?fields=is_adset_budget_sharing_enabled,daily_budget,lifetime_budget&access_token=${accessToken}`)
@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
         const localTableBudget = metaTargetId !== id ? 'campaigns' : localTable
         const localIdFieldBudget = metaTargetId !== id ? 'campaign_id' : localIdField
 
-        const { data: currentItem } = await adminSupabase
+        const { data: currentItem } = await admin
           .from(localTableBudget).select('daily_budget,lifetime_budget').eq(localIdFieldBudget, metaTargetId).eq('ad_account_id', ad_account_id).single()
 
         const currentBudget = Number(currentItem?.daily_budget || currentItem?.lifetime_budget || 0)
@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
           continue
         }
 
-        await adminSupabase.from(localTableBudget).update({ [budgetField]: newBudget, updated_at: new Date().toISOString() })
+        await admin.from(localTableBudget).update({ [budgetField]: newBudget, updated_at: new Date().toISOString() })
           .eq(localIdFieldBudget, metaTargetId).eq('ad_account_id', ad_account_id).eq('user_id', user.id)
 
         results.push({ id, action: 'budget', new_budget: newBudget, field: budgetField, applied_to: metaTargetId !== id ? 'campaign' : level })
@@ -197,7 +197,7 @@ export async function POST(req: NextRequest) {
           continue
         }
 
-        await adminSupabase.from(localTable).update({ status: metaStatus, effective_status: metaStatus, updated_at: new Date().toISOString() })
+        await admin.from(localTable).update({ status: metaStatus, effective_status: metaStatus, updated_at: new Date().toISOString() })
           .eq(localIdField, id).eq('ad_account_id', ad_account_id).eq('user_id', user.id)
 
         results.push({ id, status: metaStatus })

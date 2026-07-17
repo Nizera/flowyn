@@ -116,10 +116,10 @@ export async function POST(req: NextRequest) {
 
     const supabase = createAdminClient()
     const { data: allowed } = await supabase.rpc('consume_rate_limit', {
-      p_user_id: user_id,
-      p_action: 'data_deletion',
-      p_max: 5,
-      p_window_seconds: 3600,
+      requested_bucket: `data_deletion:${user_id}`,
+      requested_identifier_hash: user_id,
+      max_requests: 5,
+      window_seconds: 3600,
     })
     if (!allowed) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })

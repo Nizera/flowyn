@@ -380,11 +380,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 })
   }
 
-  const { data: allowed, error: rlErr } = await supabase.rpc('consume_rate_limit', {
-    p_user_id: user.id,
-    p_action: 'meta_duplicate',
-    p_max: 5,
-    p_window_seconds: 60,
+  const admin = createAdminClient()
+  const { data: allowed, error: rlErr } = await admin.rpc('consume_rate_limit', {
+    requested_bucket: `meta_duplicate:${user.id}`,
+    requested_identifier_hash: source_campaign_id,
+    max_requests: 5,
+    window_seconds: 60,
   })
   if (rlErr || !allowed) {
     return NextResponse.json({ error: 'Rate limit exceeded. Try again later.' }, { status: 429 })

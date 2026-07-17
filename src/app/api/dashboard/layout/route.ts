@@ -27,12 +27,28 @@ export async function PUT(req: NextRequest) {
   const body = JSON.parse(rawBody)
   const { layout, visible_widgets } = body
 
+  if (layout !== undefined && (!Array.isArray(layout) || layout.length > 50)) {
+    return NextResponse.json({ error: 'Invalid layout' }, { status: 400 })
+  }
+  if (visible_widgets !== undefined && (!Array.isArray(visible_widgets) || visible_widgets.length > 50)) {
+    return NextResponse.json({ error: 'Invalid visible_widgets' }, { status: 400 })
+  }
+
+  const safeLayout = Array.isArray(layout) ? layout.map((w: Record<string, unknown>) => ({
+    i: typeof w.i === 'string' ? w.i.slice(0, 100) : '',
+    x: typeof w.x === 'number' ? w.x : 0,
+    y: typeof w.y === 'number' ? w.y : 0,
+    w: typeof w.w === 'number' ? w.w : 1,
+    h: typeof w.h === 'number' ? w.h : 1,
+  })) : []
+  const safeWidgets = Array.isArray(visible_widgets) ? visible_widgets.filter((w: unknown) => typeof w === 'string').map((w: string) => w.slice(0, 100)) : []
+
   const { error } = await supabase
     .from('dashboard_layouts')
     .upsert({
       user_id: user.id,
-      layout: layout || [],
-      visible_widgets: visible_widgets || [],
+      layout: safeLayout,
+      visible_widgets: safeWidgets,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' })
 

@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/utils/supabase/admin'
 import { decryptApiKey } from '@/lib/encryption'
+import crypto from 'crypto'
 
 const META_GRAPH_API = 'https://graph.facebook.com/v21.0'
 const ACCESS_TOKEN = process.env.META_CAPI_ACCESS_TOKEN || ''
@@ -21,7 +22,6 @@ export interface CapiOrderData {
 }
 
 function sha256(data: string): string {
-  const crypto = require('crypto')
   return crypto.createHash('sha256').update(data.toLowerCase().trim()).digest('hex')
 }
 

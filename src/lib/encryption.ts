@@ -29,6 +29,7 @@ export function encryptApiKey(plaintext: string): string {
 
 export function decryptApiKey(value: string): string {
   if (!value.startsWith(ENCRYPTED_PREFIX)) {
+    console.warn('[Encryption] Value not encrypted (missing enc: prefix). This is a security risk.')
     return value
   }
 
