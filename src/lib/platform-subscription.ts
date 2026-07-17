@@ -101,7 +101,7 @@ export async function processPlatformSubscriptionPayment(eventType: string, paym
         let referralId: string | null = null
         const { data: existingReferral } = await admin
           .from('referrals')
-          .select('id, first_payment_at')
+          .select('id')
           .eq('referrer_id', userProfile.referred_by)
           .eq('referred_id', subscription.user_id)
           .maybeSingle()
@@ -121,26 +121,23 @@ export async function processPlatformSubscriptionPayment(eventType: string, paym
           if (newReferral) referralId = newReferral.id
         }
 
-        // Create commission only on first payment (one-time)
-        if (referralId && !existingReferral?.first_payment_at) {
+        // Create commission on EVERY payment (recurring 20%)
+        // UNIQUE(payment_id) prevents duplicates
+        if (referralId && paymentId) {
           const paidValue = Number(payment.value) || 97
           const commissionAmount = Math.round(paidValue * 20) / 100
 
           if (commissionAmount > 0) {
-            await admin.from('referral_commissions').insert({
+            const { error: commissionError } = await admin.from('referral_commissions').insert({
               referral_id: referralId,
-              payment_id: subscription.id,
+              payment_id: paymentId,
               amount: commissionAmount,
               status: 'pending',
             })
 
-            await admin
-              .from('referrals')
-              .update({ first_payment_at: now.toISOString() })
-              .eq('id', referralId)
-              .is('first_payment_at', null)
-
-            console.log(`[Referral] Platform subscription commission: R$${commissionAmount} for referral ${referralId}`)
+            if (!commissionError) {
+              console.log(`[Referral] Commission R$${commissionAmount} for payment ${paymentId}`)
+            }
           }
         }
       }
@@ -172,12 +169,14 @@ export async function processPlatformSubscriptionPayment(eventType: string, paym
       .update({ plan: 'free', updated_at: now.toISOString() })
       .eq('id', subscription.user_id)
 
-    // Cancel any pending referral commission for this subscription
-    await admin
-      .from('referral_commissions')
-      .update({ status: 'cancelled' })
-      .eq('payment_id', subscription.id)
-      .eq('status', 'pending')
+    // Cancel pending referral commission for this specific payment
+    if (paymentId) {
+      await admin
+        .from('referral_commissions')
+        .update({ status: 'cancelled' })
+        .eq('payment_id', paymentId)
+        .eq('status', 'pending')
+    }
   }
 
   return true
