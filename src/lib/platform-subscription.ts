@@ -88,7 +88,8 @@ export async function processPlatformSubscriptionPayment(eventType: string, paym
       .update({ plan: 'pro', updated_at: now.toISOString() })
       .eq('id', subscription.user_id)
 
-    // ── Referral commission: 20% of net value (R$97), one-time per referral ──
+    // ── Referral tracking: log payment for referral stats ──
+    // Split is handled at subscription creation time by Asaas (20% to referrer wallet)
     try {
       const { data: userProfile } = await admin
         .from('profiles')
@@ -97,7 +98,7 @@ export async function processPlatformSubscriptionPayment(eventType: string, paym
         .maybeSingle()
 
       if (userProfile?.referred_by) {
-        // Find or create referral record
+        // Ensure referral record exists for tracking
         let referralId: string | null = null
         const { data: existingReferral } = await admin
           .from('referrals')
@@ -121,28 +122,23 @@ export async function processPlatformSubscriptionPayment(eventType: string, paym
           if (newReferral) referralId = newReferral.id
         }
 
-        // Create commission on EVERY payment (recurring 20%)
-        // UNIQUE(payment_id) prevents duplicates
+        // Log commission as 'split' (paid automatically by Asaas split, not manual withdrawal)
         if (referralId && paymentId) {
           const paidValue = Number(payment.value) || 97
           const commissionAmount = Math.round(paidValue * 20) / 100
 
           if (commissionAmount > 0) {
-            const { error: commissionError } = await admin.from('referral_commissions').insert({
+            await admin.from('referral_commissions').insert({
               referral_id: referralId,
               payment_id: paymentId,
               amount: commissionAmount,
-              status: 'pending',
-            })
-
-            if (!commissionError) {
-              console.log(`[Referral] Commission R$${commissionAmount} for payment ${paymentId}`)
-            }
+              status: 'split',
+            }).then(() => {}, () => {}) // ignore duplicate errors
           }
         }
       }
     } catch (referralError) {
-      console.error('[Referral] Commission error (non-blocking):', referralError)
+      console.error('[Referral] Tracking error (non-blocking):', referralError)
     }
   } else if (FAILED_EVENTS.has(eventType)) {
     await admin

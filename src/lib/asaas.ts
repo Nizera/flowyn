@@ -216,6 +216,7 @@ export async function createCreditCardSubscription(
     creditCard: AsaasCreditCardPayload
     creditCardHolderInfo: AsaasCreditCardHolderInfo
     remoteIp: string
+    split?: Array<{ walletId: string; percentualValue: number }>
   },
   apiKey: string
 ) {

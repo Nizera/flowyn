@@ -261,13 +261,13 @@ export default function ReferralsPage() {
                     </td>
                     <td className="px-6 py-3">
                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        c.status === 'paid'
+                        c.status === 'paid' || c.status === 'split'
                           ? 'bg-emerald-50 text-emerald-700'
                           : c.status === 'pending'
                             ? 'bg-amber-50 text-amber-700'
                             : 'bg-red-50 text-red-700'
                       }`}>
-                        {c.status === 'paid' ? 'Pago' : c.status === 'pending' ? 'Pendente' : 'Cancelado'}
+                        {c.status === 'paid' ? 'Pago' : c.status === 'split' ? 'Split' : c.status === 'pending' ? 'Pendente' : 'Cancelado'}
                       </span>
                     </td>
                   </tr>

@@ -5,6 +5,7 @@ import {
   cancelSubscription,
   createCreditCardSubscription,
   createCustomer,
+  createSubaccount,
   onlyDigits,
 } from '@/lib/asaas'
 import { isValidCardExpiry, isValidCpfCnpj, isValidEmail, isValidPhone, isValidCardNumber, isValidCvv, isValidPostalCode } from '@/lib/validation'
@@ -161,6 +162,60 @@ export async function POST(req: NextRequest) {
 
   const trialEndsAt = localSubscription.trial_ends_at as string | null
   const nextDueDate = isoDate(isFuture(trialEndsAt) ? trialEndsAt : new Date().toISOString())
+
+  // ── Referral split: 20% to referrer's Asaas wallet ──
+  let split: Array<{ walletId: string; percentualValue: number }> | undefined
+  try {
+    const { data: subscriberProfile } = await admin
+      .from('profiles')
+      .select('referred_by')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (subscriberProfile?.referred_by) {
+      const { data: referrer } = await admin
+        .from('profiles')
+        .select('id, full_name, email, document_number, asaas_wallet_id, asaas_account_id')
+        .eq('id', subscriberProfile.referred_by)
+        .maybeSingle()
+
+      if (referrer) {
+        let walletId = referrer.asaas_wallet_id
+
+        // Create subaccount if referrer doesn't have one
+        if (!walletId && referrer.email && referrer.document_number) {
+          try {
+            const subaccount = await createSubaccount({
+              name: referrer.full_name || referrer.email,
+              email: referrer.email,
+              cpfCnpj: referrer.document_number.replace(/\D/g, ''),
+            })
+            walletId = subaccount.walletId
+            // Save wallet and account IDs
+            await admin
+              .from('profiles')
+              .update({
+                asaas_wallet_id: walletId,
+                asaas_account_id: subaccount.id,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', referrer.id)
+          } catch (subaccountError) {
+            console.error('[Platform Subscription] Failed to create referrer subaccount:', subaccountError)
+          }
+        }
+
+        if (walletId) {
+          split = [
+            { walletId, percentualValue: 20 },
+          ]
+        }
+      }
+    }
+  } catch (splitError) {
+    console.error('[Platform Subscription] Split lookup error (non-blocking):', splitError)
+  }
+
   const asaasSubscription = await createCreditCardSubscription({
     customer: customer.id,
     billingType: 'CREDIT_CARD',
@@ -186,6 +241,7 @@ export async function POST(req: NextRequest) {
       mobilePhone: phone,
     },
     remoteIp: getClientIp(req),
+    ...(split ? { split } : {}),
   }, apiKey)
 
   const nextStatus = isFuture(trialEndsAt) ? 'scheduled' : 'active'

@@ -45,7 +45,7 @@ export async function GET() {
   }
 
   const totalCommission = commissions.reduce((sum, c) => sum + Number(c.amount), 0)
-  const paidCommission = commissions.filter(c => c.status === 'paid').reduce((sum, c) => sum + Number(c.amount), 0)
+  const paidCommission = commissions.filter(c => c.status === 'paid' || c.status === 'split').reduce((sum, c) => sum + Number(c.amount), 0)
   const pendingCommission = commissions.filter(c => c.status === 'pending').reduce((sum, c) => sum + Number(c.amount), 0)
 
   return NextResponse.json({
