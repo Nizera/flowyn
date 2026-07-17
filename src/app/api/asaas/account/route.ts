@@ -75,10 +75,16 @@ export async function GET() {
 
   // Auto-fetch walletId for standalone connections that are missing it
   if (connectionMode === 'standalone' && isConnected && !paymentAccount?.wallet_id && !(profile as Profile).asaas_wallet_id) {
+    console.log('[Asaas Account] Auto-fetching walletId for standalone connection')
+    console.log('[Asaas Account] paymentAccount keys:', Object.keys(paymentAccount || {}))
+    console.log('[Asaas Account] has api_key:', Boolean(paymentAccount?.api_key))
     try {
       const decryptedKey = decryptApiKey(paymentAccount!.api_key!)
+      console.log('[Asaas Account] Calling retrieveAccountInfo...')
       const accountInfo = await retrieveAccountInfo(decryptedKey)
+      console.log('[Asaas Account] accountInfo:', JSON.stringify(accountInfo))
       if (accountInfo.walletId) {
+        console.log('[Asaas Account] Found walletId:', accountInfo.walletId)
         await admin
           .from('payment_accounts')
           .update({ wallet_id: accountInfo.walletId, updated_at: new Date().toISOString() })
@@ -90,9 +96,12 @@ export async function GET() {
           .eq('id', user.id)
         // Update local vars for response
         ;(paymentAccount as Record<string, unknown>).wallet_id = accountInfo.walletId
+        console.log('[Asaas Account] walletId saved successfully')
+      } else {
+        console.warn('[Asaas Account] accountInfo.walletId is empty/null')
       }
     } catch (err) {
-      console.warn('[Asaas Account] Could not auto-fetch walletId:', err)
+      console.error('[Asaas Account] Auto-fetch walletId failed:', err)
     }
   }
 
