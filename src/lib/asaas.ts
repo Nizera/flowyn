@@ -412,3 +412,25 @@ export async function createPixAutomaticCharge(
     body: payload,
   })
 }
+
+export async function createTransfer(
+  payload: {
+    value: number
+    walletId?: string
+    pixAddressKey?: string
+    pixAddressKeyType?: 'CPF' | 'CNPJ' | 'EMAIL' | 'PHONE' | 'EVP'
+    description?: string
+    externalReference?: string
+  },
+  apiKey?: string
+) {
+  return asaasRequest<{
+    id: string
+    status: string
+    value: number
+  }>('/transfers', {
+    apiKey,
+    method: 'POST',
+    body: payload,
+  })
+}

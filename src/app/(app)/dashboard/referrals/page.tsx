@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Copy, Users, DollarSign, Clock, CheckCircle } from 'lucide-react'
+import { Copy, Users, DollarSign, Clock, CheckCircle, ArrowDownToLine } from 'lucide-react'
 
 type ReferralStats = {
   total_referred: number
@@ -42,6 +42,8 @@ export default function ReferralsPage() {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [withdrawing, setWithdrawing] = useState(false)
+  const [withdrawResult, setWithdrawResult] = useState<{ success?: boolean; error?: string; amount?: number } | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -80,6 +82,25 @@ export default function ReferralsPage() {
     navigator.clipboard.writeText(url)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  async function handleWithdraw() {
+    setWithdrawing(true)
+    setWithdrawResult(null)
+    try {
+      const res = await fetch('/api/referrals/withdraw', { method: 'POST' })
+      const json = await res.json()
+      if (json.success) {
+        setWithdrawResult({ success: true, amount: json.amount })
+        fetchData()
+      } else {
+        setWithdrawResult({ error: json.error || 'Erro ao sacar.' })
+      }
+    } catch {
+      setWithdrawResult({ error: 'Erro de conexão.' })
+    } finally {
+      setWithdrawing(false)
+    }
   }
 
   if (loading) {
@@ -143,6 +164,46 @@ export default function ReferralsPage() {
         <StatCard icon={CheckCircle} label="Pago" value={currency(data?.stats.paid_commission ?? 0)} />
         <StatCard icon={Clock} label="Pendente" value={currency(data?.stats.pending_commission ?? 0)} />
       </div>
+
+      {/* Withdraw Section */}
+      {data?.stats.pending_commission != null && data.stats.pending_commission > 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Sacar Comissões</h2>
+              <p className="mt-1 text-lg font-bold text-slate-900">{currency(data.stats.pending_commission)}</p>
+              <p className="text-xs text-slate-400">Transferência via Pix para seu CPF/CNPJ</p>
+            </div>
+            <button
+              onClick={handleWithdraw}
+              disabled={withdrawing}
+              className="flex items-center gap-2 rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:opacity-50"
+            >
+              {withdrawing ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Transferindo...
+                </>
+              ) : (
+                <>
+                  <ArrowDownToLine className="h-4 w-4" />
+                  Sacar
+                </>
+              )}
+            </button>
+          </div>
+          {withdrawResult?.success && (
+            <p className="mt-3 rounded-lg bg-green-50 px-4 py-2 text-sm text-green-700">
+              {currency(withdrawResult.amount!)} transferido com sucesso!
+            </p>
+          )}
+          {withdrawResult?.error && (
+            <p className="mt-3 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">
+              {withdrawResult.error}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Commissions Table */}
       {data?.commissions && data.commissions.length > 0 && (
