@@ -40,7 +40,9 @@ function currency(value: number) {
 export default function ReferralsPage() {
   const [data, setData] = useState<ReferralData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
+  const [generateError, setGenerateError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [withdrawing, setWithdrawing] = useState(false)
   const [withdrawResult, setWithdrawResult] = useState<{ success?: boolean; error?: string; amount?: number } | null>(null)
@@ -52,10 +54,14 @@ export default function ReferralsPage() {
   async function fetchData() {
     try {
       const res = await fetch('/api/referrals/dashboard')
+      if (!res.ok) {
+        setLoadError('Erro ao carregar dados.')
+        return
+      }
       const json = await res.json()
       setData(json)
-    } catch (err) {
-      console.error('Failed to load referral data:', err)
+    } catch {
+      setLoadError('Erro de conexão.')
     } finally {
       setLoading(false)
     }
@@ -63,14 +69,20 @@ export default function ReferralsPage() {
 
   async function generateCode() {
     setGenerating(true)
+    setGenerateError(null)
     try {
       const res = await fetch('/api/referrals/track', { method: 'POST' })
+      if (!res.ok) {
+        const json = await res.json()
+        setGenerateError(json.error || 'Erro ao gerar código.')
+        return
+      }
       const json = await res.json()
       if (json.code) {
         setData(prev => prev ? { ...prev, code: json.code } : null)
       }
-    } catch (err) {
-      console.error('Failed to generate code:', err)
+    } catch {
+      setGenerateError('Erro de conexão.')
     } finally {
       setGenerating(false)
     }
@@ -85,6 +97,12 @@ export default function ReferralsPage() {
   }
 
   async function handleWithdraw() {
+    if (!data?.stats.pending_commission) return
+    const confirmed = window.confirm(
+      `Confirmar saque de ${currency(data.stats.pending_commission)}?\n\nA transferência será feita via Pix para seu CPF/CNPJ.`
+    )
+    if (!confirmed) return
+
     setWithdrawing(true)
     setWithdrawResult(null)
     try {
@@ -111,6 +129,15 @@ export default function ReferralsPage() {
     )
   }
 
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-20 text-center">
+        <p className="text-sm text-red-600">{loadError}</p>
+        <button onClick={fetchData} className="mt-4 text-sm font-medium text-orange-600 hover:underline">Tentar novamente</button>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-8 px-4 py-8">
       <div>
@@ -127,6 +154,9 @@ export default function ReferralsPage() {
         {!data?.code ? (
           <div className="text-center">
             <p className="mb-4 text-sm text-slate-500">Você ainda não gerou um código de indicação.</p>
+            {generateError && (
+              <p className="mb-3 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{generateError}</p>
+            )}
             <button
               onClick={generateCode}
               disabled={generating}

@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS public.referral_commissions (
   referral_id UUID NOT NULL REFERENCES public.referrals(id),
   payment_id UUID NOT NULL REFERENCES public.orders(id),
   amount NUMERIC NOT NULL CHECK (amount >= 0),
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'cancelled')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'withdrawing', 'paid', 'cancelled')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   paid_at TIMESTAMPTZ,
   UNIQUE (payment_id)

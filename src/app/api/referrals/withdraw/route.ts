@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { createTransfer } from '@/lib/asaas'
-import { decryptApiKey } from '@/lib/encryption'
+
+const MIN_WITHDRAWAL = 10
 
 export async function POST() {
   const supabase = await createClient()
@@ -14,7 +15,7 @@ export async function POST() {
   // Get referrer profile
   const { data: profile } = await admin
     .from('profiles')
-    .select('id, document_number, asaas_wallet_id, asaas_api_key, asaas_account_id')
+    .select('id, full_name, document_number')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -53,8 +54,8 @@ export async function POST() {
   }
 
   const totalPending = pendingCommissions.reduce((sum, c) => sum + Number(c.amount), 0)
-  if (totalPending <= 0) {
-    return NextResponse.json({ error: 'Valor insuficiente para saque.' }, { status: 400 })
+  if (totalPending < MIN_WITHDRAWAL) {
+    return NextResponse.json({ error: `Valor mínimo para saque: R$ ${MIN_WITHDRAWAL},00.` }, { status: 400 })
   }
 
   // Need CPF/CNPJ for Pix transfer
@@ -63,28 +64,49 @@ export async function POST() {
     return NextResponse.json({ error: 'CPF/CNPJ não encontrado no perfil. Atualize seus dados em Minha Conta.' }, { status: 400 })
   }
 
+  // Atomically mark commissions as 'withdrawing' to prevent double withdrawal
+  const commissionIds = pendingCommissions.map(c => c.id)
+  const { data: lockedCommissions, error: lockError } = await admin
+    .from('referral_commissions')
+    .update({ status: 'withdrawing' })
+    .in('id', commissionIds)
+    .eq('status', 'pending')
+    .select('id, amount')
+
+  if (lockError || !lockedCommissions || lockedCommissions.length === 0) {
+    return NextResponse.json({ error: 'Não foi possível processar o saque. Tente novamente.' }, { status: 409 })
+  }
+
+  // Use only the commissions we actually locked (handles partial lock)
+  const lockedIds = lockedCommissions.map(c => c.id)
+  const lockedTotal = lockedCommissions.reduce((sum, c) => sum + Number(c.amount), 0)
+
   // Get platform API key for Asaas transfers
   const platformApiKey = process.env.ASAAS_API_KEY
   if (!platformApiKey) {
+    // Rollback: revert locked commissions to pending
+    await admin
+      .from('referral_commissions')
+      .update({ status: 'pending' })
+      .in('id', lockedIds)
     return NextResponse.json({ error: 'Sistema de pagamento indisponível.' }, { status: 500 })
   }
 
   try {
-    // Transfer via Pix using CPF as key
     const transfer = await createTransfer({
-      value: totalPending,
+      value: lockedTotal,
       pixAddressKey: documentNumber,
       pixAddressKeyType: documentNumber.length === 11 ? 'CPF' : 'CNPJ',
-      description: `Comissão de indicação - Flowyn`,
-      externalReference: `referral-withdrawal-${user.id}-${Date.now()}`,
+      description: `Comissão indicação Flowyn - ${profile.full_name || user.id}`,
+      externalReference: `ref-${user.id.slice(0, 8)}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     }, platformApiKey)
 
     // Mark commissions as paid
-    const commissionIds = pendingCommissions.map(c => c.id)
     await admin
       .from('referral_commissions')
       .update({ status: 'paid', paid_at: new Date().toISOString() })
-      .in('id', commissionIds)
+      .in('id', lockedIds)
+      .eq('status', 'withdrawing')
 
     // Audit log
     await admin.from('security_audit_log').insert({
@@ -93,20 +115,25 @@ export async function POST() {
       entity_type: 'referral_commission',
       entity_id: user.id,
       metadata: {
-        amount: totalPending,
-        commission_count: commissionIds.length,
+        amount: lockedTotal,
+        commission_count: lockedIds.length,
         transfer_id: transfer.id,
       },
     })
 
     return NextResponse.json({
       success: true,
-      amount: totalPending,
+      amount: lockedTotal,
       transfer_id: transfer.id,
     })
   } catch (transferError) {
     console.error('[Referral] Transfer error:', transferError)
-    const message = transferError instanceof Error ? transferError.message : 'Erro ao transferir.'
-    return NextResponse.json({ error: `Falha na transferência: ${message}` }, { status: 500 })
+    // Rollback: revert locked commissions to pending
+    await admin
+      .from('referral_commissions')
+      .update({ status: 'pending' })
+      .in('id', lockedIds)
+      .eq('status', 'withdrawing')
+    return NextResponse.json({ error: 'Falha na transferência. Tente novamente.' }, { status: 500 })
   }
 }
