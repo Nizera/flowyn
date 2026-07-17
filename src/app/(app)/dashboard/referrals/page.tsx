@@ -76,7 +76,7 @@ export default function ReferralsPage() {
 
   function copyCode() {
     if (!data?.code) return
-    const url = `${window.location.origin}/checkout?ref=${data.code}`
+    const url = `${window.location.origin}/register?ref=${data.code}`
     navigator.clipboard.writeText(url)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -131,7 +131,7 @@ export default function ReferralsPage() {
 
         {data?.code && (
           <p className="mt-3 text-xs text-slate-400">
-            Compartilhe: <span className="text-slate-600">{typeof window !== 'undefined' ? window.location.origin : ''}/checkout?ref={data.code}</span>
+            Compartilhe: <span className="text-slate-600">{typeof window !== 'undefined' ? window.location.origin : ''}/register?ref={data.code}</span>
           </p>
         )}
       </div>

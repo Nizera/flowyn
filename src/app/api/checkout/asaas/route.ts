@@ -101,7 +101,6 @@ export async function POST(req: NextRequest) {
     const addOrderBump = Boolean(body.add_order_bump)
     const billingType = String(body.billing_type || 'CREDIT_CARD')
     const trackingParams = body.tracking_params as Record<string, string> | undefined
-    const referralCodeParam = String(body.referral_code || '').trim() || null
 
     if (trackingParams) {
       const keys = Object.keys(trackingParams)
@@ -250,55 +249,12 @@ export async function POST(req: NextRequest) {
 
     const asaasCustomer = await createCustomer(customerPayload, asaasApiKey)
 
-    // ── Referral resolution ──
-    let resolvedReferralId: string | null = null
-    if (referralCodeParam) {
-      const { data: referrerProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('referral_code', referralCodeParam)
-        .maybeSingle()
-
-      if (referrerProfile && referrerProfile.id !== product.owner_id) {
-        // Find or create customer auth user to get referred_id
-        const { data: customerUser } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-        const matchedUser = customerUser?.users?.find(u => u.email?.toLowerCase() === customerEmail.toLowerCase())
-        const referredId = matchedUser?.id ?? null
-
-        if (referredId && referredId !== referrerProfile.id) {
-          const { data: existingReferral } = await supabase
-            .from('referrals')
-            .select('id')
-            .eq('referral_code', referralCodeParam)
-            .eq('referred_id', referredId)
-            .maybeSingle()
-
-          if (!existingReferral) {
-            const { data: newReferral } = await supabase
-              .from('referrals')
-              .insert({
-                referral_code: referralCodeParam,
-                referrer_id: referrerProfile.id,
-                referred_id: referredId,
-              })
-              .select('id')
-              .single()
-
-            if (newReferral) resolvedReferralId = newReferral.id
-          } else {
-            resolvedReferralId = existingReferral.id
-          }
-        }
-      }
-    }
-
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
         product_id: product.id,
         plan_id: plan.id,
         affiliate_id: null,
-        referral_id: resolvedReferralId,
         customer_name: firstName(customerName),
         customer_email: maskEmail(customerEmail),
         amount: totalAmount,

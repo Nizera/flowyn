@@ -13,9 +13,10 @@ interface ClientAuthPanelProps {
   initialType?: string
   initialSuccess?: string
   redirectTo?: string
+  referralCode?: string | null
 }
 
-export function ClientAuthPanel({ initialError, initialType, initialSuccess, redirectTo = '/dashboard' }: ClientAuthPanelProps) {
+export function ClientAuthPanel({ initialError, initialType, initialSuccess, redirectTo = '/dashboard', referralCode }: ClientAuthPanelProps) {
   const router = useRouter()
   const [isLogin, setIsLogin] = useState(initialType !== 'register')
   const [error, setError] = useState(initialError || '')
@@ -71,7 +72,13 @@ export function ClientAuthPanel({ initialError, initialType, initialSuccess, red
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name, role: 'producer' } },
+      options: {
+        data: {
+          full_name,
+          role: 'producer',
+          ...(referralCode ? { referral_code: referralCode } : {}),
+        },
+      },
     })
 
     setPending(false)
