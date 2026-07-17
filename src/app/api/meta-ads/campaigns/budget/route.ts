@@ -4,6 +4,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { getDecryptedToken } from '@/lib/meta-oauth'
 import { requireProPlan } from '@/lib/subscription'
 import { GRAPH_API } from '@/lib/meta-graph-api'
+import { isValidMetaId } from '@/lib/auto-rules'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -19,6 +20,20 @@ export async function POST(req: NextRequest) {
 
   if (!id || !ad_account_id || !level) {
     return NextResponse.json({ error: 'id, ad_account_id, level required' }, { status: 400 })
+  }
+
+  if (!isValidMetaId(id) || !isValidMetaId(ad_account_id)) {
+    return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 })
+  }
+
+  const { data: allowed, error: rlErr } = await supabase.rpc('consume_rate_limit', {
+    p_user_id: user.id,
+    p_action: 'meta_budget',
+    p_max: 20,
+    p_window_seconds: 60,
+  })
+  if (rlErr || !allowed) {
+    return NextResponse.json({ error: 'Rate limit exceeded. Try again later.' }, { status: 429 })
   }
 
   if (!['campaign', 'adset'].includes(level)) {
@@ -94,6 +109,7 @@ export async function POST(req: NextRequest) {
       lifetime_budget,
     })
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Internal server error' }, { status: 500 })
+    console.error('[Meta Budget] Error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

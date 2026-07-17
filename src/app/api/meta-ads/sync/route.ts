@@ -37,7 +37,11 @@ export async function POST(req: NextRequest) {
     }, { status: 429 })
   }
 
-  const body = await req.json()
+  const rawBody = await req.text()
+  if (rawBody.length > 4096) {
+    return NextResponse.json({ error: 'Request too large' }, { status: 413 })
+  }
+  const body = JSON.parse(rawBody)
   const { ad_account_id } = body
 
   if (!ad_account_id) {
@@ -157,8 +161,9 @@ export async function POST(req: NextRequest) {
         account_util_pct: metaRateLimitInfo.acc_id_util_pct,
       } : null,
     })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  } catch (err) {
+    console.error('[Meta Sync] Error:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -177,7 +182,11 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Subscription required' }, { status: 403 })
   }
 
-  const body = await req.json()
+  const rawBody = await req.text()
+  if (rawBody.length > 4096) {
+    return NextResponse.json({ error: 'Request too large' }, { status: 413 })
+  }
+  const body = JSON.parse(rawBody)
   const { ad_account_id, sync_enabled } = body
 
   if (!ad_account_id || sync_enabled === undefined) {
@@ -191,7 +200,8 @@ export async function PATCH(req: NextRequest) {
     .eq('user_id', user.id)
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[Meta Sync PATCH] Error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 
   return NextResponse.json({ success: true, sync_enabled })

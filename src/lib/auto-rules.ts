@@ -4,6 +4,25 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 import { GRAPH_API } from '@/lib/meta-graph-api'
 
+const PRIVATE_IP_RE = /^(localhost|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+|0\.\d+\.\d+\.\d+|169\.254\.\d+\.\d+|::1|fc[0-9a-f]{2}:|fd[0-9a-f]{2}:|fe80:)/i
+
+export function isAllowedWebhookUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    if (!['https:', 'http:'].includes(parsed.protocol)) return false
+    if (PRIVATE_IP_RE.test(parsed.hostname)) return false
+    return true
+  } catch { return false }
+}
+
+export function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
+export function isValidMetaId(id: string): boolean {
+  return /^[a-zA-Z0-9_]+$/.test(id)
+}
+
 export type RuleMetric = 'roas' | 'spend' | 'cpa' | 'ctr' | 'cpc' | 'conversions' | 'purchase_value' | 'impressions' | 'cpm'
 export type RuleOperator = 'lt' | 'lte' | 'gt' | 'gte' | 'eq'
 export type RuleAction = 'pause' | 'resume' | 'increase_budget' | 'decrease_budget' | 'notify'
@@ -295,6 +314,11 @@ export async function sendWebhook(
   webhookSecret: string | null,
   payload: Record<string, unknown>
 ): Promise<boolean> {
+  if (!isAllowedWebhookUrl(webhookUrl)) {
+    console.error('[AutoRules] Webhook blocked: URL failed SSRF validation')
+    return false
+  }
+
   try {
     const body = JSON.stringify(payload)
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -337,13 +361,13 @@ export async function sendRuleEmail(
   const recipientEmail = profile?.email
   if (!recipientEmail) return false
 
-  const subject = `[FlowynPay] Regra "${rule.name}" disparou`
+  const subject = `[FlowynPay] Regra "${escapeHtml(rule.name)}" disparou`
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
       <h2 style="color:#1e293b;">Regra Automatizada Disparou</h2>
       <div style="background:#f8fafc;border-radius:8px;padding:16px;margin:16px 0;">
-        <p style="margin:4px 0;"><strong>Regra:</strong> ${rule.name}</p>
-        <p style="margin:4px 0;"><strong>Entidade:</strong> ${entityName} (${rule.entity_level})</p>
+        <p style="margin:4px 0;"><strong>Regra:</strong> ${escapeHtml(rule.name)}</p>
+        <p style="margin:4px 0;"><strong>Entidade:</strong> ${escapeHtml(entityName)} (${escapeHtml(rule.entity_level)})</p>
         <p style="margin:4px 0;"><strong>Condicao:</strong> ${getMetricLabel(rule.condition_metric)} ${getOperatorLabel(rule.condition_operator)} ${rule.condition_value}</p>
         <p style="margin:4px 0;"><strong>Valor atual:</strong> ${actualValue.toFixed(2)}</p>
         <p style="margin:4px 0;"><strong>Acao tomada:</strong> ${getActionLabel(rule.action_type)}</p>

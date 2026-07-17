@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 
 export async function GET(req: NextRequest) {
   const html = `<!DOCTYPE html>
@@ -102,8 +103,27 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    const rawBody = await req.text()
+    if (rawBody.length > 4096) {
+      return NextResponse.json({ error: 'Request too large' }, { status: 413 })
+    }
+    const body = JSON.parse(rawBody)
     const { user_id } = body
+
+    if (!user_id || typeof user_id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user_id)) {
+      return NextResponse.json({ error: 'Invalid user_id' }, { status: 400 })
+    }
+
+    const supabase = createAdminClient()
+    const { data: allowed } = await supabase.rpc('consume_rate_limit', {
+      p_user_id: user_id,
+      p_action: 'data_deletion',
+      p_max: 5,
+      p_window_seconds: 3600,
+    })
+    if (!allowed) {
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
+    }
 
     console.log('[Data Deletion] Request received:', { user_id, timestamp: new Date().toISOString() })
 

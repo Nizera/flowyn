@@ -4,6 +4,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { getDecryptedToken } from '@/lib/meta-oauth'
 import { requireProPlan } from '@/lib/subscription'
 import { GRAPH_API } from '@/lib/meta-graph-api'
+import { isValidMetaId } from '@/lib/auto-rules'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -32,6 +33,20 @@ export async function POST(req: NextRequest) {
 
   if (!['campaign', 'adset', 'ad'].includes(level)) {
     return NextResponse.json({ error: 'level must be campaign, adset, or ad' }, { status: 400 })
+  }
+
+  if (!isValidMetaId(id) || !isValidMetaId(ad_account_id)) {
+    return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 })
+  }
+
+  const { data: allowed, error: rlErr } = await supabase.rpc('consume_rate_limit', {
+    p_user_id: user.id,
+    p_action: 'meta_toggle',
+    p_max: 30,
+    p_window_seconds: 60,
+  })
+  if (rlErr || !allowed) {
+    return NextResponse.json({ error: 'Rate limit exceeded. Try again later.' }, { status: 429 })
   }
 
   // Verify user owns this account
@@ -94,7 +109,8 @@ export async function POST(req: NextRequest) {
       .eq('user_id', user.id)
 
     return NextResponse.json({ success: true, id, status, level })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error) {
+    console.error('[Meta Toggle] Error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

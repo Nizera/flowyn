@@ -4,6 +4,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { getDecryptedToken } from '@/lib/meta-oauth'
 import { requireProPlan } from '@/lib/subscription'
 import { GRAPH_API } from '@/lib/meta-graph-api'
+import { isValidMetaId } from '@/lib/auto-rules'
 
 const API_BUDGET_PER_OP = 1000
 const HARD_CAP = 20
@@ -375,6 +376,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'source_campaign_id and source_ad_account_id required' }, { status: 400 })
   }
 
+  if (!isValidMetaId(source_campaign_id) || !isValidMetaId(source_ad_account_id) || (target_ad_account_id && !isValidMetaId(target_ad_account_id))) {
+    return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 })
+  }
+
+  const { data: allowed, error: rlErr } = await supabase.rpc('consume_rate_limit', {
+    p_user_id: user.id,
+    p_action: 'meta_duplicate',
+    p_max: 5,
+    p_window_seconds: 60,
+  })
+  if (rlErr || !allowed) {
+    return NextResponse.json({ error: 'Rate limit exceeded. Try again later.' }, { status: 429 })
+  }
+
   const finalTargetAccountId = target_ad_account_id || source_ad_account_id
 
   const sourceToken = await getDecryptedToken(source_ad_account_id, user.id)
@@ -441,7 +456,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, copies, results })
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error('[Meta Duplicate] Error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

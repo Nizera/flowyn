@@ -40,7 +40,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const body = await req.json()
+    const rawBody = await req.text()
+    if (rawBody.length > 16_384) {
+      return NextResponse.json({ error: 'Request too large' }, { status: 413 })
+    }
+    const body = JSON.parse(rawBody)
     const { ad_account_id, start_date, end_date } = body
 
     if (!ad_account_id || !start_date || !end_date) {
@@ -69,7 +73,8 @@ export async function POST(req: NextRequest) {
       .lte('date', end_date)
 
     if (insightsError) {
-      return NextResponse.json({ error: insightsError.message }, { status: 500 })
+      console.error('[Attribution] Insights error:', insightsError)
+      return NextResponse.json({ error: 'Failed to fetch insights' }, { status: 500 })
     }
 
     // 2. Fetch cost configurations
@@ -92,7 +97,8 @@ export async function POST(req: NextRequest) {
       .lte('created_at', end_date + 'T23:59:59')
 
     if (ordersError) {
-      return NextResponse.json({ error: ordersError.message }, { status: 500 })
+      console.error('[Attribution] Orders error:', ordersError)
+      return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
     }
 
     // 4. Build campaign attribution map
@@ -214,6 +220,7 @@ export async function POST(req: NextRequest) {
       }
     })
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Internal server error' }, { status: 500 })
+    console.error('[Attribution] Error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

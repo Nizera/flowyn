@@ -107,8 +107,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ campaigns: enrichedCampaigns })
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error('[Meta Campaigns GET] Error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -127,7 +127,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Subscription required' }, { status: 403 })
   }
 
-  const body = await req.json()
+  const rawBody = await req.text()
+  if (rawBody.length > 16_384) {
+    return NextResponse.json({ error: 'Request too large' }, { status: 413 })
+  }
+  const body = JSON.parse(rawBody)
   const { campaign_id, ad_account_id, status } = body
 
   if (!campaign_id || !ad_account_id || !status) {
@@ -179,7 +183,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, campaign_id, status })
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error('[Meta Campaigns POST] Error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
     .single()
 
   if (error && error.code !== 'PGRST116') {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[Cost Config] GET error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 
   return NextResponse.json({ 
@@ -37,7 +38,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const body = await req.json()
+  const rawBody = await req.text()
+  if (rawBody.length > 16_384) {
+    return NextResponse.json({ error: 'Request too large' }, { status: 413 })
+  }
+  const body = JSON.parse(rawBody)
   const { tax_percentage, asaas_flat_fee, asaas_percent_fee, product_costs } = body
 
   const { data, error } = await supabase
@@ -54,7 +59,8 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[Cost Config] POST error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 
   return NextResponse.json({ data })

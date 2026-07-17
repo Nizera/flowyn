@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { requireProPlan } from '@/lib/subscription'
+import { isAllowedWebhookUrl, isValidMetaId } from '@/lib/auto-rules'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -40,7 +41,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Subscription required' }, { status: 403 })
   }
 
-  const body = await req.json()
+  const rawBody = await req.text()
+  if (rawBody.length > 16_384) {
+    return NextResponse.json({ error: 'Request too large' }, { status: 413 })
+  }
+  const body = JSON.parse(rawBody)
   const {
     ad_account_id, name, entity_level, entity_ids,
     condition_metric, condition_operator, condition_value, condition_period,
@@ -50,6 +55,14 @@ export async function POST(req: NextRequest) {
 
   if (!ad_account_id || !name || !condition_metric || !condition_operator || condition_value == null || !action_type) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  }
+
+  if (!isValidMetaId(ad_account_id)) {
+    return NextResponse.json({ error: 'Invalid ad_account_id format' }, { status: 400 })
+  }
+
+  if (webhook_url && !isAllowedWebhookUrl(webhook_url)) {
+    return NextResponse.json({ error: 'Webhook URL not allowed (private/internal URLs blocked)' }, { status: 400 })
   }
 
   const validMetrics = ['roas', 'spend', 'cpa', 'ctr', 'cpc', 'conversions', 'purchase_value', 'impressions', 'cpm']

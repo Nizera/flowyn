@@ -20,7 +20,11 @@ export async function PUT(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await req.json()
+  const rawBody = await req.text()
+  if (rawBody.length > 16_384) {
+    return NextResponse.json({ error: 'Request too large' }, { status: 413 })
+  }
+  const body = JSON.parse(rawBody)
   const { layout, visible_widgets } = body
 
   const { error } = await supabase
@@ -32,6 +36,9 @@ export async function PUT(req: NextRequest) {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('[Dashboard Layout] PUT error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
   return NextResponse.json({ success: true })
 }

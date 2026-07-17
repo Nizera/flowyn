@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
 
   if (adAccountsError) {
     console.error('[Meta Sync Cron] Database error:', adAccountsError.message)
-    return NextResponse.json({ error: adAccountsError.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 
   if (!adAccounts || adAccounts.length === 0) {
@@ -111,8 +111,9 @@ export async function GET(req: NextRequest) {
       if (!budget.allowed) {
         break
       }
-    } catch (err: any) {
-      results.push({ account_id: account.ad_account_id, error: err.message })
+    } catch (err) {
+      console.error(`[Meta Sync Cron] Error syncing ${account.ad_account_id}:`, err)
+      results.push({ account_id: account.ad_account_id, error: 'Sync failed' })
     }
   }
 

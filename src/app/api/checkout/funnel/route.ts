@@ -3,7 +3,11 @@ import { createAdminClient } from '@/utils/supabase/admin'
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    const rawBody = await req.text()
+    if (rawBody.length > 16_384) {
+      return NextResponse.json({ error: 'Request too large' }, { status: 413 })
+    }
+    const body = JSON.parse(rawBody)
     const { plan_id, event_name, tracking_params } = body
 
     if (!plan_id || !event_name) {
@@ -49,12 +53,12 @@ export async function POST(req: NextRequest) {
 
     if (insertError) {
       console.error('Error inserting funnel event:', insertError)
-      return NextResponse.json({ error: insertError.message }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to record event' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error in funnel API:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

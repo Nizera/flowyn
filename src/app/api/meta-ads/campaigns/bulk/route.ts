@@ -4,6 +4,9 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { getDecryptedToken } from '@/lib/meta-oauth'
 import { requireProPlan } from '@/lib/subscription'
 import { GRAPH_API } from '@/lib/meta-graph-api'
+import { isValidMetaId } from '@/lib/auto-rules'
+
+const MAX_BULK_IDS = 50
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -19,11 +22,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Subscription required' }, { status: 403 })
   }
 
-  const body = await req.json()
+  const rawBody = await req.text()
+  if (rawBody.length > 65_536) {
+    return NextResponse.json({ error: 'Request too large' }, { status: 413 })
+  }
+  const body = JSON.parse(rawBody)
   const { ids, action, ad_account_id, level, budget_amount } = body
 
   if (!ids || !Array.isArray(ids) || ids.length === 0 || !action || !ad_account_id || !level) {
     return NextResponse.json({ error: 'ids[], action, ad_account_id, level required' }, { status: 400 })
+  }
+
+  if (ids.length > MAX_BULK_IDS) {
+    return NextResponse.json({ error: `Too many IDs. Maximum: ${MAX_BULK_IDS}` }, { status: 400 })
+  }
+
+  if (!isValidMetaId(ad_account_id) || !ids.every((id: string) => isValidMetaId(id))) {
+    return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 })
+  }
+
+  const { data: allowed, error: rlErr } = await supabase.rpc('consume_rate_limit', {
+    p_user_id: user.id,
+    p_action: 'meta_bulk',
+    p_max: 10,
+    p_window_seconds: 60,
+  })
+  if (rlErr || !allowed) {
+    return NextResponse.json({ error: 'Rate limit exceeded. Try again later.' }, { status: 429 })
   }
 
   if (!['pause', 'resume', 'delete', 'increase_budget', 'decrease_budget', 'set_budget'].includes(action)) {
@@ -177,8 +202,9 @@ export async function POST(req: NextRequest) {
 
         results.push({ id, status: metaStatus })
       }
-    } catch (err: any) {
-      errors.push(`${id}: ${err.message}`)
+    } catch (err) {
+      console.error(`[Meta Bulk] Error for ${id}:`, err)
+      errors.push(`${id}: operation failed`)
     }
   }
 

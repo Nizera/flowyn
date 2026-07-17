@@ -38,7 +38,11 @@ export async function POST(req: NextRequest) {
     }, { status: 429 })
   }
 
-  const body = await req.json()
+  const rawBody = await req.text()
+  if (rawBody.length > 4096) {
+    return NextResponse.json({ error: 'Request too large' }, { status: 413 })
+  }
+  const body = JSON.parse(rawBody)
   const { ad_account_id } = body
 
   if (!ad_account_id) {
@@ -116,8 +120,8 @@ export async function POST(req: NextRequest) {
         account_util_pct: parseMetaRateLimitHeader(syncResult.rateLimitHeader)?.acc_id_util_pct || 0,
       } : null,
     })
-  } catch (err: any) {
-    // Log failed sync
+  } catch (err) {
+    console.error('[Meta Sync Expanded] Error:', err)
     await supabase.from('sync_logs').insert({
       user_id: user.id,
       ad_account_id,
@@ -125,11 +129,11 @@ export async function POST(req: NextRequest) {
       status: 'failed',
       api_calls_made: 0,
       rows_synced: 0,
-      error_message: err.message?.slice(0, 500),
+      error_message: 'Internal server error',
       duration_ms: Date.now() - startTime,
       completed_at: new Date().toISOString(),
     })
 
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

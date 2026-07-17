@@ -24,7 +24,10 @@ export async function GET(request: NextRequest) {
 
   const now = Date.now()
   const { data: sessions, error } = await admin.from('mentorship_sessions').select('id, product_id, student_id, scheduled_at, meeting_url').eq('status', 'scheduled').not('student_id', 'is', null).gte('scheduled_at', new Date(now + 45 * 60 * 1000).toISOString()).lte('scheduled_at', new Date(now + 25 * 60 * 60 * 1000).toISOString())
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('[Mentorship Reminders] Database error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 
   let sent = 0
   for (const session of (sessions || []) as Session[]) {
