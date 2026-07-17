@@ -13,6 +13,7 @@ const FEATURES = [
   'Certificados automáticos',
   'Order bump nativo',
   'Upload de vídeos',
+  'Rastreamento nativo: Meta Pixel + UTMs',
 ]
 
 export default function PricingSection() {
@@ -42,7 +43,7 @@ export default function PricingSection() {
 
           {/* Price */}
           <div className="flex items-baseline justify-center gap-1 mb-4">
-            <span className="text-4xl md:text-5xl font-bold text-white">R$ 49</span>
+            <span className="text-4xl md:text-5xl font-bold text-white">R$ 97</span>
             <span className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>/mês</span>
           </div>
 
