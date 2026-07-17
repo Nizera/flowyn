@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { createSubaccount, listSubaccounts, onlyDigits, retrieveSubaccount, retrieveAccountInfo } from '@/lib/asaas'
+import { createSubaccount, listSubaccounts, onlyDigits, retrieveSubaccount, retrieveAccountInfo, retrieveWalletId } from '@/lib/asaas'
 import { isValidCpfCnpj, isValidEmail, isValidPhone } from '@/lib/validation'
 import { hashIdentifier } from '@/lib/hash'
 import { encryptApiKey, decryptApiKey } from '@/lib/encryption'
@@ -76,29 +76,24 @@ export async function GET() {
   // Auto-fetch walletId for standalone connections that are missing it
   if (connectionMode === 'standalone' && isConnected && !paymentAccount?.wallet_id && !(profile as Profile).asaas_wallet_id) {
     console.log('[Asaas Account] Auto-fetching walletId for standalone connection')
-    console.log('[Asaas Account] paymentAccount keys:', Object.keys(paymentAccount || {}))
-    console.log('[Asaas Account] has api_key:', Boolean(paymentAccount?.api_key))
     try {
       const decryptedKey = decryptApiKey(paymentAccount!.api_key!)
-      console.log('[Asaas Account] Calling retrieveAccountInfo...')
-      const accountInfo = await retrieveAccountInfo(decryptedKey)
-      console.log('[Asaas Account] accountInfo:', JSON.stringify(accountInfo))
-      if (accountInfo.walletId) {
-        console.log('[Asaas Account] Found walletId:', accountInfo.walletId)
+      const walletId = await retrieveWalletId(decryptedKey)
+      console.log('[Asaas Account] walletId from API:', walletId)
+      if (walletId) {
         await admin
           .from('payment_accounts')
-          .update({ wallet_id: accountInfo.walletId, updated_at: new Date().toISOString() })
+          .update({ wallet_id: walletId, updated_at: new Date().toISOString() })
           .eq('user_id', user.id)
           .eq('provider', 'asaas')
         await admin
           .from('profiles')
-          .update({ asaas_wallet_id: accountInfo.walletId, updated_at: new Date().toISOString() })
+          .update({ asaas_wallet_id: walletId, updated_at: new Date().toISOString() })
           .eq('id', user.id)
-        // Update local vars for response
-        ;(paymentAccount as Record<string, unknown>).wallet_id = accountInfo.walletId
+        ;(paymentAccount as Record<string, unknown>).wallet_id = walletId
         console.log('[Asaas Account] walletId saved successfully')
       } else {
-        console.warn('[Asaas Account] accountInfo.walletId is empty/null')
+        console.warn('[Asaas Account] No walletId returned from API')
       }
     } catch (err) {
       console.error('[Asaas Account] Auto-fetch walletId failed:', err)
@@ -174,11 +169,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'API key invalida ou sem acesso. Verifique no painel Asaas.' }, { status: 400 })
     }
 
+    const walletId = await retrieveWalletId(apiKey)
+
     await admin
       .from('profiles')
       .update({
         asaas_account_id: accountInfo.id || null,
-        asaas_wallet_id: accountInfo.walletId || null,
+        asaas_wallet_id: walletId,
         asaas_account_status: 'connected',
         updated_at: new Date().toISOString(),
       })
@@ -190,7 +187,7 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         provider: 'asaas',
         provider_account_id: accountInfo.id || null,
-        wallet_id: accountInfo.walletId || null,
+        wallet_id: walletId,
         api_key: encryptApiKey(apiKey),
         status: 'connected',
         connection_mode: 'standalone',

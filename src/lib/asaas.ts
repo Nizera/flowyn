@@ -293,7 +293,21 @@ export async function retrieveAccountInfo(apiKey: string) {
     cpfCnpj?: string
     walletId?: string
     status?: string
-  }>('/accounts', { apiKey })
+  }>('/myAccount', { apiKey })
+}
+
+export async function retrieveWalletId(apiKey: string): Promise<string | null> {
+  try {
+    const result = await asaasRequest<{
+      object: string
+      hasMore: boolean
+      totalCount: number
+      data: Array<{ object: string; id: string }>
+    }>('/wallets/', { apiKey })
+    return result.data?.[0]?.id || null
+  } catch {
+    return null
+  }
 }
 
 export type PixAutomaticFrequency = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUALLY' | 'ANNUALLY'
