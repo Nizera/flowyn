@@ -8,12 +8,12 @@ export async function GET() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, referral_code')
+    .select('id, referral_code, asaas_wallet_id')
     .eq('id', user.id)
     .single()
 
   if (!profile?.referral_code) {
-    return NextResponse.json({ code: null, stats: { total_referred: 0, total_commission: 0, paid_commission: 0, pending_commission: 0 }, commissions: [] })
+    return NextResponse.json({ code: null, wallet_connected: false, stats: { total_referred: 0, total_commission: 0, paid_commission: 0, pending_commission: 0 }, commissions: [] })
   }
 
   const { data: referrals } = await supabase
@@ -50,6 +50,7 @@ export async function GET() {
 
   return NextResponse.json({
     code: profile.referral_code,
+    wallet_connected: !!profile.asaas_wallet_id,
     stats: {
       total_referred: referrals?.length ?? 0,
       total_commission: totalCommission,
