@@ -356,6 +356,43 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
     }
   }
 
+  // ── Referral commission (20% of net value, one-time per referral) ──
+  if (orderData.referral_id) {
+    try {
+      const { data: referral } = await supabase
+        .from('referrals')
+        .select('id, referrer_id, first_payment_at')
+        .eq('id', orderData.referral_id)
+        .maybeSingle()
+
+      if (referral) {
+        if (!referral.first_payment_at) {
+          const netValue = typeof orderData.net_value === 'number' ? Number(orderData.net_value) : Number(orderData.amount)
+          const commissionAmount = Math.round(netValue * 20) / 100
+
+          if (commissionAmount > 0) {
+            await supabase.from('referral_commissions').insert({
+              referral_id: referral.id,
+              payment_id: orderId,
+              amount: commissionAmount,
+              status: 'pending',
+            })
+
+            await supabase
+              .from('referrals')
+              .update({ first_payment_at: new Date().toISOString() })
+              .eq('id', referral.id)
+              .is('first_payment_at', null)
+
+            console.log(`[Referral] Commission created: R$${commissionAmount} for referral ${referral.id}`)
+          }
+        }
+      }
+    } catch (referralError) {
+      console.error('[Referral] Commission error (non-blocking):', referralError)
+    }
+  }
+
   return { skipped: false }
 }
 
@@ -413,6 +450,13 @@ export async function revokePaidOrder(supabase: SupabaseAdmin, orderId: string, 
       }
     }
   }
+
+  // Cancel any pending referral commission for this payment
+  await supabase
+    .from('referral_commissions')
+    .update({ status: 'cancelled' })
+    .eq('payment_id', orderId)
+    .eq('status', 'pending')
 
   return { skipped: false }
 }
