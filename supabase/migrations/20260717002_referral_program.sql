@@ -79,7 +79,6 @@ CREATE POLICY "referrals_select_own" ON public.referrals
   FOR SELECT USING (
     referrer_id = auth.uid()
     OR referred_id = auth.uid()
-    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
   );
 
 CREATE POLICY "referrals_insert_service_role" ON public.referrals
@@ -94,7 +93,6 @@ ALTER TABLE public.referral_commissions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "referral_commissions_select_own" ON public.referral_commissions
   FOR SELECT USING (
     referral_id IN (SELECT id FROM public.referrals WHERE referrer_id = auth.uid())
-    OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
   );
 
 CREATE POLICY "referral_commissions_insert_service_role" ON public.referral_commissions
