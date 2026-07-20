@@ -172,7 +172,7 @@ export default function FeaturesSection() {
 
       <div className="relative mx-auto max-w-7xl">
         {/* Header */}
-        <div className="mb-16 md:w-2/3">
+        <div className="mb-16 text-center max-w-3xl mx-auto">
           <span className="text-xs font-semibold uppercase tracking-widest mb-4 block text-[#f97316]">A Solução</span>
           <h2 className="text-gradient text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
             O fluxo perfeito para o seu infoproduto
