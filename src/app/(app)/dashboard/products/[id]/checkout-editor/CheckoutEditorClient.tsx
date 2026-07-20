@@ -31,6 +31,7 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
   const [previewLoading, setPreviewLoading] = useState(Boolean(plans[0]?.id))
   const [previewError, setPreviewError] = useState(false)
   const [autoSaved, setAutoSaved] = useState(false)
+  const [bannerWarning, setBannerWarning] = useState<string | null>(null)
   const previewFrameRef = useRef<HTMLDivElement | null>(null)
   const previewTimeoutRef = useRef<number | null>(null)
   const autoSaveTimerRef = useRef<number | null>(null)
@@ -127,6 +128,15 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
 
   function handlePublish() {
     if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current)
+    const hasDesktop = Boolean(config.bannerImageUrl)
+    const hasMobile = Boolean(config.bannerMobileImageUrl)
+    if (hasDesktop !== hasMobile) {
+      setBannerWarning(hasDesktop
+        ? 'Voce adicionou o banner desktop, mas falta o banner mobile. Adicione os dois para publicar.'
+        : 'Voce adicionou o banner mobile, mas falta o banner desktop. Adicione os dois para publicar.')
+      return
+    }
+    setBannerWarning(null)
     startTransition(async () => {
       await publishCheckout(productId, config)
       setPreviewKey(current => current + 1)
@@ -164,10 +174,17 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
         </div>
       </div>
 
+      {bannerWarning && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+          {bannerWarning}
+        </div>
+      )}
+
       <div className="grid gap-8 xl:grid-cols-[360px_minmax(0,1fr)]">
         <aside className="space-y-6 overflow-y-auto pr-2 xl:max-h-[calc(100vh-12rem)]">
           <Panel title="Imagens">
-            <FileUpload mode="image" label="Banner do checkout" hint="Imagem horizontal para o topo do checkout" dimensionsHint="Recomendado: 1280 × 320px" userId={userId} folder="checkout-assets" currentUrl={config.bannerImageUrl} onUpload={(url) => update('bannerImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('bannerImageUrl', '')} />
+            <FileUpload mode="image" label="Banner desktop" hint="Imagem horizontal para o topo do checkout" dimensionsHint="Recomendado: 1280 × 320px" userId={userId} folder="checkout-assets" currentUrl={config.bannerImageUrl} onUpload={(url) => update('bannerImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('bannerImageUrl', '')} />
+            <FileUpload mode="image" label="Banner mobile" hint="Imagem para a versao mobile do checkout" dimensionsHint="Recomendado: 750 × 300px" userId={userId} folder="checkout-assets" currentUrl={config.bannerMobileImageUrl} onUpload={(url) => update('bannerMobileImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('bannerMobileImageUrl', '')} />
             <FileUpload mode="image" label="Mockup do produto" hint="Arraste ou anexe uma imagem do produto" dimensionsHint="Recomendado: 400 × 400px (quadrado)" userId={userId} folder="checkout-assets" currentUrl={config.mockupImageUrl} onUpload={(url) => update('mockupImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('mockupImageUrl', '')} />
             {orderBumpEnabled && (
               <FileUpload mode="image" label="Imagem do order bump" hint="Imagem usada na oferta extra" dimensionsHint="Recomendado: 200 × 200px (quadrado)" userId={userId} folder="checkout-assets" currentUrl={config.orderBumpImageUrl} onUpload={(url) => update('orderBumpImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('orderBumpImageUrl', '')} />

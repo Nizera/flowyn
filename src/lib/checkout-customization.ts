@@ -9,6 +9,7 @@ export type CheckoutCustomizationConfig = {
   securityText: string
   guaranteeText: string
   bannerImageUrl: string
+  bannerMobileImageUrl: string
   mockupImageUrl: string
   orderBumpImageUrl: string
   benefits: string[]
@@ -43,6 +44,7 @@ export function defaultCheckoutConfig(product?: {
     securityText: 'Pagamento seguro via Asaas',
     guaranteeText: 'Acesso enviado automaticamente após a confirmação do pagamento.',
     bannerImageUrl: product?.checkout_banner_url || '',
+    bannerMobileImageUrl: '',
     mockupImageUrl: product?.logo_url || '',
     orderBumpImageUrl: product?.order_bump_image_url || '',
     benefits: ['Acesso imediato', 'Checkout seguro', 'Suporte do produtor'],
@@ -89,6 +91,7 @@ export function normalizeCheckoutConfig(input: unknown, product?: Parameters<typ
     securityText: safeText(data.securityText, defaults.securityText),
     guaranteeText: safeText(data.guaranteeText, defaults.guaranteeText),
     bannerImageUrl: safeUrl(data.bannerImageUrl) || defaults.bannerImageUrl,
+    bannerMobileImageUrl: safeUrl(data.bannerMobileImageUrl) || defaults.bannerMobileImageUrl,
     mockupImageUrl: safeUrl(data.mockupImageUrl) || defaults.mockupImageUrl,
     orderBumpImageUrl: safeUrl(data.orderBumpImageUrl) || defaults.orderBumpImageUrl,
     benefits: safeStringArray(data.benefits, defaults.benefits),

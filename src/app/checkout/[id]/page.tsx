@@ -134,7 +134,16 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:py-10">
         {checkoutConfig.blocks.banner && checkoutConfig.bannerImageUrl && (
-          <img src={checkoutConfig.bannerImageUrl} alt={product.name} className="mb-6 h-52 w-full rounded-[28px] border border-slate-200 object-cover shadow-sm lg:h-64" />
+          <>
+            {checkoutConfig.bannerMobileImageUrl ? (
+              <>
+                <img src={checkoutConfig.bannerImageUrl} alt={product.name} className="mb-6 hidden h-52 w-full rounded-[28px] border border-slate-200 object-cover shadow-sm lg:block lg:h-64" />
+                <img src={checkoutConfig.bannerMobileImageUrl} alt={product.name} className="mb-6 block h-40 w-full rounded-[28px] border border-slate-200 object-cover shadow-sm sm:h-48 lg:hidden" />
+              </>
+            ) : (
+              <img src={checkoutConfig.bannerImageUrl} alt={product.name} className="mb-6 h-52 w-full rounded-[28px] border border-slate-200 object-cover shadow-sm lg:h-64" />
+            )}
+          </>
         )}
 
         <div className="grid gap-6 lg:grid-cols-[1fr_390px] lg:items-start">
