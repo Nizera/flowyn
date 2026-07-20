@@ -19,10 +19,6 @@ const FAQS = [
     a: 'Sim. O recebimento é feito diretamente na sua conta Asaas (CPF ou CNPJ). Isso garante que o dinheiro caia direto na sua conta sem passar por intermediários.',
   },
   {
-    q: 'Posso usar meu próprio domínio no checkout?',
-    a: 'Sim! Você pode configurar um domínio personalizado para seu checkout. Isso transmite mais confiança para seus clientes e fortalece sua marca.',
-  },
-  {
     q: 'Quais tipos de produto posso vender?',
     a: 'Cursos online, e-books, mentoria, assinaturas e qualquer infoproduto digital. Você também pode configurar order bumps para aumentar o ticket médio.',
   },
