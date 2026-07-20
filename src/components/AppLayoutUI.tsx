@@ -214,7 +214,7 @@ export function AppLayoutUI({ children, profile, subscription, notifications }: 
                         <p className="mt-1 text-xs text-slate-400">Atualizacoes importantes aparecem aqui.</p>
                       </div>
                     ) : (
-                      <div className="max-h-80 overflow-y-auto">
+                      <div className="max-h-80 overflow-y-auto sidebar-scrollbar">
                         {notifications.map((n) => (
                           n.href ? (
                             <Link
@@ -259,7 +259,7 @@ export function AppLayoutUI({ children, profile, subscription, notifications }: 
 
         <SubscriptionBanner subscription={subscription} />
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+        <main className="flex-1 overflow-y-auto sidebar-scrollbar p-4 md:p-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
       </div>

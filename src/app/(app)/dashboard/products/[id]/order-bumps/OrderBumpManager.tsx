@@ -232,45 +232,41 @@ export function OrderBumpManager({ bumps, plans, productId, userId, createOrderB
               </button>
             </div>
 
-            <div className="space-y-4 overflow-y-auto px-6 py-5">
-              <div className="flex gap-4">
-                <div className="w-24 shrink-0">
-                  <span className={labelClass}>Capa</span>
-                  {imageUrl ? (
-                    <div className="relative mt-1">
-                      <img src={imageUrl} alt="" className="h-20 w-20 rounded-xl border border-slate-200 object-cover" />
-                      <button onClick={() => setImageUrl('')} className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white transition hover:bg-red-600">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="mt-1">
-                      <FileUpload mode="image" label="" userId={userId} folder="order-bumps" currentUrl="" onUpload={(url) => setImageUrl(Array.isArray(url) ? url[0] : url)} />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 space-y-3">
-                  <label className="block">
-                    <span className={labelClass}>Titulo *</span>
-                    <input className={fieldClass} value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Planilha de organizacao" />
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="block">
-                      <span className={labelClass}>Preco *</span>
-                      <input className={fieldClass} type="number" min="0.01" step="0.01" value={price} onChange={e => setPrice(e.target.value)} placeholder="9.90" />
-                    </label>
-                    <label className="block">
-                      <span className={labelClass}>De (riscado)</span>
-                      <input className={fieldClass} type="number" min="0" step="0.01" value={originalPrice} onChange={e => setOriginalPrice(e.target.value)} placeholder="19.90" />
-                    </label>
+            <div className="space-y-4 overflow-y-auto px-6 py-5 sidebar-scrollbar">
+              <div className="block">
+                <span className={labelClass}>Imagem de capa</span>
+                {imageUrl ? (
+                  <div className="relative mt-1 inline-block">
+                    <img src={imageUrl} alt="" className="h-28 w-44 rounded-xl border border-slate-200 object-cover" />
+                    <button onClick={() => setImageUrl('')} className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow transition hover:bg-red-600">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                </div>
+                ) : (
+                  <FileUpload mode="image" label="" userId={userId} folder="order-bumps" currentUrl="" onUpload={(url) => setImageUrl(Array.isArray(url) ? url[0] : url)} />
+                )}
               </div>
+
+              <label className="block">
+                <span className={labelClass}>Titulo *</span>
+                <input className={fieldClass} value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Planilha de organizacao" />
+              </label>
 
               <label className="block">
                 <span className={labelClass}>Descricao</span>
                 <textarea className="min-h-16 w-full resize-none rounded-xl border-0 bg-[#f4f4f6] px-4 py-3 text-sm font-medium leading-5 text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20" value={description} onChange={e => setDescription(e.target.value)} placeholder="O que esta sendo oferecido?" />
               </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className={labelClass}>Preco *</span>
+                  <input className={fieldClass} type="number" min="0.01" step="0.01" value={price} onChange={e => setPrice(e.target.value)} placeholder="9.90" />
+                </label>
+                <label className="block">
+                  <span className={labelClass}>De (riscado)</span>
+                  <input className={fieldClass} type="number" min="0" step="0.01" value={originalPrice} onChange={e => setOriginalPrice(e.target.value)} placeholder="19.90" />
+                </label>
+              </div>
 
               <div className="block">
                 <span className={labelClass}>Arquivo de entrega (opcional)</span>

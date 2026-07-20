@@ -181,7 +181,7 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
       )}
 
       <div className="grid gap-8 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="space-y-6 overflow-y-auto pr-2 xl:max-h-[calc(100vh-12rem)]">
+        <aside className="space-y-6 overflow-y-auto pr-2 sidebar-scrollbar xl:max-h-[calc(100vh-12rem)]">
           <Panel title="Imagens">
             <FileUpload mode="image" label="Banner desktop" hint="Imagem horizontal para o topo do checkout" dimensionsHint="Recomendado: 1280 × 320px" userId={userId} folder="checkout-assets" currentUrl={config.bannerImageUrl} onUpload={(url) => update('bannerImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('bannerImageUrl', '')} />
             <FileUpload mode="image" label="Banner mobile" hint="Imagem para a versao mobile do checkout" dimensionsHint="Recomendado: 750 × 300px" userId={userId} folder="checkout-assets" currentUrl={config.bannerMobileImageUrl} onUpload={(url) => update('bannerMobileImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('bannerMobileImageUrl', '')} />

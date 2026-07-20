@@ -390,7 +390,7 @@ async function CourseExperience({ product, userId, selectedLessonId }: { product
               </div>
             </div>
 
-            <div className="max-h-[calc(100vh-11rem)] overflow-y-auto p-3">
+            <div className="max-h-[calc(100vh-11rem)] overflow-y-auto sidebar-scrollbar p-3">
               {moduleRows.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-white/10 p-5 text-sm text-white/35">O conteúdo deste curso ainda está sendo preparado.</p>
               ) : moduleRows.map((module, moduleIndex) => {

@@ -486,7 +486,7 @@ export default function RulesPage() {
       {/* Modal Form */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowForm(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto sidebar-scrollbar" onClick={e => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-slate-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold text-slate-900">{editingRule ? 'Editar Regra' : 'Nova Regra'}</h2>
