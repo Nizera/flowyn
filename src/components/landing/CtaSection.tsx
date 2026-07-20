@@ -15,7 +15,7 @@ export default function CtaSection() {
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-[1.1] text-white max-w-3xl mx-auto"
+          className="text-gradient text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-[1.1] max-w-3xl mx-auto"
         >
           Se sua margem importa, sua plataforma não deveria virar{' '}
           <span className="text-[#f97316] font-display italic">sócio invisível</span>.

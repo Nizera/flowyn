@@ -89,3 +89,47 @@ body {
 .sidebar-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .sidebar-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 3px; }
 .sidebar-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+
+/* ── Glass Morphism ── */
+.glass-card {
+  background: radial-gradient(circle at center, #1a1a1a 0%, #111214 100%);
+  border: 1px solid transparent;
+  position: relative;
+  backdrop-filter: blur(16px);
+  border-radius: 0.75rem;
+}
+
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ── Text Gradient ── */
+.text-gradient {
+  background: linear-gradient(135deg, #ffffff 0%, #a3a3a3 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── 3D Tilt Card ── */
+.tilt-card {
+  transition: transform 0.5s ease;
+  transform-style: preserve-3d;
+}
+.tilt-card:hover {
+  transform: perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1.02, 1.02, 1.02);
+}
+
+/* ── Navbar Glow ── */
+.nav-glow {
+  box-shadow: 0 0 40px rgba(249, 115, 22, 0.12);
+}

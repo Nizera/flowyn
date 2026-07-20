@@ -35,7 +35,7 @@ export default function FaqSection() {
     <section id="faq" className="bg-[#070908] px-4 py-20 md:px-6 md:py-32">
       <div className="mx-auto max-w-3xl">
         <FadeInView>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center text-white mb-2">
+          <h2 className="text-gradient text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-2">
             Perguntas frequentes
           </h2>
           <p
@@ -50,7 +50,7 @@ export default function FaqSection() {
           {FAQS.map((faq, i) => (
             <FadeInView key={i} delay={i * 0.05}>
               <div
-                className="bg-[#101412] rounded-2xl border border-white/5 overflow-hidden transition-all duration-300"
+                className="glass-card rounded-2xl overflow-hidden transition-all duration-300"
                 style={{
                   borderColor: openIndex === i ? 'rgba(249,115,22,0.3)' : undefined,
                 }}

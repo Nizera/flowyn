@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { useRef } from 'react'
 import { ArrowRight, Check, Menu, X } from 'lucide-react'
@@ -17,9 +17,18 @@ export default function HeroSection() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState('')
+  const [glowPos, setGlowPos] = useState({ x: 50, y: 50 })
   const sectionRef = useRef<HTMLElement>(null)
   const headingRef = useRef<HTMLDivElement>(null)
   const headingInView = useInView(headingRef, { once: true })
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const rect = sectionRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const x = ((e.clientX - rect.left) / rect.width) * 100
+    const y = ((e.clientY - rect.top) / rect.height) * 100
+    setGlowPos({ x, y })
+  }, [])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 80)
@@ -51,7 +60,17 @@ export default function HeroSection() {
   }, [])
 
   return (
-    <section ref={sectionRef} className="h-screen relative">
+    <section ref={sectionRef} className="h-screen relative" onMouseMove={handleMouseMove}>
+      {/* Mouse Follow Glow */}
+      <div
+        className="pointer-events-none absolute z-10 h-[500px] w-[500px] rounded-full mix-blend-screen transition-all duration-300 ease-out"
+        style={{
+          left: `${glowPos.x}%`,
+          top: `${glowPos.y}%`,
+          transform: 'translate(-50%, -50%)',
+          background: 'radial-gradient(circle, rgba(249,115,22,0.08) 0%, transparent 70%)',
+        }}
+      />
       {/* Fixed Pill Navbar */}
       <nav
         className={`fixed top-0 left-1/2 z-50 -translate-x-1/2 transition-all duration-300 pt-3 md:pt-4 ${
@@ -61,7 +80,7 @@ export default function HeroSection() {
         <div
           className={`flex items-center gap-3 sm:gap-6 md:gap-12 lg:gap-14 rounded-b-2xl md:rounded-b-3xl px-4 py-2 md:px-8 transition-all duration-300 ${
             scrolled
-              ? 'bg-[#070908]/90 backdrop-blur-xl shadow-lg shadow-black/20'
+              ? 'bg-[#070908]/90 backdrop-blur-xl shadow-lg shadow-black/20 nav-glow'
               : 'bg-[#0a0f0d]'
           }`}
         >

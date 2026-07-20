@@ -3,6 +3,7 @@
 import { useRef } from 'react'
 import { TrendingUp, Settings, Layout } from 'lucide-react'
 import { WordsPullUpMultiStyle, AnimatedLetter, ScaleInView } from './animations'
+import { useTilt } from './useTilt'
 
 const PROBLEM_CARDS = [
   {
@@ -21,6 +22,21 @@ const PROBLEM_CARDS = [
     desc: 'Sua oferta fica limitada ao padrão genérico de outra plataforma, sem personalização.',
   },
 ]
+
+function TiltCard({ children, className }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const { handleMouseMove, handleMouseLeave } = useTilt(ref)
+  return (
+    <div
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className={`glass-card tilt-card ${className}`}
+    >
+      {children}
+    </div>
+  )
+}
 
 export default function ProblemSection() {
   const charRef = useRef<HTMLDivElement>(null)
@@ -56,13 +72,13 @@ export default function ProblemSection() {
           <div className="mt-10 grid gap-4 md:grid-cols-3">
             {PROBLEM_CARDS.map((card, i) => (
               <ScaleInView key={card.title} delay={i * 0.15}>
-                <div className="bg-[#1a1f1c] rounded-2xl border border-white/5 p-6 h-full transition-all duration-300 hover:border-[#f97316]/30 hover:-translate-y-1">
+                <TiltCard className="p-6 h-full hover:border-[#f97316]/30 hover:-translate-y-1 transition-all duration-300">
                   <card.icon size={24} className="text-[#f97316] mb-4" />
                   <h3 className="text-base font-semibold text-white mb-2">{card.title}</h3>
                   <p className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
                     {card.desc}
                   </p>
-                </div>
+              </TiltCard>
               </ScaleInView>
             ))}
           </div>

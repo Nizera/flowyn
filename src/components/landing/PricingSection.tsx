@@ -3,6 +3,7 @@
 import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { Check, Sparkles } from 'lucide-react'
+import { useTilt } from './useTilt'
 
 const FEATURES = [
   'Checkout ilimitado enquanto assinatura ativa',
@@ -19,6 +20,7 @@ const FEATURES = [
 export default function PricingSection() {
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-80px' })
+  const { handleMouseMove, handleMouseLeave } = useTilt(ref)
 
   return (
     <section id="custos" className="bg-[#070908] px-4 py-20 md:px-6 md:py-32">
@@ -28,7 +30,9 @@ export default function PricingSection() {
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="relative bg-[#101412] rounded-3xl border border-white/5 p-8 md:p-10 text-center overflow-hidden"
+          className="relative glass-card tilt-card rounded-3xl p-8 md:p-10 text-center overflow-hidden"
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
         >
           {/* Badge */}
           <div className="inline-flex items-center gap-1.5 bg-[#f97316]/10 border border-[#f97316]/20 rounded-full px-3 py-1 mb-6">

@@ -1,16 +1,17 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { Check, Wallet, Zap, PlayCircle, Edit3 } from 'lucide-react'
-import { WordsPullUpMultiStyle, ScaleInView } from './animations'
+import { ScaleInView } from './animations'
+import { useTilt } from './useTilt'
 
 const FLOW_STEPS = [
-  { label: 'Tráfego', icon: '📢' },
-  { label: 'Checkout Flowyn', icon: '🛒' },
-  { label: 'Pagamento Asaas', icon: '💳' },
-  { label: 'Entrega Automática', icon: '📦' },
-  { label: 'Área do Aluno', icon: '🎓' },
+  { label: 'Tráfego', icon: '📢', desc: 'Seus leads chegam via campanhas Meta, Google ou orgânico.' },
+  { label: 'Checkout Flowyn', icon: '🛒', desc: 'Conversão otimizada sem taxas por transação. O checkout é seu.' },
+  { label: 'Pagamento via Asaas', icon: '💳', desc: 'Dinheiro cai direto na sua conta, sem intermediários.' },
+  { label: 'Entrega Automática', icon: '⚡', desc: 'Envio imediato do acesso ao produto após confirmação.' },
+  { label: 'Área do Aluno', icon: '🎓', desc: 'Seu cliente consome o conteúdo em ambiente seguro e premium.' },
 ]
 
 const FEATURE_CARDS = [
@@ -58,46 +59,108 @@ const FEATURE_CARDS = [
   },
 ]
 
-function FlowDiagram() {
-  const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once: true, margin: '-80px' })
+function AnimatedFunnel() {
+  const sectionRef = useRef<HTMLDivElement>(null)
+  const isInView = useInView(sectionRef, { once: true, margin: '-100px' })
+  const [lineHeight, setLineHeight] = useState(0)
+  const [activeStep, setActiveStep] = useState(-1)
+
+  useEffect(() => {
+    const onScroll = () => {
+      if (!sectionRef.current) return
+      const rect = sectionRef.current.getBoundingClientRect()
+      const windowH = window.innerHeight
+      const start = windowH * 0.6
+      const progress = Math.max(0, Math.min(1, (start - rect.top) / rect.height))
+      setLineHeight(progress * 100)
+      const stepIndex = Math.floor(progress * FLOW_STEPS.length)
+      setActiveStep(Math.min(stepIndex, FLOW_STEPS.length - 1))
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   return (
-    <div ref={ref} className="relative py-8 md:py-12">
-      <div className="flex items-center justify-center gap-2 md:gap-4 lg:gap-6">
-        {FLOW_STEPS.map((step, i) => (
-          <div key={step.label} className="flex items-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.4, delay: i * 0.12, ease: [0.22, 1, 0.36, 1] }}
-              className="flex flex-col items-center gap-2"
-            >
-              <div className="relative">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#1a1f1c] border border-white/10 flex items-center justify-center text-lg md:text-xl">
-                  {step.icon}
-                </div>
-                <div className="dot-pulse absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#f97316]" />
-                <div className="ring-pulse absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#f97316]" />
+    <div ref={sectionRef} className="relative max-w-3xl mx-auto py-10">
+      {/* Base line */}
+      <div className="absolute left-[39px] md:left-1/2 top-0 bottom-0 w-[2px] bg-white/10 -translate-x-1/2" />
+      {/* Animated fill line */}
+      <div
+        className="absolute left-[39px] md:left-1/2 top-0 w-[2px] -translate-x-1/2 z-0 transition-all duration-200 ease-out"
+        style={{
+          height: `${lineHeight}%`,
+          background: 'linear-gradient(to bottom, #f97316, #fb923c)',
+          boxShadow: '0 0 20px rgba(249,115,22,0.3)',
+        }}
+      />
+
+      <div className="space-y-20">
+        {FLOW_STEPS.map((step, i) => {
+          const isActive = i <= activeStep
+          return (
+            <div key={step.label} className="flex flex-col md:flex-row items-center gap-6 relative z-10">
+              {/* Left side (odd steps) */}
+              <div className={`md:w-1/2 ${i % 2 === 0 ? 'flex justify-end md:pr-16 text-left md:text-right w-full pl-24 md:pl-0 order-2 md:order-1' : 'hidden md:block order-1'}`}>
+                {i % 2 === 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={isInView && isActive ? { opacity: 1, x: 0 } : {}}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                  >
+                    <h3 className="text-lg md:text-xl font-bold text-white mb-2">{step.label}</h3>
+                    <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>{step.desc}</p>
+                  </motion.div>
+                )}
               </div>
-              <span
-                className="text-[10px] md:text-xs text-center max-w-[80px] md:max-w-[100px] leading-tight"
-                style={{ color: 'rgba(255,255,255,0.7)' }}
-              >
-                {step.label}
-              </span>
-            </motion.div>
-            {i < FLOW_STEPS.length - 1 && (
+
+              {/* Center icon */}
               <motion.div
-                initial={{ scaleX: 0 }}
-                animate={isInView ? { scaleX: 1 } : {}}
-                transition={{ duration: 0.5, delay: i * 0.12 + 0.2, ease: [0.22, 1, 0.36, 1] }}
-                className="h-[2px] w-4 md:w-8 lg:w-12 bg-gradient-to-r from-[#f97316] to-[#f97316]/30 origin-left"
-              />
-            )}
-          </div>
-        ))}
+                initial={{ scale: 0 }}
+                animate={isInView && isActive ? { scale: 1 } : {}}
+                transition={{ duration: 0.4, type: 'spring', stiffness: 200 }}
+                className={`absolute left-0 md:left-1/2 -translate-x-1/2 w-20 h-20 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${
+                  isActive
+                    ? 'bg-[#f97316]/15 border-[#f97316] shadow-[0_0_30px_rgba(249,115,22,0.4)]'
+                    : 'bg-[#1a1f1c] border-white/10'
+                }`}
+              >
+                <span className={`text-3xl transition-all duration-500 ${isActive ? '' : 'opacity-40'}`}>
+                  {step.icon}
+                </span>
+              </motion.div>
+
+              {/* Right side (even steps) */}
+              <div className={`md:w-1/2 ${i % 2 !== 0 ? 'flex justify-start md:pl-16 text-left w-full pl-24 md:pl-0 order-3' : 'hidden md:block order-3'}`}>
+                {i % 2 !== 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={isInView && isActive ? { opacity: 1, x: 0 } : {}}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                  >
+                    <h3 className="text-lg md:text-xl font-bold text-white mb-2">{step.label}</h3>
+                    <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>{step.desc}</p>
+                  </motion.div>
+                )}
+              </div>
+            </div>
+          )
+        })}
       </div>
+    </div>
+  )
+}
+
+function TiltCard({ children, className }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const { handleMouseMove, handleMouseLeave } = useTilt(ref)
+  return (
+    <div
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className={`glass-card tilt-card ${className}`}
+    >
+      {children}
     </div>
   )
 }
@@ -109,32 +172,26 @@ export default function FeaturesSection() {
 
       <div className="relative mx-auto max-w-7xl">
         {/* Header */}
-        <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
-          <WordsPullUpMultiStyle
-            containerClassName="text-center"
-            className="text-xl sm:text-2xl md:text-3xl lg:text-4xl leading-tight"
-            segments={[
-              { text: 'Venda infoprodutos com checkout próprio,' },
-              { text: 'entrega automática', className: 'text-[#f97316] font-display italic' },
-              { text: 'e custo de plataforma previsível.' },
-            ]}
-          />
+        <div className="mb-16 md:w-2/3">
+          <span className="text-xs font-semibold uppercase tracking-widest mb-4 block text-[#f97316]">A Solução</span>
+          <h2 className="text-gradient text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
+            O fluxo perfeito para o seu infoproduto
+          </h2>
         </div>
 
-        {/* Flow Diagram */}
-        <FlowDiagram />
+        {/* Animated Funnel */}
+        <AnimatedFunnel />
 
         {/* Feature Cards */}
-        <div className="mt-10 grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-20 grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {FEATURE_CARDS.map((card, i) => (
             <ScaleInView key={card.title} delay={i * 0.12}>
-              <div className="bg-[#212121] rounded-2xl p-5 flex flex-col h-full transition-all duration-300 hover:border-[#f97316]/20 hover:-translate-y-0.5">
+              <TiltCard className="p-6 h-full group hover:border-[#f97316]/30 transition-colors">
                 <card.icon size={24} className="text-[#f97316] mb-4" />
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-xs font-mono text-white/40">{card.number}</span>
                   <h3 className="text-sm font-semibold text-white">{card.title}</h3>
                 </div>
-
                 <div className="flex-1 space-y-2.5">
                   {card.items.map((item) => (
                     <div key={item} className="flex items-start gap-2">
@@ -145,7 +202,7 @@ export default function FeaturesSection() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </TiltCard>
             </ScaleInView>
           ))}
         </div>
