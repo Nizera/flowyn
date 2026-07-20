@@ -8,11 +8,11 @@ import { FadeInView } from './animations'
 const FAQS = [
   {
     q: 'Como funciona o período grátis de 7 dias?',
-    a: 'Você testa todos os recursos do Flowyn Pro por 7 dias sem custo. Não pedimos cartão de crédito. Se quiser continuar após o período, basta assinar por R$ 49/mês.',
+    a: 'Você testa todos os recursos do Flowyn Pro por 7 dias sem custo. Não pedimos cartão de crédito. Se quiser continuar após o período, basta assinar por R$ 97/mês.',
   },
   {
     q: 'A Flowyn cobra taxa por venda?',
-    a: 'Não. A Flowyn não cobra nenhum percentual sobre suas vendas. Você paga apenas R$ 49/mês de assinatura. As tarifas financeiras do Asaas (cartão, boleto, Pix) continuam sendo de responsabilidade do vendedor.',
+    a: 'Não. A Flowyn não cobra nenhum percentual sobre suas vendas. Você paga apenas R$ 97/mês de assinatura. As tarifas financeiras do Asaas (cartão, boleto, Pix) continuam sendo de responsabilidade do vendedor.',
   },
   {
     q: 'Preciso ter conta no Asaas?',
