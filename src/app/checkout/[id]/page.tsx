@@ -78,15 +78,18 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
     customization = data
   }
 
-  const { data: orderBumps } = await admin
+  const { data: allBumps } = await admin
     .from('product_order_bumps')
-    .select('title, description, price, original_price, image_url')
+    .select('title, description, price, original_price, image_url, plan_ids')
     .eq('product_id', product.id)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
-    .limit(1)
 
-  const firstBump = orderBumps && orderBumps.length > 0 ? orderBumps[0] : null
+  const orderBumps = (allBumps ?? []).filter(bump => {
+    if (!bump.plan_ids || !Array.isArray(bump.plan_ids) || bump.plan_ids.length === 0) return true
+    return bump.plan_ids.includes(plan.id)
+  })
+  const firstBump = orderBumps.length > 0 ? orderBumps[0] : null
 
   const checkoutConfig = normalizeCheckoutConfig(
     canPreviewDraft ? customization?.draft_config : customization?.published_config,

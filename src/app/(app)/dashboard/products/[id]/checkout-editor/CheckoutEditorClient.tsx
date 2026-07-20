@@ -425,14 +425,14 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 
 function Field({ label, value, onChange, textarea = false }: { label: string; value: string; onChange: (value: string) => void; textarea?: boolean }) {
   return (
-    <label className="block">
+    <div className="block">
       <span className="mb-2 block text-sm font-medium text-slate-700">{label}</span>
       {textarea ? (
         <textarea value={value} onChange={(event) => onChange(event.target.value)} className="min-h-24 w-full rounded-xl border-0 bg-[#f4f4f6] px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-orange-500/20" />
       ) : (
         <input value={value} onChange={(event) => onChange(event.target.value)} className="h-12 w-full rounded-xl border-0 bg-[#f4f4f6] px-4 text-sm font-medium text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-orange-500/20" />
       )}
-    </label>
+    </div>
   )
 }
 

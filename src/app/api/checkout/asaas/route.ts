@@ -201,15 +201,19 @@ export async function POST(req: NextRequest) {
 
     let orderBumpAmount = 0
     if (addOrderBump) {
-      const { data: bumps } = await supabase
+      const { data: allBumps } = await supabase
         .from('product_order_bumps')
-        .select('price')
+        .select('price, plan_ids')
         .eq('product_id', product.id)
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true })
-        .limit(1)
 
-      if (bumps && bumps.length > 0) {
+      const bumps = (allBumps ?? []).filter(bump => {
+        if (!bump.plan_ids || !Array.isArray(bump.plan_ids) || bump.plan_ids.length === 0) return true
+        return bump.plan_ids.includes(plan.id)
+      })
+
+      if (bumps.length > 0) {
         orderBumpAmount = Number(bumps[0].price)
       }
     }

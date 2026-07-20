@@ -11,11 +11,21 @@ type OrderBump = {
   image_url: string
   price: number
   original_price: number
+  file_paths: string[]
+  plan_ids: string[]
   sort_order: number
+}
+
+type Plan = {
+  id: string
+  name: string
+  price: number
+  billing_type: string
 }
 
 type Props = {
   bumps: OrderBump[]
+  plans: Plan[]
   productId: string
   userId: string
   createOrderBump: (productId: string, data: {
@@ -24,6 +34,8 @@ type Props = {
     image_url?: string
     price: number
     original_price?: number
+    file_paths?: string[]
+    plan_ids?: string[]
   }) => Promise<void>
   updateOrderBump: (id: string, productId: string, data: {
     title: string
@@ -31,6 +43,8 @@ type Props = {
     image_url?: string
     price: number
     original_price?: number
+    file_paths?: string[]
+    plan_ids?: string[]
   }) => Promise<void>
   deleteOrderBump: (id: string, productId: string) => Promise<void>
 }
@@ -38,7 +52,7 @@ type Props = {
 const fieldClass = 'h-12 w-full rounded-xl border-0 bg-[#f4f4f6] px-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20'
 const labelClass = 'mb-2 block text-sm font-medium text-slate-700'
 
-export function OrderBumpManager({ bumps, productId, userId, createOrderBump, updateOrderBump, deleteOrderBump }: Props) {
+export function OrderBumpManager({ bumps, plans, productId, userId, createOrderBump, updateOrderBump, deleteOrderBump }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<OrderBump | null>(null)
   const [title, setTitle] = useState('')
@@ -46,6 +60,8 @@ export function OrderBumpManager({ bumps, productId, userId, createOrderBump, up
   const [imageUrl, setImageUrl] = useState('')
   const [price, setPrice] = useState('')
   const [originalPrice, setOriginalPrice] = useState('')
+  const [filePath, setFilePath] = useState('')
+  const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -56,6 +72,8 @@ export function OrderBumpManager({ bumps, productId, userId, createOrderBump, up
     setImageUrl('')
     setPrice('')
     setOriginalPrice('')
+    setFilePath('')
+    setSelectedPlanIds([])
     setError(null)
     setShowForm(true)
   }
@@ -67,6 +85,8 @@ export function OrderBumpManager({ bumps, productId, userId, createOrderBump, up
     setImageUrl(bump.image_url)
     setPrice(String(bump.price))
     setOriginalPrice(bump.original_price > 0 ? String(bump.original_price) : '')
+    setFilePath(bump.file_paths?.[0] || '')
+    setSelectedPlanIds(bump.plan_ids || [])
     setError(null)
     setShowForm(true)
   }
@@ -90,6 +110,8 @@ export function OrderBumpManager({ bumps, productId, userId, createOrderBump, up
         image_url: imageUrl,
         price: Number(price),
         original_price: originalPrice ? Number(originalPrice) : 0,
+        file_paths: filePath ? [filePath] : [],
+        plan_ids: selectedPlanIds,
       }
       if (editing) {
         await updateOrderBump(editing.id, productId, data)
@@ -177,6 +199,21 @@ export function OrderBumpManager({ bumps, productId, userId, createOrderBump, up
                   </span>
                 )}
               </div>
+              {bump.plan_ids && bump.plan_ids.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {bump.plan_ids.map(planId => {
+                    const plan = plans.find(p => p.id === planId)
+                    return plan ? (
+                      <span key={planId} className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600">
+                        {plan.name}
+                      </span>
+                    ) : null
+                  })}
+                </div>
+              )}
+              {(!bump.plan_ids || bump.plan_ids.length === 0) && (
+                <p className="mt-2 text-xs text-slate-400">Todos os planos</p>
+              )}
             </div>
           </div>
         ))}
@@ -229,6 +266,49 @@ export function OrderBumpManager({ bumps, productId, userId, createOrderBump, up
                   <input className={fieldClass} type="number" min="0" step="0.01" value={originalPrice} onChange={e => setOriginalPrice(e.target.value)} placeholder="19.90" />
                 </label>
               </div>
+
+              <label className="block">
+                <span className={labelClass}>Arquivo para entrega (opcional)</span>
+                <FileUpload
+                  mode="file"
+                  label=""
+                  userId={userId}
+                  folder="order-bump-files"
+                  currentUrl={filePath}
+                  onUpload={(url) => setFilePath(Array.isArray(url) ? url[0] : url)}
+                  onRemove={() => setFilePath('')}
+                />
+                {filePath && (
+                  <p className="mt-1 text-xs text-green-600">Arquivo vinculado ao order bump</p>
+                )}
+              </label>
+
+              {plans.length > 0 && (
+                <div className="block">
+                  <span className={labelClass}>Planos vinculados</span>
+                  <p className="mb-2 text-xs text-slate-400">Se nenhum plano for selecionado, o order bump aparece em todos.</p>
+                  <div className="space-y-2">
+                    {plans.map(plan => (
+                      <label key={plan.id} className="flex items-center gap-3 rounded-xl bg-[#f4f4f6] px-4 py-3 text-sm font-medium text-slate-700 cursor-pointer transition hover:bg-slate-100">
+                        <input
+                          type="checkbox"
+                          checked={selectedPlanIds.includes(plan.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedPlanIds(prev => [...prev, plan.id])
+                            } else {
+                              setSelectedPlanIds(prev => prev.filter(id => id !== plan.id))
+                            }
+                          }}
+                          className="accent-orange-500"
+                        />
+                        <span>{plan.name}</span>
+                        <span className="ml-auto text-xs text-slate-400">R$ {Number(plan.price).toFixed(2)}{plan.billing_type === 'recurring' ? '/mês' : ''}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {error && (
                 <div className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-100">

@@ -27,10 +27,16 @@ export default async function OrderBumpsPage({ params }: Props) {
 
   const { data: bumps } = await supabase
     .from('product_order_bumps')
-    .select('id, product_id, title, description, image_url, price, original_price, source_plan_id, target_product_id, discount_percent, discount_amount, sort_order, created_at')
+    .select('id, product_id, title, description, image_url, price, original_price, file_paths, plan_ids, sort_order, created_at')
     .eq('product_id', productId)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
+
+  const { data: plans } = await supabase
+    .from('plans')
+    .select('id, name, price, billing_type')
+    .eq('product_id', productId)
+    .order('price', { ascending: true })
 
   return (
     <section className="overflow-hidden rounded-[10px] bg-white px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
@@ -38,6 +44,7 @@ export default async function OrderBumpsPage({ params }: Props) {
 
       <OrderBumpManager
         bumps={bumps ?? []}
+        plans={plans ?? []}
         productId={productId}
         userId={user.id}
         createOrderBump={createOrderBump}

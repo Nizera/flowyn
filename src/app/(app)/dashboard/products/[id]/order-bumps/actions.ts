@@ -9,6 +9,8 @@ type OrderBumpInput = {
   image_url?: string
   price: number
   original_price?: number
+  file_paths?: string[]
+  plan_ids?: string[]
 }
 
 export async function createOrderBump(productId: string, data: OrderBumpInput) {
@@ -31,6 +33,8 @@ export async function createOrderBump(productId: string, data: OrderBumpInput) {
     image_url: data.image_url || '',
     price: data.price,
     original_price: data.original_price || 0,
+    file_paths: data.file_paths || [],
+    plan_ids: data.plan_ids || [],
   })
 
   if (error) throw new Error(error.message)
@@ -58,6 +62,8 @@ export async function updateOrderBump(id: string, productId: string, data: Order
       image_url: data.image_url || '',
       price: data.price,
       original_price: data.original_price || 0,
+      file_paths: data.file_paths || [],
+      plan_ids: data.plan_ids || [],
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
