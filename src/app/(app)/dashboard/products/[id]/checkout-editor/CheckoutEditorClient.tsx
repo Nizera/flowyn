@@ -200,7 +200,16 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
           </Panel>
 
           <Panel title="Urgencia">
-            <Field label="Frases de urgencia (uma por linha)" value={config.urgencyPhrases.join('\n')} onChange={(value) => update('urgencyPhrases', value.split('\n').map(item => item.trim()).filter(Boolean))} textarea />
+            <label className="flex items-center justify-between rounded-xl bg-[#f4f4f6] px-4 py-3 text-sm font-medium text-slate-700">
+              Mostrar faixa de urgencia
+              <input type="checkbox" checked={config.blocks.urgency} onChange={(event) => updateBlock('urgency', event.target.checked)} className="accent-orange-500" />
+            </label>
+            {config.blocks.urgency && (
+              <>
+                <ColorField label="Cor da faixa" value={config.urgencyBarColor} onChange={(value) => update('urgencyBarColor', value)} />
+                <Field label="Frases de urgencia (uma por linha)" value={config.urgencyPhrases.join('\n')} onChange={(value) => update('urgencyPhrases', value.split('\n').map(item => item.trim()).filter(Boolean))} textarea />
+              </>
+            )}
           </Panel>
 
           <Panel title="Estilo">
@@ -209,7 +218,7 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
           </Panel>
 
           <Panel title="Blocos">
-            {Object.entries(config.blocks).map(([key, value]) => (
+            {Object.entries(config.blocks).filter(([key]) => key !== 'urgency').map(([key, value]) => (
               <label key={key} className="flex items-center justify-between rounded-xl bg-[#f4f4f6] px-4 py-3 text-sm font-medium text-slate-700">
                 {blockLabel(key)}
                 <input type="checkbox" checked={value} onChange={(event) => updateBlock(key as keyof CheckoutCustomizationConfig['blocks'], event.target.checked)} className="accent-orange-500" />
@@ -443,6 +452,7 @@ function blockLabel(key: string) {
     testimonials: 'Depoimentos',
     faq: 'FAQ',
     guarantee: 'Garantia',
+    urgency: 'Urgencia',
   }
   return labels[key] || key
 }

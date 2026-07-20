@@ -16,12 +16,14 @@ export type CheckoutCustomizationConfig = {
   testimonials: Array<{ name: string; text: string; imageUrl: string }>
   faq: Array<{ question: string; answer: string }>
   urgencyPhrases: string[]
+  urgencyBarColor: string
   blocks: {
     banner: boolean
     benefits: boolean
     testimonials: boolean
     faq: boolean
     guarantee: boolean
+    urgency: boolean
   }
 }
 
@@ -51,12 +53,14 @@ export function defaultCheckoutConfig(product?: {
     testimonials: [],
     faq: [],
     urgencyPhrases: ['Oferta por tempo limitado', 'Garanta seu acesso agora', 'Acesso imediato apos a compra'],
+    urgencyBarColor: '#f97316',
     blocks: {
       banner: true,
       benefits: true,
       testimonials: false,
       faq: false,
       guarantee: true,
+      urgency: true,
     },
   }
 }
@@ -109,12 +113,14 @@ export function normalizeCheckoutConfig(input: unknown, product?: Parameters<typ
         })).filter(item => item.question && item.answer).slice(0, 8)
       : defaults.faq,
     urgencyPhrases: safeStringArray(data.urgencyPhrases, defaults.urgencyPhrases),
+    urgencyBarColor: HEX_COLOR.test(String(data.urgencyBarColor || '')) ? String(data.urgencyBarColor) : defaults.urgencyBarColor,
     blocks: {
       banner: blocks.banner ?? defaults.blocks.banner,
       benefits: blocks.benefits ?? defaults.blocks.benefits,
       testimonials: blocks.testimonials ?? defaults.blocks.testimonials,
       faq: blocks.faq ?? defaults.blocks.faq,
       guarantee: blocks.guarantee ?? defaults.blocks.guarantee,
+      urgency: blocks.urgency ?? defaults.blocks.urgency,
     },
   }
 }

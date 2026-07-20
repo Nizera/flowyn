@@ -130,7 +130,9 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
     <div className="min-h-screen" style={{ backgroundColor: checkoutConfig.backgroundColor }}>
       {!isPreviewMode && <PixelScripts pixels={allPixels} />}
 
-      <UrgencyCarousel phrases={checkoutConfig.urgencyPhrases} primaryColor={checkoutConfig.primaryColor} />
+      {checkoutConfig.blocks.urgency && checkoutConfig.urgencyPhrases.length > 0 && (
+        <UrgencyCarousel phrases={checkoutConfig.urgencyPhrases} primaryColor={checkoutConfig.urgencyBarColor} />
+      )}
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:py-10">
         {checkoutConfig.blocks.banner && checkoutConfig.bannerImageUrl && (
