@@ -12,7 +12,7 @@ export type CheckoutCustomizationConfig = {
   mockupImageUrl: string
   orderBumpImageUrl: string
   benefits: string[]
-  testimonials: Array<{ name: string; text: string }>
+  testimonials: Array<{ name: string; text: string; imageUrl: string }>
   faq: Array<{ question: string; answer: string }>
   urgencyPhrases: string[]
   blocks: {
@@ -96,6 +96,7 @@ export function normalizeCheckoutConfig(input: unknown, product?: Parameters<typ
       ? data.testimonials.map(item => ({
           name: safeText((item as { name?: unknown })?.name),
           text: safeText((item as { text?: unknown })?.text),
+          imageUrl: safeUrl((item as { imageUrl?: unknown })?.imageUrl),
         })).filter(item => item.name && item.text).slice(0, 6)
       : defaults.testimonials,
     faq: Array.isArray(data.faq)

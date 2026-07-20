@@ -120,21 +120,24 @@ async function notify(options: { recipient?: string | null; userId?: string | nu
   }
 }
 
-export // TODO(H9): This function makes 15+ sequential DB queries per booking.
-// Refactor to use a single RPC function or batched queries for performance.
-async function bookMentorshipSlot(productId: string, slotId: string) {
+export async function bookMentorshipSlot(productId: string, slotId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Faça login para reservar uma sessão.')
   const { admin, access, product, program } = await getMentorshipContext(productId, user.id)
   if (!access || !product) throw new Error('Acesso não encontrado.')
 
-  const { data: slot } = await admin.from('mentorship_availability_slots').select('id, starts_at, ends_at').eq('id', slotId).eq('product_id', productId).is('booked_by', null).maybeSingle()
+  // Batch: fetch slot, session count, and private slot in parallel
+  const [slotResult, countResult, privateSlotResult] = await Promise.all([
+    admin.from('mentorship_availability_slots').select('id, starts_at, ends_at').eq('id', slotId).eq('product_id', productId).is('booked_by', null).maybeSingle(),
+    admin.from('mentorship_sessions').select('id', { count: 'exact', head: true }).eq('product_id', productId).eq('student_id', user.id).in('status', ['scheduled', 'done', 'missed']),
+    admin.from('mentorship_slot_private').select('meeting_url').eq('slot_id', slotId).maybeSingle(),
+  ])
+
+  const slot = slotResult.data
   if (!slot) throw new Error('Este horário não está mais disponível.')
   if (new Date(slot.starts_at).getTime() < Date.now() + Number(program?.booking_min_notice_hours ?? 2) * 3600000) throw new Error('Este horário é muito próximo. Escolha outro.')
-  const { count } = await admin.from('mentorship_sessions').select('id', { count: 'exact', head: true }).eq('product_id', productId).eq('student_id', user.id).in('status', ['scheduled', 'done', 'missed'])
-  if (Number(count || 0) >= Number(program?.session_count || 4)) throw new Error('Você já atingiu o limite de sessões.')
-  const { data: privateSlot } = await admin.from('mentorship_slot_private').select('meeting_url').eq('slot_id', slotId).maybeSingle()
+  if (Number(countResult.count || 0) >= Number(program?.session_count || 4)) throw new Error('Você já atingiu o limite de sessões.')
 
   const { data: session } = await admin.from('mentorship_sessions').insert({
     product_id: productId,
@@ -143,7 +146,7 @@ async function bookMentorshipSlot(productId: string, slotId: string) {
     description: 'Horário reservado pelo aluno.',
     scheduled_at: slot.starts_at,
     ends_at: slot.ends_at,
-    meeting_url: privateSlot?.meeting_url || null,
+    meeting_url: privateSlotResult.data?.meeting_url || null,
     status: 'scheduled',
   }).select('id').single()
   if (!session) throw new Error('Não foi possível agendar a sessão.')

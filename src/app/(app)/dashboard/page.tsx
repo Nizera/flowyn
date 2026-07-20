@@ -3,12 +3,15 @@
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { FunnelChart } from './FunnelChart'
 import { SalesGoalCard } from '@/components/SalesGoalCard'
 import { TrendingUp, CreditCard, CheckCircle, Undo, Clock, AlertCircle } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { currency } from '@/lib/format'
 
+const FunnelChart = dynamic(
+  () => import('./FunnelChart').then(m => ({ default: m.FunnelChart })),
+  { loading: () => <div className="h-[200px] animate-pulse rounded-xl bg-slate-100" /> },
+)
 const RevenueSpendChart = dynamic(
   () => import('./RevenueSpendChart').then(m => ({ default: m.RevenueSpendChart })),
   { loading: () => <div className="h-[300px] animate-pulse rounded-xl bg-slate-100" /> },

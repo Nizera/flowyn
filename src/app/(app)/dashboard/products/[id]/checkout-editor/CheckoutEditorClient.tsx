@@ -203,7 +203,7 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
             {config.blocks.testimonials && (
               <div className="mt-2 space-y-2">
                 <p className="text-xs font-semibold text-slate-500">Depoimentos ({config.testimonials.length} de 6)</p>
-                <TestimonialList items={config.testimonials} onChange={(items) => update('testimonials', items)} />
+                <TestimonialList items={config.testimonials} onChange={(items) => update('testimonials', items)} userId={userId} />
               </div>
             )}
 
@@ -289,13 +289,13 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
   )
 }
 
-function TestimonialList({ items, onChange }: { items: Array<{ name: string; text: string }>; onChange: (items: Array<{ name: string; text: string }>) => void }) {
-  function update(index: number, field: 'name' | 'text', value: string) {
+function TestimonialList({ items, onChange, userId }: { items: Array<{ name: string; text: string; imageUrl: string }>; onChange: (items: Array<{ name: string; text: string; imageUrl: string }>) => void; userId: string }) {
+  function update(index: number, field: 'name' | 'text' | 'imageUrl', value: string) {
     onChange(items.map((item, i) => i === index ? { ...item, [field]: value } : item))
   }
   function add() {
     if (items.length >= 6) return
-    onChange([...items, { name: '', text: '' }])
+    onChange([...items, { name: '', text: '', imageUrl: '' }])
   }
   function remove(index: number) {
     onChange(items.filter((_, i) => i !== index))
@@ -320,6 +320,19 @@ function TestimonialList({ items, onChange }: { items: Array<{ name: string; tex
             <span className="mb-1 block text-xs font-medium text-slate-500">Depoimento</span>
             <textarea value={item.text} onChange={(e) => update(i, 'text', e.target.value)} maxLength={500} className="min-h-16 w-full rounded-lg border-0 bg-[#f4f4f6] px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-orange-500/20" />
           </label>
+          <div>
+            <span className="mb-1 block text-xs font-medium text-slate-500">Foto (opcional)</span>
+            {item.imageUrl ? (
+              <div className="flex items-center gap-2">
+                <img src={item.imageUrl} alt="Avatar" className="h-10 w-10 rounded-full border border-slate-200 object-cover" />
+                <button type="button" onClick={() => update(i, 'imageUrl', '')} className="text-xs font-semibold text-red-500 hover:text-red-700 transition">
+                  Remover foto
+                </button>
+              </div>
+            ) : (
+              <FileUpload mode="image" label="" hint="Foto de perfil" dimensionsHint="100x100px" userId={userId} folder="checkout-assets" currentUrl="" onUpload={(url) => update(i, 'imageUrl', Array.isArray(url) ? url[0] : url)} />
+            )}
+          </div>
         </div>
       ))}
       {items.length < 6 && (

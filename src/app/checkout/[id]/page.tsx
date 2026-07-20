@@ -173,22 +173,6 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
               )}
             </div>
 
-            {checkoutConfig.blocks.testimonials && checkoutConfig.testimonials.length > 0 && (
-              <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Depoimentos</p>
-                <h2 className="mt-2 text-2xl font-black text-slate-950">O que nossos alunos dizem</h2>
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  {checkoutConfig.testimonials.map((testimonial, index) => (
-                    <div key={index} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                      <div className="mb-3 text-2xl leading-none" style={{ color: checkoutConfig.primaryColor }}>&ldquo;</div>
-                      <p className="text-sm leading-6 text-slate-700">{testimonial.text}</p>
-                      <p className="mt-4 text-xs font-black text-slate-500">— {testimonial.name}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
                 <div className="mb-6 border-b border-slate-100 pb-5">
                   <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Pagamento</p>
@@ -277,6 +261,33 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
           </aside>
         </div>
       </main>
+
+      {checkoutConfig.blocks.testimonials && checkoutConfig.testimonials.length > 0 && (
+        <div className="mx-auto max-w-6xl px-4 pb-8 sm:px-6">
+          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Depoimentos</p>
+            <h2 className="mt-2 text-2xl font-black text-slate-950">O que nossos alunos dizem</h2>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              {checkoutConfig.testimonials.map((testimonial, index) => (
+                <div key={index} className="flex gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  {testimonial.imageUrl && (
+                    <img
+                      src={testimonial.imageUrl}
+                      alt={testimonial.name}
+                      className="h-12 w-12 shrink-0 rounded-full border border-slate-200 object-cover"
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <div className="mb-2 text-2xl leading-none" style={{ color: checkoutConfig.primaryColor }}>&ldquo;</div>
+                    <p className="text-sm leading-6 text-slate-700">{testimonial.text}</p>
+                    <p className="mt-3 text-xs font-black text-slate-500">— {testimonial.name}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {checkoutConfig.blocks.faq && checkoutConfig.faq.length > 0 && (
         <div className="mx-auto max-w-6xl px-4 pb-8 sm:px-6">
