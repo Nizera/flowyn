@@ -119,13 +119,6 @@ export default function TrackingSection() {
           transition={{ duration: 0.6 }}
           className="mb-16 text-center"
         >
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#f97316]/20 bg-[#f97316]/5 px-4 py-1.5">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#f97316] opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#f97316]" />
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#f97316]">Rastreamento em tempo real</span>
-          </div>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white">
             Cada clique é <span className="text-[#f97316]">rastreado</span>.
             <br />
