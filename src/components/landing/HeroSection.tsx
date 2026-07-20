@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { useRef } from 'react'
 import { ArrowRight, Check, Menu, X } from 'lucide-react'
+import ShaderBackground from './ShaderBackground'
 
 const NAV_ITEMS = [
   { label: 'Produto', href: '#produto' },
@@ -17,18 +18,9 @@ export default function HeroSection() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState('')
-  const [glowPos, setGlowPos] = useState({ x: 50, y: 50 })
   const sectionRef = useRef<HTMLElement>(null)
   const headingRef = useRef<HTMLDivElement>(null)
   const headingInView = useInView(headingRef, { once: true })
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    const rect = sectionRef.current?.getBoundingClientRect()
-    if (!rect) return
-    const x = ((e.clientX - rect.left) / rect.width) * 100
-    const y = ((e.clientY - rect.top) / rect.height) * 100
-    setGlowPos({ x, y })
-  }, [])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 80)
@@ -60,17 +52,7 @@ export default function HeroSection() {
   }, [])
 
   return (
-    <section ref={sectionRef} className="h-screen relative" onMouseMove={handleMouseMove}>
-      {/* Mouse Follow Glow */}
-      <div
-        className="pointer-events-none absolute z-10 h-[500px] w-[500px] rounded-full mix-blend-screen transition-all duration-300 ease-out"
-        style={{
-          left: `${glowPos.x}%`,
-          top: `${glowPos.y}%`,
-          transform: 'translate(-50%, -50%)',
-          background: 'radial-gradient(circle, rgba(249,115,22,0.08) 0%, transparent 70%)',
-        }}
-      />
+    <section ref={sectionRef} className="h-screen relative">
       {/* Fixed Pill Navbar */}
       <nav
         className={`fixed top-0 left-1/2 z-50 -translate-x-1/2 transition-all duration-300 pt-3 md:pt-4 ${
@@ -143,11 +125,7 @@ export default function HeroSection() {
       {/* Hero Container */}
       <div className="h-full p-0 md:p-0">
         <div className="relative h-full overflow-hidden">
-          <img
-            src="/brand/hero.gif"
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-          />
+          <ShaderBackground />
 
           <div className="noise-overlay absolute inset-0 z-10" />
           <div className="absolute inset-0 z-20 bg-gradient-to-b from-[#070908]/30 via-transparent to-[#070908]/70" />
