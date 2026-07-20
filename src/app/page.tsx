@@ -1,6 +1,7 @@
 import HeroSection from '@/components/landing/HeroSection'
 import ProblemSection from '@/components/landing/ProblemSection'
 import FeaturesSection from '@/components/landing/FeaturesSection'
+import TrackingSection from '@/components/landing/TrackingSection'
 import RecursosSection from '@/components/landing/RecursosSection'
 import PricingSection from '@/components/landing/PricingSection'
 import FaqSection from '@/components/landing/FaqSection'
@@ -12,6 +13,7 @@ export default function Home() {
       <HeroSection />
       <ProblemSection />
       <FeaturesSection />
+      <TrackingSection />
       <RecursosSection />
       <PricingSection />
       <FaqSection />
