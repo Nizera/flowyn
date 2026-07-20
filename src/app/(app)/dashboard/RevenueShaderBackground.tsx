@@ -2,57 +2,19 @@
 
 import { useRef, useEffect } from 'react'
 
-const VERT = `attribute vec2 a_position;
-varying vec2 v_texCoord;
-void main() {
-  v_texCoord = a_position * 0.5 + 0.5;
-  gl_Position = vec4(a_position, 0.0, 1.0);
-}`
-
-// Adapted shader: white background with subtle orange flowing energy trails
-// and a mouse-following orange glow. Keeps the card light and content readable.
-const FRAG = `precision highp float;
-uniform float u_time;
-uniform vec2 u_resolution;
-uniform vec2 u_mouse;
-varying vec2 v_texCoord;
-
-void main() {
-    vec2 uv = v_texCoord;
-    vec2 mouse = u_mouse / u_resolution;
-
-    vec3 orange = vec3(1.0, 0.45, 0.15); // #FF7326
-    vec3 amber  = vec3(1.0, 0.60, 0.25); // flow accent
-    vec3 white = vec3(1.0, 0.99, 0.98);
-
-    // Animated flowing noise
-    float n = sin(uv.x * 8.0 + u_time * 0.4) * cos(uv.y * 8.0 + u_time * 0.4);
-    n += sin(uv.x * 18.0 - u_time * 0.7) * 0.5;
-
-    // Horizontal energy band centered vertically with organic motion
-    float band = smoothstep(0.12, 0.0, abs(uv.y - 0.5 + n * 0.08));
-    band *= smoothstep(1.0, 0.0, uv.x); // fade from left to right
-    band *= 0.18; // keep subtle so white stays dominant
-
-    // Mouse glow (in pixel/normalized coords)
-    float dist = distance(uv, mouse);
-    float glow = smoothstep(0.35, 0.0, dist) * 0.35;
-
-    vec3 finalColor = mix(white, orange, band);
-    finalColor = mix(finalColor, amber, glow * 0.8);
-
-    gl_FragColor = vec4(finalColor, 1.0);
-}`
-
 export function RevenueShaderBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
-    const canvasEl = canvasRef.current
-    if (!canvasEl) return
-    const canvas: HTMLCanvasElement = canvasEl
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    let width = 0
+    let height = 0
 
     function syncSize() {
       if (!canvas) return
@@ -61,68 +23,186 @@ export function RevenueShaderBackground() {
       if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
         canvas.width = w * dpr
         canvas.height = h * dpr
+        width = w
+        height = h
       }
     }
     syncSize()
     const ro = new ResizeObserver(syncSize)
     ro.observe(canvas)
 
-    const gl = (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) as WebGLRenderingContext | null
-    if (!gl) return
-    const glCtx: WebGLRenderingContext = gl
+    // Particle class for Antigravity-like floating dust
+    class Particle {
+      x: number
+      y: number
+      baseX: number
+      baseY: number
+      size: number
+      speedY: number
+      speedX: number
+      color: string
+      opacity: number
+      angle: number
+      spin: number
 
-    function compile(type: number, src: string) {
-      const s = glCtx.createShader(type)!
-      glCtx.shaderSource(s, src)
-      glCtx.compileShader(s)
-      return s
+      constructor() {
+        this.x = Math.random() * width
+        this.y = height + Math.random() * 50
+        this.baseX = this.x
+        this.baseY = this.y
+        this.size = Math.random() * 2 + 1
+        this.speedY = -(Math.random() * 0.3 + 0.1) // Float up slowly (antigravity)
+        this.speedX = (Math.random() * 0.2 - 0.1)
+        this.opacity = Math.random() * 0.6 + 0.2
+        this.angle = Math.random() * Math.PI * 2
+        this.spin = Math.random() * 0.01 - 0.005
+
+        // Flowyn orange/amber colors
+        const colors = [
+          'rgba(249, 115, 22, ',  // orange-500
+          'rgba(245, 158, 11, ',  // amber-500
+          'rgba(253, 186, 116, ', // orange-300
+        ]
+        this.color = colors[Math.floor(Math.random() * colors.length)]
+      }
+
+      update(mx: number | null, my: number | null) {
+        // Drift upwards
+        this.y += this.speedY
+        this.x += this.speedX + Math.sin(this.angle) * 0.15
+        this.angle += this.spin
+
+        // Respawn when reaching the top
+        if (this.y < -10) {
+          this.y = height + Math.random() * 20
+          this.x = Math.random() * width
+          this.opacity = Math.random() * 0.6 + 0.2
+        }
+
+        // Mouse interaction (repulsion/magnetic drift like antigravity)
+        if (mx !== null && my !== null) {
+          const dx = this.x - mx
+          const dy = this.y - my
+          const distance = Math.sqrt(dx * dx + dy * dy)
+          const forceRadius = 100
+
+          if (distance < forceRadius) {
+            const force = (forceRadius - distance) / forceRadius
+            const directionX = dx / distance
+            const directionY = dy / distance
+            // Push away gently
+            this.x += directionX * force * 1.5
+            this.y += directionY * force * 1.5
+          }
+        }
+      }
+
+      draw(c: CanvasRenderingContext2D) {
+        c.beginPath()
+        c.arc(this.x, this.y, this.size, 0, Math.PI * 2)
+        c.fillStyle = `${this.color}${this.opacity})`
+        // Add soft glow
+        c.shadowColor = 'rgba(249, 115, 22, 0.4)'
+        c.shadowBlur = 4
+        c.fill()
+        c.shadowBlur = 0 // reset
+      }
     }
 
-    const prog = gl.createProgram()!
-    gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT))
-    gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG))
-    gl.linkProgram(prog)
-    gl.useProgram(prog)
+    const particles: Particle[] = []
+    const particleCount = 45
 
-    const buf = gl.createBuffer()
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW)
-    const pos = gl.getAttribLocation(prog, 'a_position')
-    gl.enableVertexAttribArray(pos)
-    gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0)
+    for (let i = 0; i < particleCount; i++) {
+      particles.push(new Particle())
+    }
 
-    const uTime = gl.getUniformLocation(prog, 'u_time')
-    const uRes = gl.getUniformLocation(prog, 'u_resolution')
-    const uMouse = gl.getUniformLocation(prog, 'u_mouse')
-
-    let mouse = { x: (canvas.width || 1) / 2, y: (canvas.height || 1) / 2 }
+    let mouseX: number | null = null
+    let mouseY: number | null = null
 
     function onMouseMove(event: MouseEvent) {
       if (!canvas) return
       const rect = canvas.getBoundingClientRect()
-      if (!rect.width || !rect.height) return
-      const nx = (event.clientX - rect.left) / rect.width
-      const ny = 1.0 - (event.clientY - rect.top) / rect.height
-      mouse.x = nx * canvas.width
-      mouse.y = ny * canvas.height
+      mouseX = event.clientX - rect.left
+      mouseY = event.clientY - rect.top
     }
-    window.addEventListener('mousemove', onMouseMove)
 
-    let raf = 0
-    function render(t: number) {
-      syncSize()
-      glCtx.viewport(0, 0, canvas.width, canvas.height)
-      if (uTime) glCtx.uniform1f(uTime, t * 0.001)
-      if (uRes) glCtx.uniform2f(uRes, canvas.width, canvas.height)
-      if (uMouse) glCtx.uniform2f(uMouse, mouse.x, mouse.y)
-      glCtx.drawArrays(glCtx.TRIANGLE_STRIP, 0, 4)
-      raf = requestAnimationFrame(render)
+    function onMouseLeave() {
+      mouseX = null
+      mouseY = null
     }
-    raf = requestAnimationFrame(render)
+
+    window.addEventListener('mousemove', onMouseMove)
+    canvas.addEventListener('mouseleave', onMouseLeave)
+
+    let waveAngle = 0
+    let raf = 0
+
+    function animate() {
+      if (!ctx || !canvas) return
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.save()
+      ctx.scale(dpr, dpr)
+
+      // 1. Draw flowing fluid wave at the bottom edge (shifted down)
+      waveAngle += 0.008
+      ctx.beginPath()
+
+      // Wave 1
+      ctx.moveTo(0, height)
+      for (let x = 0; x <= width; x += 10) {
+        const y = height - 24 + Math.sin(x * 0.006 + waveAngle) * 8 + Math.cos(x * 0.012 - waveAngle) * 4
+        ctx.lineTo(x, y)
+      }
+      ctx.lineTo(width, height)
+      ctx.closePath()
+      const grad1 = ctx.createLinearGradient(0, height - 30, width, height)
+      grad1.addColorStop(0, 'rgba(249, 115, 22, 0.06)') // subtle flowyn orange
+      grad1.addColorStop(1, 'rgba(245, 158, 11, 0.03)') // amber
+      ctx.fillStyle = grad1
+      ctx.fill()
+
+      // Wave 2 (layered for depth)
+      ctx.beginPath()
+      ctx.moveTo(0, height)
+      for (let x = 0; x <= width; x += 10) {
+        const y = height - 20 + Math.sin(x * 0.008 - waveAngle * 1.2) * 6 + Math.cos(x * 0.004 + waveAngle) * 4
+        ctx.lineTo(x, y)
+      }
+      ctx.lineTo(width, height)
+      ctx.closePath()
+      const grad2 = ctx.createLinearGradient(0, height - 25, width, height)
+      grad2.addColorStop(0, 'rgba(245, 158, 11, 0.04)')
+      grad2.addColorStop(1, 'rgba(249, 115, 22, 0.05)')
+      ctx.fillStyle = grad2
+      ctx.fill()
+
+      // 2. Draw interactive particles
+      for (const p of particles) {
+        p.update(mouseX, mouseY)
+        p.draw(ctx)
+      }
+
+      // 3. Subtle mouse cursor glow
+      if (mouseX !== null && mouseY !== null) {
+        ctx.beginPath()
+        const radial = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 90)
+        radial.addColorStop(0, 'rgba(249, 115, 22, 0.05)')
+        radial.addColorStop(1, 'rgba(249, 115, 22, 0)')
+        ctx.fillStyle = radial
+        ctx.arc(mouseX, mouseY, 90, 0, Math.PI * 2)
+        ctx.fill()
+      }
+
+      ctx.restore()
+      raf = requestAnimationFrame(animate)
+    }
+    raf = requestAnimationFrame(animate)
 
     return () => {
       cancelAnimationFrame(raf)
       window.removeEventListener('mousemove', onMouseMove)
+      if (canvas) canvas.removeEventListener('mouseleave', onMouseLeave)
       ro.disconnect()
     }
   }, [])
@@ -130,8 +210,8 @@ export function RevenueShaderBackground() {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 h-full w-full"
-      style={{ display: 'block', pointerEvents: 'none' }}
+      className="absolute inset-0 h-full w-full pointer-events-none"
+      style={{ display: 'block' }}
     />
   )
 }
