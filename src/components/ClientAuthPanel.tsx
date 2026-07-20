@@ -108,7 +108,7 @@ export function ClientAuthPanel({ initialError, initialType, initialSuccess, red
         <section className="hidden min-h-[640px] flex-col justify-between border-r border-white/5 bg-[#0a0f0d] p-10 md:flex">
           <Link href="/" className="inline-flex">
             <motion.img
-              src="/brand/logo-dark.png"
+              src="/brand/logo-white-transparent.png"
               alt="Flowyn"
               className="h-20 w-auto"
               initial={{ opacity: 0 }}
@@ -179,7 +179,7 @@ export function ClientAuthPanel({ initialError, initialType, initialSuccess, red
 
           <div className="md:hidden">
             <Link href="/" className="mb-6 inline-flex">
-              <img src="/brand/logo-dark.png" alt="Flowyn" className="h-16 w-auto" />
+              <img src="/brand/logo-white-transparent.png" alt="Flowyn" className="h-16 w-auto" />
             </Link>
           </div>
 

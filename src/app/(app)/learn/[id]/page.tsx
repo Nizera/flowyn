@@ -189,7 +189,7 @@ async function CourseExperience({ product, userId, selectedLessonId }: { product
               <span className="hidden sm:inline">Voltar aos meus acessos</span>
             </Link>
             <Link href="/learn" className="hidden items-center gap-2 xl:flex">
-              <img src="/brand/logo-dark.png" alt="Flowyn" className="h-8 w-auto" />
+              <img src="/brand/logo-white-transparent.png" alt="Flowyn" className="h-8 w-auto" />
               <span className="font-black text-orange-500">Play</span>
             </Link>
           </div>
@@ -515,7 +515,7 @@ async function MentorshipExperience({ product, userId }: { product: Product; use
       <header className="sticky top-0 z-40 border-b border-white/[0.07] bg-[#070707]/90 backdrop-blur-xl">
         <div className="mx-auto flex h-20 max-w-[1500px] items-center justify-between gap-4 px-4 md:px-8">
           <Link href="/learn" className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm font-bold text-white/60 transition hover:border-white/25 hover:text-white"><ArrowLeft className="h-4 w-4" /> Meus acessos</Link>
-          <div className="hidden items-center gap-2 sm:flex"><img src="/brand/logo-dark.png" alt="Flowyn" className="h-8 w-auto" /><span className="font-black text-orange-500">Journey</span></div>
+          <div className="hidden items-center gap-2 sm:flex"><img src="/brand/logo-white-transparent.png" alt="Flowyn" className="h-8 w-auto" /><span className="font-black text-orange-500">Journey</span></div>
           <div className="w-32 sm:w-52"><div className="flex justify-between text-xs font-bold text-white/45"><span>Progresso</span><span className="text-orange-400">{progressPercent}%</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-orange-600 to-amber-400" style={{ width: `${progressPercent}%` }} /></div></div>
         </div>
       </header>

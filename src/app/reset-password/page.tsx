@@ -15,7 +15,7 @@ export default async function ResetPasswordPage(props: {
       <div className="relative z-10 w-full max-w-md">
         {/* Logo */}
         <Link href="/" className="flex justify-center mb-8">
-          <img src="/brand/logo-dark.png" alt="Flowyn" className="h-20 w-auto" />
+          <img src="/brand/logo-white-transparent.png" alt="Flowyn" className="h-20 w-auto" />
         </Link>
 
         {/* Card */}

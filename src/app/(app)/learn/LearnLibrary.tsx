@@ -68,7 +68,7 @@ export function LearnLibrary({ products, userName }: { products: LibraryProduct[
           </Link>
 
           <Link href="/learn" className="hidden shrink-0 items-center gap-2 lg:flex">
-            <img src="/brand/logo-dark.png" alt="Flowyn" className="h-9 w-auto" />
+            <img src="/brand/logo-white-transparent.png" alt="Flowyn" className="h-9 w-auto" />
             <span className="text-lg font-black text-orange-500">Play</span>
           </Link>
 

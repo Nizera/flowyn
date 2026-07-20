@@ -246,6 +246,58 @@ Testa 7 grátis e vê a diferença. Link na descrição.
 
 ---
 
+## 8. QUANTO VOCÊ PERDE + TUDO INTEGRADO
+
+### Versão 1
+
+Faz as contas comigo. Você fatura 10.000 reais por mês. A Hotmart leva 10%. São 1.000 reais que saem do seu bolso todo mês. E ainda paga UTMify pra saber de onde vem cada venda. São mais 97 reais.
+
+São quase 1.100 reais por mês só em custo de plataforma. E o que você recebe em troca? Uma plataforma que segura seu dinheiro e uma ferramenta de traqueamento separada.
+
+A Flowyn é diferente. Zero de taxa por venda. Traqueamento UTM já integrado. Dinheiro direto na sua conta. Tudo numa única plataforma. 97 reais por mês. Fixo. Sem surpresa. Sem taxa escondida. Sem ferramenta extra.
+
+Testa grátis por 7 dias. Link na descrição.
+
+### Versão 2
+
+Plataforma de vendas cobra 10%. Ferramenta de traqueamento cobra mais 97 reais. Ferramenta de entrega cobra mais uma assinatura. Você tá pagando 3 coisas pra fazer o que uma só deveria fazer.
+
+A Flowyn junta tudo numa única plataforma. Checkout. Entrega automática. Traqueamento UTM. Recebimento na sua conta. Zero de taxa por venda.
+
+97 reais por mês e você tem tudo. Sem integrar ferramenta extra. Sem pagar por cada pedaço separado. Sem complicação.
+
+Cria tua conta e vê na prática. Link na descrição.
+
+### Versão 3
+
+Cobra 10% por venda na plataforma. Paga UTMify pra rastrear campanha. Paga mais uma ferramenta pra entregar o produto. No fim do mês, sobrou mais dinheiro pra plataforma do que pra você.
+
+A Flowyn resolve tudo isso. Zero taxa por venda. Traqueamento UTM nativo. Entrega automática. Dinheiro direto na sua conta. Tudo junto. Tudo integrado. Tudo por 97 reais fixos por mês.
+
+Não são 3 ferramentas. É uma só. E custa menos que uma delas sozinha.
+
+Testa 7 grátis. Link na descrição.
+
+### Versão 4
+
+Quanto você gasta por mês pra vender seu produto? Plataforma de checkout, ferramenta de traqueamento, serviço de entrega. São 3, 4 assinaturas diferentes. E ainda leva 10% de cada venda.
+
+Com a Flowyn, você paga 97 reais por mês e tem tudo integrado. Checkout personalizado. Traqueamento UTM. Entrega automática. Recebimento direto na sua conta. Zero de taxa por venda.
+
+Não são 3 plataformas. É uma só. E ela não cobra porcentagem.
+
+Link na descrição. Testa grátis por 7 dias.
+
+### Versão 5
+
+Seu lucro tá sumindo e você nem percebe. Plataforma leva 10%. UTMify leva mais uma assinatura. Outra ferramenta leva mais uma. No final, o que sobra é pouco.
+
+A Flowyn acabou com esse modelo. Você paga 97 reais fixos. Zero de taxa por venda. Traqueamento UTM integrado. Dinheiro na sua conta. Entrega automática. Tudo junto.
+
+A quanto tempo você tá dando dinheiro pra plataforma? Testa a Flowyn. Link na descrição.
+
+---
+
 ## HOOKS ALTERNATIVOS (para testar)
 
 - "Quanto você tá perdendo por mês pra plataforma?"
@@ -258,6 +310,11 @@ Testa 7 grátis e vê a diferença. Link na descrição.
 - "Imagina não precisar mais pensar na taxa da plataforma."
 - "Cada venda que você faz, uma parte vai pra quem? Pra você ou pra plataforma?"
 - "O custo da plataforma aumenta quando você cresce. E se fosse o contrário?"
+- "Quanto você gasta por mês só pra conseguir vender?"
+- "Plataforma, traqueamento, entrega. São 3 assinaturas pra uma função?"
+- "Cobra 10% e ainda cobra pra rastrear. Isso é absurdo."
+- "Sua plataforma leva um pedaço de cada venda. E a ferramenta de traqueamento leva mais um."
+- "Imagina ter tudo integrado sem pagar porcentagem por venda."
 
 ---
 
