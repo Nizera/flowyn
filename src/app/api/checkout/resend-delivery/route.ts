@@ -2,15 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { hashIdentifier } from '@/lib/hash'
 import { resendOrderDelivery } from '@/lib/order-delivery'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { getClientIp } from '@/lib/client-ip'
 
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
-}
-
-function getClientIp(req: NextRequest) {
-  const forwardedFor = req.headers.get('x-forwarded-for')
-  if (forwardedFor) return forwardedFor.split(',')[0].trim()
-  return req.headers.get('x-real-ip') || '127.0.0.1'
 }
 
 export async function POST(req: NextRequest) {

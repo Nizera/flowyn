@@ -320,6 +320,10 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  try { await requireProPlan(user.id) } catch {
+    return NextResponse.json({ error: 'Subscription required' }, { status: 403 })
+  }
+
   const { searchParams } = new URL(req.url)
   const campaignId = searchParams.get('campaign_id')
   const accountId = searchParams.get('account_id')

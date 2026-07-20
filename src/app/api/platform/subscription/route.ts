@@ -11,14 +11,9 @@ import {
 import { isValidCardExpiry, isValidCpfCnpj, isValidEmail, isValidPhone, isValidCardNumber, isValidCvv, isValidPostalCode } from '@/lib/validation'
 import { hashIdentifier } from '@/lib/hash'
 import { encryptApiKey } from '@/lib/encryption'
+import { getClientIp } from '@/lib/client-ip'
 
 const FLOWYN_PRO_PRICE = 97
-
-function getClientIp(req: NextRequest) {
-  const forwardedFor = req.headers.get('x-forwarded-for')
-  if (forwardedFor) return forwardedFor.split(',')[0].trim()
-  return req.headers.get('x-real-ip') || '127.0.0.1'
-}
 
 function isoDate(value: string | null | undefined) {
   const date = value ? new Date(value) : new Date()
@@ -315,6 +310,9 @@ export async function DELETE(req: NextRequest) {
     await cancelSubscription(subscription.asaas_subscription_id, apiKey)
   }
 
+  // Mark subscription as cancelled but do NOT immediately downgrade plan.
+  // The webhook or grace-period cron will handle the actual downgrade
+  // when current_period_ends_at is reached, consistent with Asaas behavior.
   await admin
     .from('platform_subscriptions')
     .update({
@@ -322,11 +320,6 @@ export async function DELETE(req: NextRequest) {
       updated_at: new Date().toISOString(),
     })
     .eq('id', subscription.id)
-
-  await admin
-    .from('profiles')
-    .update({ plan: 'free', updated_at: new Date().toISOString() })
-    .eq('id', userId)
 
   await admin.from('security_audit_log').insert({
     actor_user_id: userId,

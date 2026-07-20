@@ -29,8 +29,8 @@ export function encryptApiKey(plaintext: string): string {
 
 export function decryptApiKey(value: string): string {
   if (!value.startsWith(ENCRYPTED_PREFIX)) {
-    console.warn('[Encryption] Value not encrypted (missing enc: prefix). This is a security risk.')
-    return value
+    console.error('[Encryption] Value not encrypted (missing enc: prefix). Refusing to decrypt — this indicates a data integrity issue.')
+    throw new Error('ENCRYPTION_ERROR: Stored API key is not encrypted. Refusing to decrypt for security.')
   }
 
   const key = getKey()

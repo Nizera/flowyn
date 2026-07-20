@@ -112,78 +112,10 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST: Toggle campaign status (pause/resume) via Meta Graph API
-export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  try {
-    await requireProPlan(user.id)
-  } catch {
-    return NextResponse.json({ error: 'Subscription required' }, { status: 403 })
-  }
-
-  const rawBody = await req.text()
-  if (rawBody.length > 16_384) {
-    return NextResponse.json({ error: 'Request too large' }, { status: 413 })
-  }
-  const body = JSON.parse(rawBody)
-  const { campaign_id, ad_account_id, status } = body
-
-  if (!campaign_id || !ad_account_id || !status) {
-    return NextResponse.json({ error: 'campaign_id, ad_account_id, status required' }, { status: 400 })
-  }
-
-  if (!['ACTIVE', 'PAUSED'].includes(status)) {
-    return NextResponse.json({ error: 'status must be ACTIVE or PAUSED' }, { status: 400 })
-  }
-
-  // Verify user owns this account
-  const { data: account } = await supabase
-    .from('ad_accounts')
-    .select('id')
-    .eq('ad_account_id', ad_account_id)
-    .eq('user_id', user.id)
-    .single()
-
-  if (!account) {
-    return NextResponse.json({ error: 'Account not found' }, { status: 404 })
-  }
-
-  const accessToken = await getDecryptedToken(ad_account_id, user.id)
-  if (!accessToken) {
-    return NextResponse.json({ error: 'Token not found' }, { status: 404 })
-  }
-
-  try {
-    // Call Meta Graph API to update campaign status
-    const metaRes = await fetch(`${GRAPH_API}/${campaign_id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, access_token: accessToken }),
-    })
-    const metaData = await metaRes.json()
-
-    if (metaData.error) {
-      return NextResponse.json({ error: metaData.error.message }, { status: 500 })
-    }
-
-    // Update local campaigns table
-    const adminSupabase = createAdminClient()
-    await adminSupabase
-      .from('campaigns')
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq('campaign_id', campaign_id)
-      .eq('ad_account_id', ad_account_id)
-      .eq('user_id', user.id)
-
-    return NextResponse.json({ success: true, campaign_id, status })
-  } catch (error) {
-    console.error('[Meta Campaigns POST] Error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
+// POST: Deprecated — use /api/meta-ads/campaigns/toggle instead
+export async function POST() {
+  return NextResponse.json(
+    { error: 'This endpoint is deprecated. Use /api/meta-ads/campaigns/toggle instead.' },
+    { status: 410 },
+  )
 }

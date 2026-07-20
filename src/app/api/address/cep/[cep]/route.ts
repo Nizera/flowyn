@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { hashIdentifier } from '@/lib/hash'
+import { getClientIp } from '@/lib/client-ip'
 
 type ViaCepResponse = {
   erro?: boolean
@@ -11,13 +12,7 @@ type ViaCepResponse = {
   uf?: string
 }
 
-function getClientIp(req: Request) {
-  const forwardedFor = req.headers.get('x-forwarded-for')
-  if (forwardedFor) return forwardedFor.split(',')[0].trim()
-  return req.headers.get('x-real-ip') || '127.0.0.1'
-}
-
-export async function GET(request: Request, context: { params: Promise<{ cep: string }> }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ cep: string }> }) {
   const { cep: rawCep } = await context.params
   const cep = rawCep.replace(/\D/g, '')
 

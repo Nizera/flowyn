@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { getClientIp } from '@/lib/client-ip'
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,6 +20,18 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createAdminClient()
+
+    // Rate limit: 60 events/min per IP
+    const ip = getClientIp(req)
+    const { data: allowed } = await supabase.rpc('consume_rate_limit', {
+      p_identifier: `funnel:${ip}`,
+      p_action: 'funnel_event',
+      p_max_requests: 60,
+      p_window_seconds: 60,
+    })
+    if (allowed === false) {
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
+    }
 
     // Resolve product_id from plans
     const { data: plan, error: planError } = await supabase

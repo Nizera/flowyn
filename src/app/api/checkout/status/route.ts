@@ -4,28 +4,13 @@ import { hashIdentifier } from '@/lib/hash'
 import { fulfillPaidOrder } from '@/lib/order-fulfillment'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { decryptApiKey } from '@/lib/encryption'
+import { getClientIp } from '@/lib/client-ip'
 
 const PAID_STATUSES = new Set(['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'])
 const FAILED_STATUSES = new Set(['REFUNDED', 'REFUND_REQUESTED', 'CHARGEBACK_REQUESTED', 'CHARGEBACK_DISPUTE', 'EXPIRED', 'OVERDUE', 'FAILED'])
 
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
-}
-
-function getClientIp(req: NextRequest) {
-  // Prefer Vercel's verified header (cannot be spoofed by client)
-  const vercelIp = req.headers.get('x-vercel-forwarded-for')
-  if (vercelIp) return vercelIp.split(',')[0].trim()
-  // Fall back to x-real-ip (set by reverse proxy)
-  const realIp = req.headers.get('x-real-ip')
-  if (realIp) return realIp.trim()
-  // Last resort: rightmost of x-forwarded-for (least client-controlled)
-  const forwardedFor = req.headers.get('x-forwarded-for')
-  if (forwardedFor) {
-    const ips = forwardedFor.split(',').map(s => s.trim()).filter(Boolean)
-    return ips[ips.length - 1] || '127.0.0.1'
-  }
-  return '127.0.0.1'
 }
 
 export async function GET(req: NextRequest) {

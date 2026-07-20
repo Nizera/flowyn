@@ -3,16 +3,15 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { createTransfer } from '@/lib/asaas'
 import { hashIdentifier } from '@/lib/hash'
+import { getClientIp } from '@/lib/client-ip'
+import { verifyOrigin } from '@/lib/csrf'
 
 const MIN_WITHDRAWAL = 10
 
-function getClientIp(req: NextRequest) {
-  const forwarded = req.headers.get('x-forwarded-for')
-  if (forwarded) return forwarded.split(',')[0].trim()
-  return req.headers.get('x-real-ip') || '127.0.0.1'
-}
-
 export async function POST(req: NextRequest) {
+  const csrfError = verifyOrigin(req)
+  if (csrfError) return csrfError
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })

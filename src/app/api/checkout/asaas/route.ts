@@ -6,6 +6,8 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { isValidCardExpiry, isValidCardNumber, isValidCpfCnpj, isValidEmail, isValidPhone, isValidCvv, isValidPostalCode } from '@/lib/validation'
 import { hashIdentifier } from '@/lib/hash'
 import { decryptApiKey } from '@/lib/encryption'
+import { getClientIp } from '@/lib/client-ip'
+import { verifyOrigin } from '@/lib/csrf'
 
 type PlanProduct = {
   id: string
@@ -28,22 +30,6 @@ function today() {
   return new Date().toISOString().slice(0, 10)
 }
 
-function getClientIp(req: NextRequest) {
-  // Prefer Vercel's verified header (cannot be spoofed by client)
-  const vercelIp = req.headers.get('x-vercel-forwarded-for')
-  if (vercelIp) return vercelIp.split(',')[0].trim()
-  // Fall back to x-real-ip (set by reverse proxy)
-  const realIp = req.headers.get('x-real-ip')
-  if (realIp) return realIp.trim()
-  // Last resort: rightmost of x-forwarded-for (least client-controlled)
-  const forwardedFor = req.headers.get('x-forwarded-for')
-  if (forwardedFor) {
-    const ips = forwardedFor.split(',').map(s => s.trim()).filter(Boolean)
-    return ips[ips.length - 1] || '127.0.0.1'
-  }
-  return '127.0.0.1'
-}
-
 function maskEmail(email: string) {
   const [localPart, domain] = email.split('@')
   return localPart && domain ? `${localPart.charAt(0)}***@${domain}` : '***'
@@ -58,6 +44,9 @@ function sameWallet(left?: string | null, right?: string | null) {
 }
 
 export async function POST(req: NextRequest) {
+  const csrfError = verifyOrigin(req)
+  if (csrfError) return csrfError
+
   const rawBody = await req.text()
   if (rawBody.length > 16_384) {
     return NextResponse.json({ error: 'Requisição inválida.' }, { status: 413 })

@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { timingSafeEqual } from 'node:crypto'
 import { fulfillPaidOrder, revokePaidOrder } from '@/lib/order-fulfillment'
 import { processPlatformSubscriptionPayment } from '@/lib/platform-subscription'
 import { retrievePayment } from '@/lib/asaas'
 import { createAdminClient } from '@/utils/supabase/admin'
-
-function safeTokenEqual(a: string, b: string) {
-  const bufA = Buffer.from(a)
-  const bufB = Buffer.from(b)
-  if (bufA.length !== bufB.length) return false
-  return timingSafeEqual(bufA, bufB)
-}
+import { safeTokenEqual } from '@/lib/safe-bearer-compare'
 
 const PAID_EVENTS = new Set(['PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED', 'PAYMENT_RECEIVED_IN_CASH'])
 const FAILED_EVENTS = new Set([

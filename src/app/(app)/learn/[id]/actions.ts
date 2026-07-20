@@ -120,7 +120,9 @@ async function notify(options: { recipient?: string | null; userId?: string | nu
   }
 }
 
-export async function bookMentorshipSlot(productId: string, slotId: string) {
+export // TODO(H9): This function makes 15+ sequential DB queries per booking.
+// Refactor to use a single RPC function or batched queries for performance.
+async function bookMentorshipSlot(productId: string, slotId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Faça login para reservar uma sessão.')

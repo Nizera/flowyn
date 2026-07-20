@@ -5,6 +5,7 @@ import { createSubaccount, listSubaccounts, onlyDigits, retrieveSubaccount, retr
 import { isValidCpfCnpj, isValidEmail, isValidPhone } from '@/lib/validation'
 import { hashIdentifier } from '@/lib/hash'
 import { encryptApiKey, decryptApiKey } from '@/lib/encryption'
+import { verifyOrigin } from '@/lib/csrf'
 
 type Profile = {
   asaas_account_id: string | null
@@ -137,6 +138,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const csrfError = verifyOrigin(request)
+  if (csrfError) return csrfError
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
