@@ -16,6 +16,10 @@ const RevenueSpendChart = dynamic(
   () => import('./RevenueSpendChart').then(m => ({ default: m.RevenueSpendChart })),
   { loading: () => <div className="h-[300px] animate-pulse rounded-xl bg-slate-100" /> },
 )
+const RevenueShaderBackground = dynamic(
+  () => import('./RevenueShaderBackground').then(m => ({ default: m.RevenueShaderBackground })),
+  { ssr: false, loading: () => null },
+)
 
 interface Summary {
   total_revenue: number
@@ -124,34 +128,8 @@ export default function DashboardPage() {
       {/* Revenue Hero */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <section className="lg:col-span-8 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative overflow-hidden">
-          {/* Animated sparkline background */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <svg className="absolute bottom-0 left-0 w-full h-32 opacity-[0.07]" viewBox="0 0 400 100" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="spark-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#f97316" />
-                  <stop offset="50%" stopColor="#f59e0b" />
-                  <stop offset="100%" stopColor="#f97316" />
-                </linearGradient>
-              </defs>
-              <path d="M0,80 Q50,60 100,70 T200,50 T300,65 T400,45 L400,100 L0,100 Z" fill="url(#spark-gradient)">
-                <animate attributeName="d" dur="8s" repeatCount="indefinite"
-                  values="M0,80 Q50,60 100,70 T200,50 T300,65 T400,45 L400,100 L0,100 Z;
-                          M0,70 Q50,50 100,65 T200,55 T300,45 T400,55 L400,100 L0,100 Z;
-                          M0,75 Q50,55 100,60 T200,60 T300,50 T400,50 L400,100 L0,100 Z;
-                          M0,80 Q50,60 100,70 T200,50 T300,65 T400,45 L400,100 L0,100 Z" />
-              </path>
-              <path d="M0,90 Q80,75 160,82 T320,70 T400,60 L400,100 L0,100 Z" fill="url(#spark-gradient)" opacity="0.5">
-                <animate attributeName="d" dur="10s" repeatCount="indefinite"
-                  values="M0,90 Q80,75 160,82 T320,70 T400,60 L400,100 L0,100 Z;
-                          M0,85 Q80,70 160,78 T320,75 T400,65 L400,100 L0,100 Z;
-                          M0,88 Q80,72 160,80 T320,72 T400,62 L400,100 L0,100 Z;
-                          M0,90 Q80,75 160,82 T320,70 T400,60 L400,100 L0,100 Z" />
-              </path>
-            </svg>
-          </div>
-
-          <div className="absolute right-0 top-0 w-64 h-64 bg-orange-50 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+          {/* WebGL shader background: orange flow + mouse glow */}
+          <RevenueShaderBackground />
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Faturamento</span>
