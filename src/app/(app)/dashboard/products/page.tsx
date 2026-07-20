@@ -4,6 +4,7 @@ import type { LucideIcon } from 'lucide-react'
 import { BookOpen, Box, ExternalLink, FileText, Layers, Plus, Search, Users } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { CopyUtmButton } from '@/components/CopyUtmButton'
+import { currency } from '@/lib/format'
 
 type ProductPlanRow = {
   price: string | number | null
@@ -19,10 +20,6 @@ const TYPE_CONFIG: Record<string, { label: string; badge: string; icon: LucideIc
   ebook: { label: 'E-book', badge: 'bg-violet-50 text-violet-700 ring-violet-100', icon: FileText },
   mentoria: { label: 'Mentoria', badge: 'bg-amber-50 text-amber-700 ring-amber-100', icon: Users },
   outros: { label: 'Infoproduto', badge: 'bg-slate-100 text-slate-700 ring-slate-200', icon: Layers },
-}
-
-function currency(value: number) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
 }
 
 function date(value: string | null) {

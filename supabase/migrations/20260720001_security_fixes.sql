@@ -36,3 +36,12 @@ CREATE POLICY "referral_commissions_update_service_role" ON public.referral_comm
 -- GRANT at the role level is fragile defense-in-depth. Remove it.
 REVOKE INSERT ON public.funnel_events FROM anon;
 REVOKE ALL ON public.funnel_events FROM authenticated;
+
+-- M5 FIX: Add indexes for TTL cleanup on unbounded tables
+CREATE INDEX IF NOT EXISTS idx_sync_logs_created_at ON public.sync_logs (created_at);
+CREATE INDEX IF NOT EXISTS idx_tracking_events_created_at ON public.tracking_events (created_at);
+CREATE INDEX IF NOT EXISTS idx_funnel_events_created_at ON public.funnel_events (created_at);
+
+-- Dead table drops (verified zero code references)
+DROP TABLE IF EXISTS public.campaign_costs CASCADE;
+DROP TABLE IF EXISTS public.platform_access CASCADE;

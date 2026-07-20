@@ -14,9 +14,7 @@ interface OrderBumpData {
 
 interface CheckoutFormProps {
   planId: string
-  productId: string
   amount: number
-  pixels: { platform: string; pixel_id: string }[]
   orderBump: OrderBumpData
   primaryColor?: string
   buttonText?: string
@@ -154,6 +152,8 @@ export function CheckoutForm({
 
   const totalAmount = amount + bumpPrice
 
+  // TODO(M9): This DOM manipulation is an anti-pattern. The totalAmount should
+  // be lifted to the parent page via props/callback instead of mutating the DOM.
   useEffect(() => {
     const el = document.getElementById('checkout-total-amount')
     if (el) el.innerText = `R$ ${money(totalAmount)}`

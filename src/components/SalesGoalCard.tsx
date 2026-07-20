@@ -4,7 +4,6 @@ import { Target, Star, Award, Medal, Trophy, Crown, Gem } from 'lucide-react'
 
 interface SalesGoalCardProps {
   totalSales: number
-  variant?: 'compact' | 'full'
 }
 
 const STEP = 10_000
@@ -39,7 +38,7 @@ function formatCompact(value: number) {
   return `R$ ${value.toFixed(0)}`
 }
 
-export function SalesGoalCard({ totalSales, variant = 'compact' }: SalesGoalCardProps) {
+export function SalesGoalCard({ totalSales }: SalesGoalCardProps) {
   const goalStart = Math.floor(totalSales / STEP) * STEP
   const goalEnd = goalStart + STEP
   const progressPct = Math.min(((totalSales - goalStart) / STEP) * 100, 100)
@@ -48,27 +47,6 @@ export function SalesGoalCard({ totalSales, variant = 'compact' }: SalesGoalCard
   const nextBadge = getNextBadge(totalSales)
 
   const BadgeIcon = currentBadge.icon
-
-  if (variant === 'compact') {
-    return (
-      <div className="hidden min-w-[190px] rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm md:block">
-        <div className="mb-1.5 flex items-center justify-between">
-          <span className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
-            <Target className="h-3.5 w-3.5 text-orange-600" />
-            Meta
-          </span>
-          <span className="text-xs font-black text-orange-600">{formatCompact(totalSales)} / {formatCompact(goalEnd)}</span>
-        </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-700 ease-out"
-            style={{ width: `${progressPct}%` }}
-          />
-        </div>
-        <p className="mt-1 text-[10px] text-slate-400">Faltam {formatCompact(remaining)} para a proxima meta</p>
-      </div>
-    )
-  }
 
   return (
     <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm h-[140px]">

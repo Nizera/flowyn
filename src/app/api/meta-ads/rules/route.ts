@@ -45,13 +45,35 @@ export async function POST(req: NextRequest) {
   if (rawBody.length > 16_384) {
     return NextResponse.json({ error: 'Request too large' }, { status: 413 })
   }
-  const body = JSON.parse(rawBody)
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse(rawBody)
+  } catch {
+    return NextResponse.json({ error: 'JSON invalido' }, { status: 400 })
+  }
   const {
     ad_account_id, name, entity_level, entity_ids,
     condition_metric, condition_operator, condition_value, condition_period,
     action_type, action_value, action_value_type,
     cooldown_hours, notify_whatsapp, notify_email, webhook_url, webhook_secret,
-  } = body
+  } = body as {
+    ad_account_id: string
+    name: string
+    entity_level?: string
+    entity_ids?: string[]
+    condition_metric: string
+    condition_operator: string
+    condition_value: number
+    condition_period?: string
+    action_type: string
+    action_value?: number
+    action_value_type?: string
+    cooldown_hours?: number
+    notify_whatsapp?: boolean
+    notify_email?: boolean
+    webhook_url?: string
+    webhook_secret?: string
+  }
 
   if (!ad_account_id || !name || !condition_metric || !condition_operator || condition_value == null || !action_type) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })

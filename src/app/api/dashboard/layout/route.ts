@@ -28,8 +28,13 @@ export async function PUT(req: NextRequest) {
   if (rawBody.length > 16_384) {
     return NextResponse.json({ error: 'Request too large' }, { status: 413 })
   }
-  const body = JSON.parse(rawBody)
-  const { layout, visible_widgets } = body
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse(rawBody)
+  } catch {
+    return NextResponse.json({ error: 'JSON invalido' }, { status: 400 })
+  }
+  const { layout, visible_widgets } = body as { layout?: unknown[]; visible_widgets?: string[] }
 
   if (layout !== undefined && (!Array.isArray(layout) || layout.length > 50)) {
     return NextResponse.json({ error: 'Invalid layout' }, { status: 400 })
@@ -38,13 +43,16 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid visible_widgets' }, { status: 400 })
   }
 
-  const safeLayout = Array.isArray(layout) ? layout.map((w: Record<string, unknown>) => ({
-    i: typeof w.i === 'string' ? w.i.slice(0, 100) : '',
-    x: typeof w.x === 'number' ? w.x : 0,
-    y: typeof w.y === 'number' ? w.y : 0,
-    w: typeof w.w === 'number' ? w.w : 1,
-    h: typeof w.h === 'number' ? w.h : 1,
-  })) : []
+  const safeLayout = Array.isArray(layout) ? layout.map((w: unknown) => {
+    const widget = w as Record<string, unknown>
+    return {
+      i: typeof widget.i === 'string' ? widget.i.slice(0, 100) : '',
+      x: typeof widget.x === 'number' ? widget.x : 0,
+      y: typeof widget.y === 'number' ? widget.y : 0,
+      w: typeof widget.w === 'number' ? widget.w : 1,
+      h: typeof widget.h === 'number' ? widget.h : 1,
+    }
+  }) : []
   const safeWidgets = Array.isArray(visible_widgets) ? visible_widgets.filter((w: unknown) => typeof w === 'string').map((w: string) => w.slice(0, 100)) : []
 
   const { error } = await supabase

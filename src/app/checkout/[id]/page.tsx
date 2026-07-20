@@ -196,9 +196,7 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
                 </div>
               <CheckoutForm
                 planId={plan.id}
-                productId={plan.product_id}
                 amount={plan.price}
-                pixels={allPixels}
                 primaryColor={checkoutConfig.primaryColor}
                 buttonText={checkoutConfig.buttonText}
                 previewMode={isPreviewMode}

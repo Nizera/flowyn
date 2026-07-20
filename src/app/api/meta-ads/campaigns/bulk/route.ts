@@ -26,8 +26,19 @@ export async function POST(req: NextRequest) {
   if (rawBody.length > 65_536) {
     return NextResponse.json({ error: 'Request too large' }, { status: 413 })
   }
-  const body = JSON.parse(rawBody)
-  const { ids, action, ad_account_id, level, budget_amount } = body
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse(rawBody)
+  } catch {
+    return NextResponse.json({ error: 'JSON invalido' }, { status: 400 })
+  }
+  const { ids, action, ad_account_id, level, budget_amount } = body as {
+    ids: string[]
+    action: string
+    ad_account_id: string
+    level: string
+    budget_amount?: number
+  }
 
   if (!ids || !Array.isArray(ids) || ids.length === 0 || !action || !ad_account_id || !level) {
     return NextResponse.json({ error: 'ids[], action, ad_account_id, level required' }, { status: 400 })

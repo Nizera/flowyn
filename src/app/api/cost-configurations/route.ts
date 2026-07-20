@@ -46,17 +46,35 @@ export async function POST(req: NextRequest) {
   if (rawBody.length > 16_384) {
     return NextResponse.json({ error: 'Request too large' }, { status: 413 })
   }
-  const body = JSON.parse(rawBody)
-  const { tax_percentage, asaas_flat_fee, asaas_percent_fee, product_costs } = body
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse(rawBody)
+  } catch {
+    return NextResponse.json({ error: 'JSON invalido' }, { status: 400 })
+  }
+  const { tax_percentage, asaas_flat_fee, asaas_percent_fee, product_costs } = body as {
+    tax_percentage?: number
+    asaas_flat_fee?: number
+    asaas_percent_fee?: number
+    product_costs?: unknown[]
+  }
+
+  // Validate numeric values are non-negative and within bounds
+  const tp = Number(tax_percentage) || 0
+  const af = Number(asaas_flat_fee) || 0
+  const ap = Number(asaas_percent_fee) || 0
+  if (tp < 0 || tp > 100) return NextResponse.json({ error: 'tax_percentage must be 0-100' }, { status: 400 })
+  if (af < 0 || af > 100) return NextResponse.json({ error: 'asaas_flat_fee must be 0-100' }, { status: 400 })
+  if (ap < 0 || ap > 100) return NextResponse.json({ error: 'asaas_percent_fee must be 0-100' }, { status: 400 })
 
   const { data, error } = await supabase
     .from('cost_configurations')
     .upsert({
       user_id: user.id,
-      tax_percentage: tax_percentage || 0,
-      asaas_flat_fee: asaas_flat_fee || 0,
-      asaas_percent_fee: asaas_percent_fee || 0,
-      product_costs: product_costs || [],
+      tax_percentage: tp,
+      asaas_flat_fee: af,
+      asaas_percent_fee: ap,
+      product_costs: Array.isArray(product_costs) ? product_costs : [],
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' })
     .select()

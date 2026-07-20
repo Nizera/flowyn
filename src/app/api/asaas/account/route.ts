@@ -380,9 +380,12 @@ export async function POST(request: NextRequest) {
       } catch (createErr: unknown) {
         const msg = String((createErr as Error)?.message || createErr || '')
         if (msg.includes('já está em uso') || msg.toLowerCase().includes('already in use')) {
-          const fallbackEmail = `flowyn+${payload.cpfCnpj}@${payload.email.split('@')[1]}`
-          account = await createSubaccount({ ...subaccountPayload, email: fallbackEmail })
-          newSubaccountApiKey = account.apiKey
+          // Email already registered in Asaas — cannot create subaccount silently.
+          // The producer must use a different email or contact Asaas support.
+          console.error('[Asaas] Email already in use for subaccount creation:', payload.email)
+          return NextResponse.json({
+            error: 'Este email ja esta registrado no Asaas. Use outro email ou entre em contato com o suporte Asaas.',
+          }, { status: 409 })
         } else {
           throw createErr
         }

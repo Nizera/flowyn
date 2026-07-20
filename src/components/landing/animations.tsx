@@ -3,50 +3,6 @@
 import { motion, useInView, useScroll, useTransform, type MotionValue } from 'framer-motion'
 import { useRef, type ReactNode } from 'react'
 
-export function WordsPullUp({
-  text,
-  className,
-  showAsterisk,
-  asteriskColor,
-  style,
-}: {
-  text: string
-  className?: string
-  showAsterisk?: boolean
-  asteriskColor?: string
-  style?: React.CSSProperties
-}) {
-  const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once: true, margin: '-100px' })
-  const words = text.split(' ')
-
-  return (
-    <div ref={ref} className={className} style={style}>
-      {words.map((word, i) => (
-        <span key={i} className="relative inline-block">
-          <motion.span
-            initial={{ y: 20, opacity: 0 }}
-            animate={isInView ? { y: 0, opacity: 1 } : {}}
-            transition={{ duration: 0.5, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
-            className="inline-block"
-          >
-            {word}
-            {showAsterisk && i === words.length - 1 && (
-              <span
-                className="absolute top-[0.65em] -right-[0.3em] text-[0.31em]"
-                style={{ color: asteriskColor || '#f97316' }}
-              >
-                *
-              </span>
-            )}
-          </motion.span>
-          {i < words.length - 1 && <span>&nbsp;</span>}
-        </span>
-      ))}
-    </div>
-  )
-}
-
 export function WordsPullUpMultiStyle({
   segments,
   className,

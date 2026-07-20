@@ -42,8 +42,13 @@ export async function POST(req: NextRequest) {
   if (rawBody.length > 4096) {
     return NextResponse.json({ error: 'Request too large' }, { status: 413 })
   }
-  const body = JSON.parse(rawBody)
-  const { ad_account_id } = body
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse(rawBody)
+  } catch {
+    return NextResponse.json({ error: 'JSON invalido' }, { status: 400 })
+  }
+  const { ad_account_id } = body as { ad_account_id: string }
 
   if (!ad_account_id) {
     return NextResponse.json({ error: 'ad_account_id required' }, { status: 400 })
