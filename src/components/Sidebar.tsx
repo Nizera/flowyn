@@ -71,8 +71,8 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
   }
 
   return (
-    <aside className="flex h-screen w-full flex-col overflow-y-auto border-r border-slate-200 bg-white sidebar-scrollbar">
-      <Link href="/dashboard" className="flex h-20 items-center justify-center border-b border-slate-200 px-4 lg:justify-start">
+    <aside className="flex h-screen w-full flex-col overflow-y-auto border-r border-border bg-background sidebar-scrollbar">
+      <Link href="/dashboard" className="flex h-20 items-center justify-center border-b border-border px-4 lg:justify-start">
         <img src="/brand/logo-black-transparent.png" alt="Flowyn" className="h-10 w-auto lg:h-11" />
       </Link>
 
@@ -91,8 +91,8 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
                     title={item.label}
                     className={`group relative flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition ${
                       active
-                        ? 'bg-orange-50 text-orange-600'
-                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-950'
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted hover:bg-surface hover:text-foreground'
                     }`}
                   >
                     {active && <span className="absolute left-0 h-6 w-1 rounded-r-full bg-gradient-to-r from-orange-500 to-amber-500" />}
@@ -106,21 +106,21 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
         ))}
       </nav>
 
-      <div className="border-t border-slate-200 p-4">
+      <div className="border-t border-border p-4">
         {profile && (
           <div className="mb-3 flex items-center gap-3 rounded-xl px-3 py-2">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-sm font-black text-white">
               {profile.full_name?.charAt(0)?.toUpperCase() || '?'}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-slate-950">{profile.full_name || 'Usuario'}</p>
-              <p className="truncate text-xs text-slate-400">Conta Flowyn</p>
+              <p className="truncate text-sm font-bold text-foreground">{profile.full_name || 'Usuario'}</p>
+              <p className="truncate text-xs text-muted">Conta Flowyn</p>
             </div>
             <ThemeToggle />
           </div>
         )}
         <form action={signOutAction}>
-          <button type="submit" className="flex h-11 w-full items-center justify-center gap-3 rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-red-50 hover:text-red-600">
+          <button type="submit" className="flex h-11 w-full items-center justify-center gap-3 rounded-xl px-3 text-sm font-semibold text-muted transition hover:bg-red-500/10 hover:text-red-500">
             <LogOut className="h-5 w-5" />
             <span>Sair da Conta</span>
           </button>

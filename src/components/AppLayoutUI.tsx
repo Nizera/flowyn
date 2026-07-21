@@ -133,7 +133,7 @@ export function AppLayoutUI({ children, profile, subscription, notifications }: 
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-[#f6f7f9] text-slate-950 md:flex-row">
+    <div className="relative flex min-h-screen flex-col bg-background text-foreground md:flex-row">
       <div className="hidden shrink-0 md:block w-64" />
 
       <div className="fixed inset-y-0 left-0 z-40 hidden md:flex w-64">

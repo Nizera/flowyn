@@ -41,6 +41,7 @@ export async function checkSubscription(userId: string): Promise<SubscriptionChe
 
   const hasActiveRow =
     (subscription?.status === 'active' && periodNotExpired) ||
+    (subscription?.status === 'cancelled' && periodNotExpired) ||
     isTrialing ||
     isGracePeriod
 
