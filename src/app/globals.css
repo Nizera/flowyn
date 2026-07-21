@@ -131,17 +131,6 @@ body {
 }
 
 /* ── Hero → Problem Section Transition ── */
-.hero-fade::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 200px;
-  background: linear-gradient(to bottom, transparent, #070908);
-  pointer-events: none;
-  z-index: 40;
-}
 
 .problem-section {
   position: relative;

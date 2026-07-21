@@ -44,8 +44,7 @@ export default function ProblemSection() {
   return (
     <section id="produto" className="bg-[#070908] px-4 py-20 md:px-6 md:py-32 problem-section">
       <div className="mx-auto max-w-6xl">
-        <div className="bg-[#101412] rounded-3xl p-6 md:p-12 lg:p-16 relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-48 md:h-64 rounded-t-3xl pointer-events-none" style={{ background: 'linear-gradient(to bottom, #070908, transparent)' }} />
+        <div className="bg-[#101412] rounded-3xl p-6 md:p-12 lg:p-16">
           <span className="text-[#f97316] text-[10px] sm:text-xs uppercase tracking-widest font-semibold">
             O problema
           </span>

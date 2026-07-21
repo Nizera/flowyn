@@ -52,7 +52,7 @@ export default function HeroSection() {
   }, [])
 
   return (
-    <section ref={sectionRef} className="h-screen relative overflow-hidden hero-fade">
+    <section ref={sectionRef} className="h-screen relative overflow-hidden">
       {/* Fixed Pill Navbar */}
       <nav
         className={`fixed top-0 left-1/2 z-50 -translate-x-1/2 transition-all duration-300 pt-3 md:pt-4 ${
