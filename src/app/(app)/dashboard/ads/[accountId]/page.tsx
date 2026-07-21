@@ -13,6 +13,15 @@ interface Insights {
   reach: number
   conversions: number
   conversion_value: number
+  landing_page_views: number
+  initiate_checkout: number
+  cpc: number | null
+  cpm: number | null
+  ctr: number | null
+  cpv: number | null
+  cpi: number | null
+  cpa: number | null
+  roas: number | null
 }
 
 interface CampaignItem {
@@ -147,7 +156,12 @@ export default function CampaignManagementPage() {
     ctr: true,
     cpc: true,
     cpm: true,
+    landingPageViews: true,
+    cpv: true,
+    initiateCheckout: true,
+    cpi: true,
     conversions: true,
+    cpa: true,
     conversionValue: true,
     roas: true,
   })

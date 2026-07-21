@@ -44,7 +44,7 @@ const initialForm = {
 }
 
 const asaasCpfSignupUrl = process.env.NEXT_PUBLIC_ASAAS_CPF_SIGNUP_URL || 'https://www.asaas.com/cadastro'
-const inputClass = 'h-12 w-full rounded-xl border-0 bg-[#f4f4f6] px-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20'
+const inputClass = 'h-12 w-full rounded-xl border-0 bg-surface px-4 text-sm font-medium text-foreground outline-none transition placeholder:text-muted focus:bg-card focus:ring-2 focus:ring-orange-500/20'
 
 function PaymentsContent() {
   const [status, setStatus] = useState<AsaasStatus | null>(null)
@@ -175,20 +175,20 @@ function PaymentsContent() {
   const mode = status?.connectionMode || connectionMode
 
   return (
-    <section className="overflow-hidden rounded-[10px] bg-white px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+    <section className="overflow-hidden rounded-[10px] bg-card px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-950">Pagamentos</h2>
-          <p className="mt-2 text-sm text-slate-400">Conecte sua carteira Asaas para receber vendas dos checkouts.</p>
+          <h2 className="text-2xl font-semibold text-foreground">Pagamentos</h2>
+          <p className="mt-2 text-sm text-muted">Conecte sua carteira Asaas para receber vendas dos checkouts.</p>
         </div>
-        <button onClick={loadStatus} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">
+        <button onClick={loadStatus} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card px-5 text-sm font-semibold text-muted transition hover:bg-surface">
           <RefreshCw className="h-4 w-4" />
           Atualizar
         </button>
       </div>
 
       <div className="mt-10 max-w-6xl">
-        <div className="border-y border-slate-200">
+        <div className="border-y border-border">
           <RowTitle title="Status" description="Carteira conectada a sua conta." />
           <div className="py-6">
             <div className="grid gap-6 md:grid-cols-4">
@@ -209,7 +209,7 @@ function PaymentsContent() {
         </div>
 
         {!connected && (
-          <div className="border-b border-slate-200">
+          <div className="border-b border-border">
             <RowTitle title="Modo de conexao" description="Escolha como deseja receber seus pagamentos." />
             <div className="py-6">
               <div className="grid gap-4 md:grid-cols-2">
@@ -219,17 +219,17 @@ function PaymentsContent() {
                   className={`flex items-start gap-4 rounded-xl border-2 p-5 text-left transition ${
                     connectionMode === 'standalone'
                       ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-200'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
+                      : 'border-border bg-card hover:border-border'
                   }`}
                 >
                   <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                    connectionMode === 'standalone' ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-400'
+                    connectionMode === 'standalone' ? 'bg-orange-100 text-orange-600' : 'bg-surface text-muted'
                   }`}>
                     <KeyRound className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-slate-950">Minha conta Asaas</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                    <p className="text-sm font-semibold text-foreground">Minha conta Asaas</p>
+                    <p className="mt-1 text-xs leading-5 text-muted">
                       Cola sua API key do Asaas. Pagamento vai direto pra sua conta. Sem subconta, sem split.
                     </p>
                   </div>
@@ -241,17 +241,17 @@ function PaymentsContent() {
                   className={`flex items-start gap-4 rounded-xl border-2 p-5 text-left transition ${
                     connectionMode === 'subaccount'
                       ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-200'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
+                      : 'border-border bg-card hover:border-border'
                   }`}
                 >
                   <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                    connectionMode === 'subaccount' ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-400'
+                    connectionMode === 'subaccount' ? 'bg-orange-100 text-orange-600' : 'bg-surface text-muted'
                   }`}>
                     <Building2 className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-slate-950">Subconta Flowyn</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                    <p className="text-sm font-semibold text-foreground">Subconta Flowyn</p>
+                    <p className="mt-1 text-xs leading-5 text-muted">
                       Flowyn cria uma subconta no Asaas. Pagamento passa pela Flowyn com split 100% pra voce.
                     </p>
                   </div>
@@ -262,7 +262,7 @@ function PaymentsContent() {
         )}
 
         {connected && mode === 'standalone' && (
-          <form onSubmit={handleSubmitStandalone} className="border-b border-slate-200">
+          <form onSubmit={handleSubmitStandalone} className="border-b border-border">
             <RowTitle title="Conta Asaas" description="Sua API key esta vinculada." />
             <div className="py-6">
               <div className="flex items-center gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-100">
@@ -287,7 +287,7 @@ function PaymentsContent() {
 
         {!connected && connectionMode === 'standalone' && (
           <form onSubmit={handleSubmitStandalone}>
-            <div className="border-b border-slate-200">
+            <div className="border-b border-border">
               <RowTitle title="API Key" description="Cole sua API key do Asaas para vincular sua conta." />
               <div className="space-y-5 py-6">
                 <div className="flex items-start gap-3 rounded-xl bg-blue-50 px-4 py-3 text-xs leading-5 text-blue-700 ring-1 ring-blue-100">
@@ -362,26 +362,26 @@ function SubaccountForm({
 }) {
   return (
     <>
-      <div className="border-b border-slate-200">
+      <div className="border-b border-border">
         <RowTitle title="Tipo" description="Pessoa fisica ou juridica." />
         <div className="py-6">
-          <div className="flex max-w-xl rounded-xl bg-[#f4f4f6] p-1">
+          <div className="flex max-w-xl rounded-xl bg-surface p-1">
             <button
               type="button"
               onClick={() => selectAccountType('cpf')}
-              className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${isCpf ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+              className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${isCpf ? 'bg-card text-orange-600 shadow-sm' : 'text-muted hover:text-foreground'}`}
             >
               CPF
             </button>
             <button
               type="button"
               onClick={() => selectAccountType('cnpj')}
-              className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${!isCpf ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+              className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${!isCpf ? 'bg-card text-orange-600 shadow-sm' : 'text-muted hover:text-foreground'}`}
             >
               CNPJ
             </button>
           </div>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
             {isCpf
               ? 'Para CPF, a Flowyn vincula ou cria uma subconta Pessoa Fisica no Asaas pelo documento informado.'
               : 'Para CNPJ, a Flowyn cria ou atualiza uma subconta Pessoa Juridica via API.'}
@@ -390,10 +390,10 @@ function SubaccountForm({
       </div>
 
       {isCpf && (
-        <div className="border-b border-slate-200">
+        <div className="border-b border-border">
           <RowTitle title="Conta CPF" description="Criacao feita no Asaas." />
           <div className="flex flex-col gap-4 py-6 md:flex-row md:items-center md:justify-between">
-            <p className="max-w-2xl text-sm leading-6 text-slate-500">
+            <p className="max-w-2xl text-sm leading-6 text-muted">
               Ao clicar em Vincular, a Flowyn cria automaticamente uma subconta Pessoa Fisica no Asaas vinculada a sua conta.
             </p>
             <a href={asaasCpfSignupUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 text-sm font-semibold text-white transition hover:from-orange-600 hover:to-amber-600">
@@ -403,7 +403,7 @@ function SubaccountForm({
         </div>
       )}
 
-      <div className="border-b border-slate-200">
+      <div className="border-b border-border">
         <RowTitle title="Dados Asaas" description={isCpf ? 'Dados para vinculo da subconta.' : 'Dados para criacao ou atualizacao.'} />
         <div className="space-y-5 py-6">
           <div className="grid gap-5 md:grid-cols-2">
@@ -428,7 +428,7 @@ function SubaccountForm({
         </div>
       </div>
 
-      <div className="border-b border-slate-200">
+      <div className="border-b border-border">
         <RowTitle title="Endereco" description="Dados cadastrais da conta." />
         <div className="grid gap-5 py-6 md:grid-cols-2">
           <Field label="Endereco"><input value={form.address} onChange={e => updateField('address', e.target.value)} className={inputClass} /></Field>
@@ -456,12 +456,12 @@ function StatusItem({ label, value, tone = 'muted', mono = false, sensitive = fa
   const masked = value && value !== '-' ? '••••••••••••' : value
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</p>
       <div className="mt-2 flex items-start gap-2">
-        {tone === 'success' ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> : <AlertCircle className="mt-0.5 h-4 w-0 shrink-0 text-slate-300" />}
-        <p className={`break-all text-sm font-semibold text-slate-950 ${mono ? 'font-mono' : ''}`}>{sensitive && value && value !== '-' ? (visible ? value : masked) : value}</p>
+        {tone === 'success' ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> : <AlertCircle className="mt-0.5 h-4 w-0 shrink-0 text-muted" />}
+        <p className={`break-all text-sm font-semibold text-foreground ${mono ? 'font-mono' : ''}`}>{sensitive && value && value !== '-' ? (visible ? value : masked) : value}</p>
         {sensitive && value && value !== '-' && (
-          <button type="button" onClick={() => setVisible(!visible)} className="mt-0.5 shrink-0 text-slate-400 hover:text-slate-600 transition">
+          <button type="button" onClick={() => setVisible(!visible)} className="mt-0.5 shrink-0 text-muted hover:text-foreground transition">
             {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         )}
@@ -473,7 +473,7 @@ function StatusItem({ label, value, tone = 'muted', mono = false, sensitive = fa
 function Field({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-slate-700">
+      <span className="mb-2 block text-sm font-medium text-foreground">
         {label}{required && <span className="text-red-500">*</span>}
       </span>
       {children}
@@ -484,8 +484,8 @@ function Field({ label, required = false, children }: { label: string; required?
 function RowTitle({ title, description }: { title: string; description: string }) {
   return (
     <div className="pt-6">
-      <h3 className="text-base font-semibold text-slate-950">{title}</h3>
-      <p className="mt-1 text-sm text-slate-400">{description}</p>
+      <h3 className="text-base font-semibold text-foreground">{title}</h3>
+      <p className="mt-1 text-sm text-muted">{description}</p>
     </div>
   )
 }

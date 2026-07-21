@@ -258,7 +258,7 @@ function SubmitButton({ label, light = false, disabled = false }: { label: strin
     <button
       type="submit"
       disabled={disabled}
-      className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition-all disabled:cursor-not-allowed disabled:opacity-60 ${light ? 'bg-white text-black hover:bg-gray-200' : 'bg-[#f97316] text-[#070908] shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:-translate-y-0.5 hover:shadow-[0_0_30px_rgba(249,115,22,0.5)]'}`}
+      className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition-all disabled:cursor-not-allowed disabled:opacity-60 ${light ? 'bg-card text-foreground hover:bg-surface' : 'bg-[#f97316] text-[#070908] shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:-translate-y-0.5 hover:shadow-[0_0_30px_rgba(249,115,22,0.5)]'}`}
     >
       {label}
       <ArrowRight className="h-4 w-4" />

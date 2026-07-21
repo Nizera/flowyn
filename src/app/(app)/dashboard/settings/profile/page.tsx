@@ -21,11 +21,11 @@ export default async function ProfilePage(props: {
   const activeTab = searchParams.tab === 'security' ? 'security' : 'profile'
 
   return (
-    <section className="overflow-hidden rounded-[10px] bg-white px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+    <section className="overflow-hidden rounded-[10px] bg-card px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-950">Minha conta</h2>
-          <p className="mt-2 text-sm text-slate-400">Gerencie seus dados pessoais e seguranca.</p>
+          <h2 className="text-2xl font-semibold text-foreground">Minha conta</h2>
+          <p className="mt-2 text-sm text-muted">Gerencie seus dados pessoais e seguranca.</p>
         </div>
       </div>
 
@@ -36,12 +36,12 @@ export default async function ProfilePage(props: {
         </div>
       )}
 
-      <div className="mt-8 flex gap-2 overflow-x-auto border-b border-slate-200">
-        <a href="/dashboard/settings/profile" className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${activeTab === 'profile' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-900'}`}>
+      <div className="mt-8 flex gap-2 overflow-x-auto border-b border-border">
+        <a href="/dashboard/settings/profile" className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${activeTab === 'profile' ? 'border-orange-500 text-orange-600' : 'border-transparent text-muted hover:text-foreground'}`}>
           <User className="h-4 w-4" />
           Dados pessoais
         </a>
-        <a href="/dashboard/settings/profile?tab=security" className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${activeTab === 'security' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-900'}`}>
+        <a href="/dashboard/settings/profile?tab=security" className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${activeTab === 'security' ? 'border-orange-500 text-orange-600' : 'border-transparent text-muted hover:text-foreground'}`}>
           <Shield className="h-4 w-4" />
           Seguranca
         </a>
@@ -49,11 +49,11 @@ export default async function ProfilePage(props: {
 
       {activeTab === 'profile' && (
         <form action={updateProfile} className="mt-10 max-w-5xl">
-          <div className="grid border-y border-slate-200 md:grid-cols-[240px_1fr]">
+          <div className="grid border-y border-border md:grid-cols-[240px_1fr]">
             <RowTitle title="Conta" description="Dados fixos da sua conta." />
             <div className="grid gap-5 py-6 md:pl-8 lg:grid-cols-2">
               <Field label="E-mail da conta">
-                <div className="flex h-12 items-center rounded-xl bg-slate-50 px-4 text-sm font-medium text-slate-400">{user.email}</div>
+                <div className="flex h-12 items-center rounded-xl bg-surface px-4 text-sm font-medium text-muted">{user.email}</div>
               </Field>
               <Field label="Tipo de conta">
                 <div className="flex h-12 items-center">
@@ -65,7 +65,7 @@ export default async function ProfilePage(props: {
             </div>
           </div>
 
-          <div className="grid border-b border-slate-200 md:grid-cols-[240px_1fr]">
+          <div className="grid border-b border-border md:grid-cols-[240px_1fr]">
             <RowTitle title="Perfil" description="Informacoes pessoais e contato." />
             <div className="grid gap-5 py-6 md:pl-8 lg:grid-cols-2">
               <Field label="Nome completo" required>
@@ -91,7 +91,7 @@ export default async function ProfilePage(props: {
 
       {activeTab === 'security' && (
         <form action={changePassword} className="mt-10 max-w-5xl">
-          <div className="grid border-y border-slate-200 md:grid-cols-[240px_1fr]">
+          <div className="grid border-y border-border md:grid-cols-[240px_1fr]">
             <RowTitle title="Senha" description="Atualize sua senha de acesso." />
             <div className="grid gap-5 py-6 md:pl-8 lg:grid-cols-2">
               <Field label="Nova senha" required>
@@ -103,7 +103,7 @@ export default async function ProfilePage(props: {
             </div>
           </div>
 
-          <div className="grid border-b border-slate-200 md:grid-cols-[240px_1fr]">
+          <div className="grid border-b border-border md:grid-cols-[240px_1fr]">
             <RowTitle title="Recuperacao" description="Alternativa por e-mail." />
             <div className="py-6 md:pl-8">
               <a href="/forgot-password" className="text-sm font-semibold text-orange-600 transition hover:text-orange-800">
@@ -124,13 +124,13 @@ export default async function ProfilePage(props: {
   )
 }
 
-const inputClass = 'h-12 w-full rounded-xl border-0 bg-[#f4f4f6] px-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20'
+const inputClass = 'h-12 w-full rounded-xl border-0 bg-surface px-4 text-sm font-medium text-foreground outline-none transition placeholder:text-muted focus:bg-card focus:ring-2 focus:ring-orange-500/20'
 
 function RowTitle({ title, description }: { title: string; description: string }) {
   return (
     <div className="py-6 md:pr-8">
-      <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
-      <p className="mt-1 text-sm leading-6 text-slate-400">{description}</p>
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      <p className="mt-1 text-sm leading-6 text-muted">{description}</p>
     </div>
   )
 }
@@ -138,7 +138,7 @@ function RowTitle({ title, description }: { title: string; description: string }
 function Field({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-slate-700">
+      <span className="mb-2 block text-sm font-medium text-foreground">
         {label}{required && <span className="text-red-500">*</span>}
       </span>
       {children}

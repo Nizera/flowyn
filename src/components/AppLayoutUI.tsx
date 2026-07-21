@@ -160,7 +160,7 @@ export function AppLayoutUI({ children, profile, subscription, notifications }: 
               <Sidebar profile={profile} />
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="absolute right-[-48px] top-4 flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white text-slate-700 shadow-lg"
+                className="absolute right-[-48px] top-4 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-foreground shadow-lg"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -211,7 +211,7 @@ export function AppLayoutUI({ children, profile, subscription, notifications }: 
                           <Bell className="h-5 w-5 text-muted" />
                         </div>
                         <p className="text-sm font-bold text-muted">Nenhuma notificacao</p>
-                        <p className="mt-1 text-xs text-slate-400">Atualizacoes importantes aparecem aqui.</p>
+                        <p className="mt-1 text-xs text-muted">Atualizacoes importantes aparecem aqui.</p>
                       </div>
                     ) : (
                       <div className="max-h-80 overflow-y-auto sidebar-scrollbar">

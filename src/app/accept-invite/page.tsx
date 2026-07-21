@@ -84,14 +84,14 @@ function AcceptInviteForm() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-        <div className="w-full max-w-md rounded-3xl bg-white p-12 text-center shadow-2xl">
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <div className="w-full max-w-md rounded-3xl bg-card p-12 text-center shadow-2xl">
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
             <CheckCircle className="h-10 w-10 text-green-600" />
           </div>
-          <h1 className="mb-2 text-2xl font-extrabold text-slate-900">Conta ativada com sucesso!</h1>
-          <p className="mb-6 text-slate-500">Redirecionando para sua area do aluno...</p>
-          <div className="mt-6 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+          <h1 className="mb-2 text-2xl font-extrabold text-foreground">Conta ativada com sucesso!</h1>
+          <p className="mb-6 text-muted">Redirecionando para sua area do aluno...</p>
+          <div className="mt-6 h-1.5 w-full overflow-hidden rounded-full bg-surface">
             <div className="h-full rounded-full bg-green-500 animate-[progress_2.5s_linear_forwards]" />
           </div>
         </div>
@@ -101,13 +101,13 @@ function AcceptInviteForm() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-      <div className="w-full max-w-md rounded-3xl bg-white p-10 shadow-2xl">
+      <div className="w-full max-w-md rounded-3xl bg-card p-10 shadow-2xl">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-black">
             <Lock className="h-7 w-7 text-white" />
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-900">Crie sua senha</h1>
-          <p className="mt-2 text-sm text-slate-500">
+          <h1 className="text-2xl font-extrabold text-foreground">Crie sua senha</h1>
+          <p className="mt-2 text-sm text-muted">
             {productName ? `Defina uma senha para acessar ${productName}` : 'Bem-vindo! Defina uma senha segura para acessar sua conta.'}
           </p>
           <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700">
@@ -164,17 +164,17 @@ function PasswordField({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-bold text-slate-700">{label}</label>
+      <label className="mb-1.5 block text-sm font-bold text-foreground">{label}</label>
       <div className="relative">
         <input
           type={visible ? 'text' : 'password'}
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-slate-900 outline-none transition focus:border-black focus:bg-white"
+          className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-12 text-foreground outline-none transition focus:border-black focus:bg-card"
           placeholder="Minimo 8 caracteres"
           required
         />
-        <button type="button" onClick={onToggle} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+        <button type="button" onClick={onToggle} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground">
           {visible ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
         </button>
       </div>

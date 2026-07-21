@@ -109,21 +109,21 @@ export default async function SubscriptionPage() {
   }
 
   return (
-    <section className="overflow-hidden rounded-[10px] bg-white px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+    <section className="overflow-hidden rounded-[10px] bg-card px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-950">Assinatura</h2>
-          <p className="mt-2 max-w-2xl text-sm text-slate-400">
+          <h2 className="text-2xl font-semibold text-foreground">Assinatura</h2>
+          <p className="mt-2 max-w-2xl text-sm text-muted">
             Use a Flowyn sem taxa por venda. Voce paga a mensalidade da plataforma e as tarifas normais da transacao na Asaas.
           </p>
         </div>
         <div className="text-left sm:text-right">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Status</p>
-          <p className="mt-1 text-lg font-semibold text-slate-950">{statusLabel(subscription?.status)}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Status</p>
+          <p className="mt-1 text-lg font-semibold text-foreground">{statusLabel(subscription?.status)}</p>
         </div>
       </div>
 
-      <div className="mt-10 border-y border-slate-200">
+      <div className="mt-10 border-y border-border">
         <RowTitle title="Plano" description="Condicoes da conta." />
         <div className="grid gap-6 py-6 md:grid-cols-3">
           <Metric label="Taxa Flowyn por venda" value="R$0" description="Sem percentual da plataforma." />
@@ -132,7 +132,7 @@ export default async function SubscriptionPage() {
         </div>
       </div>
 
-      <div className="border-b border-slate-200">
+      <div className="border-b border-border">
         <RowTitle title="Pagamento" description="Cartao da mensalidade Flowyn." />
         <div className="py-6">
           <SubscriptionForm
@@ -143,7 +143,7 @@ export default async function SubscriptionPage() {
         </div>
       </div>
 
-      <div className="border-b border-slate-200">
+      <div className="border-b border-border">
         <RowTitle title="Acesso" description="Recursos liberados." />
         <div className="grid gap-3 py-6 md:grid-cols-2">
           {[
@@ -152,7 +152,7 @@ export default async function SubscriptionPage() {
             'Checkout e area do aluno inclusos',
             'Carteira CPF/CNPJ sem taxa Flowyn por venda',
           ].map(item => (
-            <div key={item} className="flex items-center gap-2 text-sm text-slate-600">
+            <div key={item} className="flex items-center gap-2 text-sm text-muted">
               <Check className="h-4 w-4 text-emerald-600" />
               {item}
             </div>
@@ -160,23 +160,23 @@ export default async function SubscriptionPage() {
         </div>
       </div>
 
-      <div className="border-b border-slate-200">
+      <div className="border-b border-border">
         <RowTitle title="Faturas" description="Ultimas cobrancas." />
         <div className="py-6">
           {!invoices || invoices.length === 0 ? (
-            <p className="text-sm text-slate-400">Nenhuma fatura registrada ainda.</p>
+            <p className="text-sm text-muted">Nenhuma fatura registrada ainda.</p>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-slate-200">
+            <div className="overflow-hidden rounded-lg border border-border">
               {invoices.map(invoice => (
-                <div key={invoice.asaas_payment_id} className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0">
+                <div key={invoice.asaas_payment_id} className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 last:border-b-0">
                   <div className="flex items-center gap-3">
-                    <ReceiptText className="h-4 w-4 text-slate-400" />
+                    <ReceiptText className="h-4 w-4 text-muted" />
                     <div>
-                      <p className="text-base font-semibold text-slate-950">{invoice.status}</p>
-                      <p className="text-xs text-slate-400">Vencimento: {formatDate(invoice.due_date)}</p>
+                      <p className="text-base font-semibold text-foreground">{invoice.status}</p>
+                      <p className="text-xs text-muted">Vencimento: {formatDate(invoice.due_date)}</p>
                     </div>
                   </div>
-                  <span className="text-base font-semibold text-slate-950">R$ {Number(invoice.value || 0).toFixed(2)}</span>
+                  <span className="text-base font-semibold text-foreground">R$ {Number(invoice.value || 0).toFixed(2)}</span>
                 </div>
               ))}
             </div>
@@ -190,9 +190,9 @@ export default async function SubscriptionPage() {
 function Metric({ label, value, description }: { label: string; value: string; description: string }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
-      <p className="mt-1 text-sm text-slate-400">{description}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-foreground">{value}</p>
+      <p className="mt-1 text-sm text-muted">{description}</p>
     </div>
   )
 }
@@ -200,8 +200,8 @@ function Metric({ label, value, description }: { label: string; value: string; d
 function RowTitle({ title, description }: { title: string; description: string }) {
   return (
     <div className="pt-6">
-      <h3 className="text-base font-semibold text-slate-950">{title}</h3>
-      <p className="mt-1 text-sm text-slate-400">{description}</p>
+      <h3 className="text-base font-semibold text-foreground">{title}</h3>
+      <p className="mt-1 text-sm text-muted">{description}</p>
     </div>
   )
 }

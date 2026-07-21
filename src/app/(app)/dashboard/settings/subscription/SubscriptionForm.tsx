@@ -124,7 +124,7 @@ export function SubscriptionForm({ defaultName, defaultEmail, hasActiveSubscript
         <Field label="CPF/CNPJ" name="cpfCnpj" placeholder="000.000.000-00" inputMode="numeric" maxLength={18} format={formatCpfCnpj} />
         <Field label="Telefone" name="phone" placeholder="(11) 99999-9999" inputMode="tel" maxLength={15} format={formatPhone} />
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-700">CEP</span>
+          <span className="mb-2 block text-sm font-medium text-foreground">CEP</span>
           <div className="flex gap-2">
             <input
               name="postalCode"
@@ -142,9 +142,9 @@ export function SubscriptionForm({ defaultName, defaultEmail, hasActiveSubscript
               }}
               placeholder="00000-000"
               maxLength={9}
-              className="h-12 min-w-0 flex-1 rounded-xl border-0 bg-[#f4f4f6] px-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20"
+              className="h-12 min-w-0 flex-1 rounded-xl border-0 bg-surface px-4 text-sm font-medium text-foreground outline-none transition placeholder:text-muted focus:bg-card focus:ring-2 focus:ring-orange-500/20"
             />
-            <button type="button" onClick={() => void searchPostalCode()} disabled={searchingPostalCode || postalCode.replace(/\D/g, '').length !== 8} className="inline-flex h-12 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-orange-300 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-45">
+            <button type="button" onClick={() => void searchPostalCode()} disabled={searchingPostalCode || postalCode.replace(/\D/g, '').length !== 8} className="inline-flex h-12 shrink-0 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-bold text-foreground transition hover:border-orange-300 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-45">
               {searchingPostalCode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               Buscar
             </button>
@@ -217,7 +217,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-slate-700">{label}</span>
+      <span className="mb-2 block text-sm font-medium text-foreground">{label}</span>
       <input
         name={name}
         type={type}
@@ -230,7 +230,7 @@ function Field({
         onChange={event => {
           if (format) event.currentTarget.value = format(event.currentTarget.value)
         }}
-        className="h-12 w-full rounded-xl border-0 bg-[#f4f4f6] px-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20"
+        className="h-12 w-full rounded-xl border-0 bg-surface px-4 text-sm font-medium text-foreground outline-none transition placeholder:text-muted focus:bg-card focus:ring-2 focus:ring-orange-500/20"
       />
     </label>
   )

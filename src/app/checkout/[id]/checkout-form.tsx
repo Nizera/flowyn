@@ -298,9 +298,9 @@ export function CheckoutForm({
   }
 
   const inputClass =
-    'w-full bg-white border border-slate-200 rounded-xl py-3.5 pl-11 pr-4 text-slate-900 placeholder:text-slate-400 focus:ring-2 transition-all outline-none'
+    'w-full bg-card border border-border rounded-xl py-3.5 pl-11 pr-4 text-foreground placeholder:text-muted focus:ring-2 transition-all outline-none'
   const plainInputClass =
-    'w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-slate-900 placeholder:text-slate-400 focus:ring-2 outline-none'
+    'w-full bg-card border border-border rounded-xl py-3.5 px-4 text-foreground placeholder:text-muted focus:ring-2 outline-none'
   const focusStyle = {
     '--tw-ring-color': `${primaryColor}26`,
   } as React.CSSProperties
@@ -308,23 +308,23 @@ export function CheckoutForm({
   if (pixQrCode) {
     return (
       <div className="space-y-6 text-center">
-        <div className="rounded-2xl bg-slate-50 p-6">
+        <div className="rounded-2xl bg-background p-6">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full" style={{ backgroundColor: `${primaryColor}15` }}>
             <QrCode className="h-7 w-7" style={{ color: primaryColor }} />
           </div>
-          <h3 className="text-lg font-black text-slate-900">Pagamento via PIX</h3>
-          <p className="mt-1 text-sm text-slate-500">Escaneie o QR Code abaixo com o app do seu banco para pagar.</p>
+          <h3 className="text-lg font-black text-foreground">Pagamento via PIX</h3>
+          <p className="mt-1 text-sm text-muted">Escaneie o QR Code abaixo com o app do seu banco para pagar.</p>
         </div>
 
         <div className="flex justify-center">
-          <img src={`data:image/png;base64,${pixQrCode}`} alt="PIX QR Code" className="h-64 w-64 rounded-2xl border border-slate-200" />
+          <img src={`data:image/png;base64,${pixQrCode}`} alt="PIX QR Code" className="h-64 w-64 rounded-2xl border border-border" />
         </div>
 
         {pixKey && (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="mb-2 text-xs font-semibold text-slate-500">Ou copie o codigo PIX:</p>
+          <div className="rounded-2xl border border-border bg-background p-4">
+            <p className="mb-2 text-xs font-semibold text-muted">Ou copie o codigo PIX:</p>
             <div className="flex gap-2">
-              <input readOnly value={pixKey} className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-700" />
+              <input readOnly value={pixKey} className="flex-1 rounded-xl border border-border bg-card px-4 py-3 text-xs text-foreground" />
               <button
                 onClick={() => navigator.clipboard.writeText(pixKey)}
                 className="rounded-xl px-4 py-3 text-sm font-bold text-white transition"
@@ -336,12 +336,12 @@ export function CheckoutForm({
           </div>
         )}
 
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-muted">
           Apos o pagamento, a confirmacao pode levar alguns segundos.
         </p>
 
         {paymentStatusMessage && (
-          <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+          <p className="rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium text-foreground">
             {paymentStatusMessage}
           </p>
         )}
@@ -363,12 +363,12 @@ export function CheckoutForm({
   if (pixPaymentId) {
     return (
       <div className="space-y-6 text-center">
-        <div className="rounded-2xl bg-slate-50 p-6">
+        <div className="rounded-2xl bg-background p-6">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full" style={{ backgroundColor: `${primaryColor}15` }}>
             <QrCode className="h-7 w-7" style={{ color: primaryColor }} />
           </div>
-          <h3 className="text-lg font-black text-slate-900">Pagamento via PIX</h3>
-          <p className="mt-1 text-sm text-slate-500">Pedido criado com sucesso! Finalize o pagamento no ambiente do Asaas.</p>
+          <h3 className="text-lg font-black text-foreground">Pagamento via PIX</h3>
+          <p className="mt-1 text-sm text-muted">Pedido criado com sucesso! Finalize o pagamento no ambiente do Asaas.</p>
         </div>
 
         {pixInvoiceUrl ? (
@@ -394,11 +394,11 @@ export function CheckoutForm({
   return (
     <form onSubmit={handleSubmit} autoComplete="off" className="space-y-6">
       {/* Payment method toggle */}
-      <div className="flex gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-1.5">
+      <div className="flex gap-2 rounded-2xl border border-border bg-background p-1.5">
         <button
           type="button"
           className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition ${
-            paymentMethod === 'credit_card' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            paymentMethod === 'credit_card' ? 'bg-card text-foreground shadow-sm' : 'text-muted hover:text-foreground'
           }`}
           onClick={() => setPaymentMethod('credit_card')}
         >
@@ -409,7 +409,7 @@ export function CheckoutForm({
           type="button"
           disabled={recurring}
           className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition ${
-            recurring ? 'cursor-not-allowed opacity-40' : paymentMethod === 'pix' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            recurring ? 'cursor-not-allowed opacity-40' : paymentMethod === 'pix' ? 'bg-card text-foreground shadow-sm' : 'text-muted hover:text-foreground'
           }`}
           onClick={() => { if (!recurring) setPaymentMethod('pix') }}
         >
@@ -426,11 +426,11 @@ export function CheckoutForm({
 
       <div className="space-y-4">
         <div>
-          <label htmlFor="customer_name" className="mb-2 block text-sm font-semibold text-slate-700">
+          <label htmlFor="customer_name" className="mb-2 block text-sm font-semibold text-foreground">
             Nome completo
           </label>
           <div className="relative">
-            <UserIcon className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+            <UserIcon className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
             <input
               id="customer_name"
               required
@@ -448,11 +448,11 @@ export function CheckoutForm({
         </div>
 
         <div>
-          <label htmlFor="customer_email" className="mb-2 block text-sm font-semibold text-slate-700">
+          <label htmlFor="customer_email" className="mb-2 block text-sm font-semibold text-foreground">
             E-mail
           </label>
           <div className="relative">
-            <Mail className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+            <Mail className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
             <input
               id="customer_email"
               type="email"
@@ -468,11 +468,11 @@ export function CheckoutForm({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="customer_document" className="mb-2 block text-sm font-semibold text-slate-700">
+            <label htmlFor="customer_document" className="mb-2 block text-sm font-semibold text-foreground">
               CPF/CNPJ
             </label>
             <div className="relative">
-              <ShieldCheck className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <ShieldCheck className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
               <input
                 id="customer_document"
                 required
@@ -488,11 +488,11 @@ export function CheckoutForm({
           </div>
 
           <div>
-            <label htmlFor="customer_phone" className="mb-2 block text-sm font-semibold text-slate-700">
+            <label htmlFor="customer_phone" className="mb-2 block text-sm font-semibold text-foreground">
               Celular
             </label>
             <div className="relative">
-              <Phone className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <Phone className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
               <input
                 id="customer_phone"
                 required
@@ -531,14 +531,14 @@ export function CheckoutForm({
               {addOrderBump && <span className="text-xs font-bold text-white">✓</span>}
             </div>
             {orderBump.imageUrl && (
-              <img src={orderBump.imageUrl} alt="Order bump" className="h-16 w-16 rounded-lg border border-slate-200 object-cover" />
+              <img src={orderBump.imageUrl} alt="Order bump" className="h-16 w-16 rounded-lg border border-border object-cover" />
             )}
             <div className="flex-1">
               <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-red-700">
                 Oferta especial
               </span>
-              <h4 className="mt-2 font-bold leading-tight text-slate-900">{orderBump.title || 'Adicionar ao pedido'}</h4>
-              <p className="mt-1 text-sm text-slate-600">{orderBump.description}</p>
+              <h4 className="mt-2 font-bold leading-tight text-foreground">{orderBump.title || 'Adicionar ao pedido'}</h4>
+              <p className="mt-1 text-sm text-muted">{orderBump.description}</p>
               <p className="mt-2 font-bold" style={{ color: primaryColor }}>
                 R$ {money(bumpPrice || Number(orderBump.price))}
               </p>
@@ -548,14 +548,14 @@ export function CheckoutForm({
       )}
 
       {paymentMethod === 'credit_card' && (
-        <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-          <div className="flex items-center gap-2 font-bold text-slate-900">
+        <div className="space-y-4 rounded-2xl border border-border bg-background p-5">
+          <div className="flex items-center gap-2 font-bold text-foreground">
             <CreditCard className="h-5 w-5" style={{ color: primaryColor }} />
             Cartao de credito
           </div>
 
           <div>
-            <label htmlFor="card_holder" className="mb-2 block text-sm font-semibold text-slate-700">
+            <label htmlFor="card_holder" className="mb-2 block text-sm font-semibold text-foreground">
               Nome impresso no cartao
             </label>
             <input
@@ -570,7 +570,7 @@ export function CheckoutForm({
           </div>
 
           <div>
-            <label htmlFor="card_number" className="mb-2 block text-sm font-semibold text-slate-700">
+            <label htmlFor="card_number" className="mb-2 block text-sm font-semibold text-foreground">
               Numero do cartao
             </label>
             <input
@@ -595,11 +595,11 @@ export function CheckoutForm({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="postal_code" className="mb-2 block text-sm font-semibold text-slate-700">
+              <label htmlFor="postal_code" className="mb-2 block text-sm font-semibold text-foreground">
                 CEP do titular
               </label>
               <div className="relative">
-                <MapPin className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                <MapPin className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
                 <input
                   id="postal_code"
                   required
@@ -620,14 +620,14 @@ export function CheckoutForm({
                   className={`${inputClass} pr-12`}
                   style={focusStyle}
                 />
-                <button type="button" aria-label="Buscar CEP" onClick={() => void searchPostalCode()} disabled={searchingPostalCode || digits(postalCode).length !== 8} className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40">
+                <button type="button" aria-label="Buscar CEP" onClick={() => void searchPostalCode()} disabled={searchingPostalCode || digits(postalCode).length !== 8} className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-muted transition hover:bg-surface hover:text-foreground disabled:opacity-40">
                   {searchingPostalCode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 </button>
               </div>
               {postalCodeError && <p className="mt-2 text-xs font-medium text-red-600">{postalCodeError}</p>}
             </div>
             <div>
-              <label htmlFor="address_number" className="mb-2 block text-sm font-semibold text-slate-700">
+              <label htmlFor="address_number" className="mb-2 block text-sm font-semibold text-foreground">
                 Numero
               </label>
               <input id="address_number" required inputMode="numeric" maxLength={10} value={addressNumber} onChange={e => setAddressNumber(digits(e.target.value).slice(0, 10))} placeholder="123" className={plainInputClass} style={focusStyle} />
@@ -646,12 +646,12 @@ export function CheckoutForm({
       )}
 
       {paymentMethod === 'pix' && (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-          <div className="flex items-center gap-2 font-bold text-slate-900">
+        <div className="rounded-2xl border border-border bg-background p-5">
+          <div className="flex items-center gap-2 font-bold text-foreground">
             <QrCode className="h-5 w-5" style={{ color: primaryColor }} />
             Pagamento via PIX
           </div>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+          <p className="mt-2 text-sm leading-6 text-muted">
             Apos finalizar, um QR Code PIX sera gerado para voce pagar diretamente pelo app do seu banco. A confirmacao e instantanea.
           </p>
         </div>
@@ -682,7 +682,7 @@ export function CheckoutForm({
         )}
       </button>
 
-      <p className="text-center text-xs text-slate-400">
+      <p className="text-center text-xs text-muted">
         Pagamento processado pela Asaas. Os dados do cartao nao sao enviados para a Flowyn.
       </p>
     </form>

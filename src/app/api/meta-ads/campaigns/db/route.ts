@@ -81,13 +81,23 @@ export async function GET(req: NextRequest) {
         reach: acc.reach + (parseInt(curr.reach) || 0),
         conversions: acc.conversions + (parseInt(curr.conversions) || 0),
         conversion_value: acc.conversion_value + (parseFloat(curr.conversion_value) || 0),
-      }), { spend: 0, impressions: 0, clicks: 0, reach: 0, conversions: 0, conversion_value: 0 })
+        landing_page_views: acc.landing_page_views + (parseInt(curr.landing_page_views) || 0),
+        initiate_checkout: acc.initiate_checkout + (parseInt(curr.initiate_checkout) || 0),
+      }), {
+        spend: 0, impressions: 0, clicks: 0, reach: 0,
+        conversions: 0, conversion_value: 0,
+        landing_page_views: 0, initiate_checkout: 0,
+      })
 
       return {
         ...totals,
         cpc: totals.clicks > 0 ? totals.spend / totals.clicks : null,
         cpm: totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : null,
         ctr: totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : null,
+        cpv: totals.landing_page_views > 0 ? totals.spend / totals.landing_page_views : null,
+        cpi: totals.initiate_checkout > 0 ? totals.spend / totals.initiate_checkout : null,
+        cpa: totals.conversions > 0 ? totals.spend / totals.conversions : null,
+        roas: totals.spend > 0 ? totals.conversion_value / totals.spend : null,
       }
     }
 

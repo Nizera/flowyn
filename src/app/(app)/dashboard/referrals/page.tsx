@@ -129,19 +129,19 @@ export default function ReferralsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-8 px-4 py-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Programa de Indicação</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-2xl font-bold text-foreground">Programa de Indicação</h1>
+        <p className="mt-1 text-sm text-muted">
           Compartilhe seu código e ganhe 20% de comissão sobre cada pagamento de clientes indicados.
         </p>
       </div>
 
       {/* Code Section */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">Seu Código</h2>
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted">Seu Código</h2>
 
         {!data?.code ? (
           <div className="text-center">
-            <p className="mb-4 text-sm text-slate-500">Você ainda não gerou um código de indicação.</p>
+            <p className="mb-4 text-sm text-muted">Você ainda não gerou um código de indicação.</p>
             {generateError && (
               <p className="mb-3 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{generateError}</p>
             )}
@@ -155,12 +155,12 @@ export default function ReferralsPage() {
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <div className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-lg font-bold tracking-wider text-slate-900">
+            <div className="flex-1 rounded-xl border border-border bg-surface px-4 py-3 font-mono text-lg font-bold tracking-wider text-foreground">
               {data.code}
             </div>
             <button
               onClick={copyCode}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+              className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
             >
               {copied ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
               {copied ? 'Copiado!' : 'Copiar Link'}
@@ -169,8 +169,8 @@ export default function ReferralsPage() {
         )}
 
         {data?.code && (
-          <p className="mt-3 text-xs text-slate-400">
-            Compartilhe: <span className="text-slate-600">{typeof window !== 'undefined' ? window.location.origin : ''}/register?ref={data.code}</span>
+          <p className="mt-3 text-xs text-muted">
+            Compartilhe: <span className="text-muted">{typeof window !== 'undefined' ? window.location.origin : ''}/register?ref={data.code}</span>
           </p>
         )}
       </div>
@@ -191,10 +191,10 @@ export default function ReferralsPage() {
             }
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">
+            <h3 className="text-sm font-semibold text-foreground">
               {data?.wallet_connected ? 'Carteira Asaas Conectada' : 'Carteira Asaas Pendente'}
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted">
               {data?.wallet_connected
                 ? 'Seus splits são processados automaticamente a cada pagamento.'
                 : 'Seus splits serão processados assim que sua carteira for configurada.'
@@ -214,26 +214,26 @@ export default function ReferralsPage() {
 
       {/* Commissions Table */}
       {data?.commissions && data.commissions.length > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-6 py-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Comissões Recentes</h2>
+        <div className="rounded-2xl border border-border bg-card shadow-sm">
+          <div className="border-b border-border px-6 py-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Comissões Recentes</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100 text-left text-xs font-medium uppercase tracking-wide text-slate-400">
+                <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wide text-muted">
                   <th className="px-6 py-3">Data</th>
                   <th className="px-6 py-3">Valor</th>
                   <th className="px-6 py-3">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-surface">
                 {data.commissions.map(c => (
-                  <tr key={c.id} className="hover:bg-slate-50/50">
-                    <td className="px-6 py-3 text-slate-600">
+                  <tr key={c.id} className="hover:bg-surface/50">
+                    <td className="px-6 py-3 text-muted">
                       {new Date(c.created_at).toLocaleDateString('pt-BR')}
                     </td>
-                    <td className="px-6 py-3 font-medium text-slate-900">
+                    <td className="px-6 py-3 font-medium text-foreground">
                       {currency(Number(c.amount))}
                     </td>
                     <td className="px-6 py-3">
@@ -259,9 +259,9 @@ export default function ReferralsPage() {
 
       {/* Empty State */}
       {data?.commissions && data.commissions.length === 0 && data.code && (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
-          <Users className="mx-auto h-10 w-10 text-slate-300" />
-          <p className="mt-3 text-sm text-slate-500">
+        <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center">
+          <Users className="mx-auto h-10 w-10 text-muted" />
+          <p className="mt-3 text-sm text-muted">
             Nenhuma comissão ainda. Compartilhe seu código para começar a indicar!
           </p>
         </div>
@@ -272,14 +272,14 @@ export default function ReferralsPage() {
 
 function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string | number }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50">
           <Icon className="h-5 w-5 text-orange-500" />
         </div>
         <div>
-          <p className="text-xs font-medium text-slate-400">{label}</p>
-          <p className="text-lg font-bold text-slate-900">{value}</p>
+          <p className="text-xs font-medium text-muted">{label}</p>
+          <p className="text-lg font-bold text-foreground">{value}</p>
         </div>
       </div>
     </div>

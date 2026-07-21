@@ -80,7 +80,7 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
       <nav className="flex-1 space-y-6 overflow-y-auto px-4 py-5 sidebar-scrollbar">
         {sections.map(section => (
           <div key={section.label}>
-            <p className="mb-2 px-2 text-[11px] font-black uppercase tracking-wide text-slate-400">{section.label}</p>
+            <p className="mb-2 px-2 text-[11px] font-black uppercase tracking-wide text-muted">{section.label}</p>
             <div className="space-y-1">
               {section.items.map(item => {
                 const Icon = item.icon
