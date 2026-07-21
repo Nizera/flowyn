@@ -145,6 +145,7 @@ body {
 
 .problem-section {
   position: relative;
+  overflow: hidden;
 }
 
 .problem-section::before {
@@ -159,18 +160,6 @@ body {
     rgba(255, 122, 26, 0.015),
     transparent 50%
   );
-  pointer-events: none;
-  z-index: 0;
-}
-
-.features-section::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 200px;
-  background: linear-gradient(to bottom, #101412, #070908);
   pointer-events: none;
   z-index: 0;
 }
