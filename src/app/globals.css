@@ -145,6 +145,7 @@ body {
 
 .problem-section {
   position: relative;
+  overflow: hidden;
 }
 
 .problem-section::before {
