@@ -44,7 +44,7 @@ export default function ProblemSection() {
   return (
     <section id="produto" className="bg-[#070908] px-4 py-16 md:px-6 md:py-24 problem-section">
       <div className="mx-auto max-w-6xl">
-        <div className="bg-[#101412] rounded-3xl p-6 md:p-12 lg:p-16">
+        <div className="relative z-10 bg-[#101412] rounded-3xl p-6 md:p-12 lg:p-16">
           <span className="text-[#f97316] text-[10px] sm:text-xs uppercase tracking-widest font-semibold">
             O problema
           </span>
