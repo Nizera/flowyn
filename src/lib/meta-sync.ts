@@ -369,4 +369,19 @@ export async function syncAccountFull(
   }
 
   return { totalApiCalls, totalRowsSynced, errors, rateLimitHeader }
+  } finally {
+    // CORREÇÃO W9 (auditoria tracking): libera o advisory lock ao final do sync
+    // (sucesso ou erro). Setamos sync_lock_until = NULL para permitir próximos syncs.
+    await supabase
+      .from('ad_accounts')
+      .update({ sync_lock_until: null })
+      .eq('ad_account_id', adAccountId)
+      .eq('user_id', userId)
+      .eq('sync_lock_until', lockUntil)
+      .then(({ error }) => {
+        if (error && !/column .* does not exist/i.test(error.message)) {
+          console.warn('[Meta Sync] Failed to release lock:', error.message)
+        }
+      })
+  }
 }

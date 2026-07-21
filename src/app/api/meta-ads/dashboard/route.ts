@@ -41,7 +41,10 @@ export async function GET(req: NextRequest) {
 
   const taxPercentage = costConfig?.tax_percentage || 0
   const productCosts = costConfig?.product_costs || []
-  const totalProductionCost = productCosts.reduce((sum: number, item: { cost?: string | number }) => sum + (parseFloat(String(item.cost)) || 0), 0)
+  // CORREÇÃO W8 (auditoria tracking): o totalProductionCost legacy (flat, somando
+  // todos os cost_configurations.product_costs) fica reservado como fallback. O
+  // valor efetivamente atribuído é calculado depois (per-product_id quando possível).
+  const fallbackTotalProductionCostLegacy = productCosts.reduce((sum: number, item: { cost?: string | number }) => sum + (parseFloat(String(item.cost)) || 0), 0)
 
   // 2. Fetch campaign-level insights (not adset/ad to avoid double-counting)
   let insightsQuery = supabase
@@ -147,7 +150,7 @@ export async function GET(req: NextRequest) {
     const cost = parseFloat(String(item.cost)) || 0
     if (pid) productCostMap.set(pid, (productCostMap.get(pid) || 0) + cost)
   }
-  const fallbackTotalProductionCost = (productCosts || [])
+  const fallbackFlatProductionCost = (productCosts || [])
     .filter((item: { product_id?: string }) => !item.product_id)
     .reduce((sum: number, item: { cost?: string | number }) => sum + (parseFloat(String(item.cost)) || 0), 0)
 
@@ -190,7 +193,7 @@ export async function GET(req: NextRequest) {
   }
   let totalProductionCost = 0
   for (const pid of attributedProductIds) totalProductionCost += productCostMap.get(pid) || 0
-  if (attributedProductIds.size === 0) totalProductionCost = fallbackTotalProductionCost
+  if (attributedProductIds.size === 0) totalProductionCost = fallbackFlatProductionCost || fallbackTotalProductionCostLegacy
   // Calculate financial metrics (recoverados após W8 refactor)
   const totalTaxes = totalAttributedRevenue * (taxPercentage / 100)
   const netProfit = totalAttributedRevenue - totalSpend - totalTaxes - totalProductionCost
