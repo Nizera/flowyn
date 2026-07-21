@@ -170,26 +170,26 @@ export function AppLayoutUI({ children, profile, subscription, notifications }: 
       </AnimatePresence>
 
       <div className="relative flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur-xl md:px-8">
+        <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur-xl md:px-8">
           <div className="flex min-w-0 items-center gap-4">
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 md:hidden"
+              className="rounded-xl p-2 text-muted transition hover:bg-surface hover:text-foreground md:hidden"
             >
               <Menu className="h-6 w-6" />
             </button>
             <div className="min-w-0">
-              <h1 className="truncate text-xl font-black text-slate-950 md:text-2xl">{page.title}</h1>
-              <p className="mt-0.5 truncate text-sm text-slate-400">{page.subtitle}</p>
+              <h1 className="truncate text-xl font-black text-foreground md:text-2xl">{page.title}</h1>
+              <p className="mt-0.5 truncate text-sm text-muted">{page.subtitle}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3 md:gap-4">
             <div className="relative" ref={notifRef}>
-              <button
-                onClick={() => setIsNotifOpen(prev => !prev)}
-                className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:text-slate-950"
-              >
+                <button
+                  onClick={() => setIsNotifOpen(prev => !prev)}
+                  className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-card text-muted shadow-sm transition hover:text-foreground"
+                >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500" />}
               </button>
@@ -200,17 +200,17 @@ export function AppLayoutUI({ children, profile, subscription, notifications }: 
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -8, scale: 0.96 }}
                     transition={{ duration: 0.15, ease: 'easeOut' }}
-                    className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+                    className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-2xl border border-border bg-card shadow-xl"
                   >
-                    <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                      <span className="text-sm font-black text-slate-950">Notificacoes</span>
+                    <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                      <span className="text-sm font-black text-foreground">Notificacoes</span>
                     </div>
                     {notifications.length === 0 ? (
                       <div className="flex flex-col items-center justify-center px-4 py-10 text-center">
-                        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50">
-                          <Bell className="h-5 w-5 text-slate-300" />
+                        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-surface">
+                          <Bell className="h-5 w-5 text-muted" />
                         </div>
-                        <p className="text-sm font-bold text-slate-500">Nenhuma notificacao</p>
+                        <p className="text-sm font-bold text-muted">Nenhuma notificacao</p>
                         <p className="mt-1 text-xs text-slate-400">Atualizacoes importantes aparecem aqui.</p>
                       </div>
                     ) : (
@@ -220,30 +220,30 @@ export function AppLayoutUI({ children, profile, subscription, notifications }: 
                             <Link
                               key={n.id}
                               href={n.href}
-                              className={`flex items-start gap-3 border-b border-slate-50 px-4 py-3 transition hover:bg-slate-50 ${n.read ? 'opacity-60' : ''}`}
+                              className={`flex items-start gap-3 border-b border-border px-4 py-3 transition hover:bg-surface ${n.read ? 'opacity-60' : ''}`}
                               onClick={() => setIsNotifOpen(false)}
                             >
                               <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${notifBg(n.id)}`}>
                                 {notifIcon(n.id)}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm font-bold text-slate-900">{n.title}</p>
-                                <p className="mt-0.5 text-xs leading-relaxed text-slate-500 line-clamp-2">{n.body}</p>
-                                <p className="mt-1 text-[10px] font-medium text-slate-400">{timeAgo(n.time)}</p>
+                                <p className="text-sm font-bold text-foreground">{n.title}</p>
+                                <p className="mt-0.5 text-xs leading-relaxed text-muted line-clamp-2">{n.body}</p>
+                                <p className="mt-1 text-[10px] font-medium text-muted">{timeAgo(n.time)}</p>
                               </div>
                             </Link>
                           ) : (
                             <div
                               key={n.id}
-                              className={`flex items-start gap-3 border-b border-slate-50 px-4 py-3 transition hover:bg-slate-50 ${n.read ? 'opacity-60' : ''}`}
+                              className={`flex items-start gap-3 border-b border-border px-4 py-3 transition hover:bg-surface ${n.read ? 'opacity-60' : ''}`}
                             >
                               <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${notifBg(n.id)}`}>
                                 {notifIcon(n.id)}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm font-bold text-slate-900">{n.title}</p>
-                                <p className="mt-0.5 text-xs leading-relaxed text-slate-500 line-clamp-2">{n.body}</p>
-                                <p className="mt-1 text-[10px] font-medium text-slate-400">{timeAgo(n.time)}</p>
+                                <p className="text-sm font-bold text-foreground">{n.title}</p>
+                                <p className="mt-0.5 text-xs leading-relaxed text-muted line-clamp-2">{n.body}</p>
+                                <p className="mt-1 text-[10px] font-medium text-muted">{timeAgo(n.time)}</p>
                               </div>
                             </div>
                           )

@@ -49,10 +49,10 @@ export function SalesGoalCard({ totalSales }: SalesGoalCardProps) {
   const BadgeIcon = currentBadge.icon
 
   return (
-    <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm h-[140px]">
+    <div className="bg-card rounded-2xl p-4 border border-border shadow-sm h-[140px]">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Meta de Vendas</span>
-        <span className="flex items-center gap-1 text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+        <span className="text-xs font-bold text-muted uppercase tracking-wider">Meta de Vendas</span>
+        <span className="flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
           <BadgeIcon className="h-3 w-3" />
           {currentBadge.label}
         </span>
@@ -61,11 +61,11 @@ export function SalesGoalCard({ totalSales }: SalesGoalCardProps) {
       <div className="flex items-center gap-4">
         <div className="relative w-20 h-20" role="img" aria-label={`Progresso: ${progressPct.toFixed(0)}%`}>
           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" fill="none" r="40" stroke="#f1f5f9" strokeWidth="10" />
+            <circle cx="50" cy="50" fill="none" r="40" stroke="currentColor" className="text-surface" strokeWidth="10" />
             <circle
-              className="transition-all duration-700 ease-out"
+              className="transition-all duration-700 ease-out text-primary"
               cx="50" cy="50" fill="none" r="40"
-              stroke="#f97316"
+              stroke="currentColor"
               strokeDasharray="251.2"
               strokeDashoffset={251.2 - (251.2 * progressPct) / 100}
               strokeLinecap="round"
@@ -73,16 +73,16 @@ export function SalesGoalCard({ totalSales }: SalesGoalCardProps) {
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-lg font-black text-slate-900">{progressPct.toFixed(0)}%</span>
+            <span className="text-lg font-black text-foreground">{progressPct.toFixed(0)}%</span>
           </div>
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-slate-400">Vendas</p>
-          <p className="text-base font-black text-slate-900">{formatCompact(totalSales)}</p>
-          <p className="text-[10px] text-slate-400 mt-1">Faltam {formatCompact(remaining)}</p>
+          <p className="text-xs text-muted">Vendas</p>
+          <p className="text-base font-black text-foreground">{formatCompact(totalSales)}</p>
+          <p className="text-[10px] text-muted mt-1">Faltam {formatCompact(remaining)}</p>
           {nextBadge && (
-            <p className="text-[10px] text-orange-500 font-bold mt-0.5">
+            <p className="text-[10px] text-primary font-bold mt-0.5">
               Próximo: {nextBadge.label}
             </p>
           )}

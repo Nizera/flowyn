@@ -17,7 +17,7 @@ export function CopyUtmButton({ productId }: { productId: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+      className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-black text-muted transition hover:border-orange-200 hover:bg-surface hover:text-primary"
       title="Copiar UTM para Meta Ads"
     >
       {copied ? (
