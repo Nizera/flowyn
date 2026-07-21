@@ -32,8 +32,9 @@ export default function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null)
 
   return (
-    <section id="faq" className="bg-[#070908] px-4 py-20 md:px-6 md:py-32">
-      <div className="mx-auto max-w-3xl">
+    <section id="faq" className="relative bg-[#070908] px-4 py-16 md:px-6 md:py-24">
+      <div className="bg-noise absolute inset-0 opacity-[0.03] pointer-events-none" />
+      <div className="relative mx-auto max-w-3xl">
         <FadeInView>
           <h2 className="text-gradient text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-2">
             Perguntas frequentes

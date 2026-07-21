@@ -73,7 +73,8 @@ export default function TrackingSection() {
   const isInView = useInView(sectionRef, { once: true, margin: '-100px' })
 
   return (
-    <section ref={sectionRef} className="relative bg-[#070908] px-4 py-20 md:px-6 md:py-32 overflow-hidden">
+    <section ref={sectionRef} className="relative bg-[#070908] px-4 py-16 md:px-6 md:py-24 overflow-hidden">
+      <div className="bg-noise absolute inset-0 opacity-[0.03] pointer-events-none" />
       <div className="relative mx-auto max-w-6xl">
         {/* Header */}
         <motion.div

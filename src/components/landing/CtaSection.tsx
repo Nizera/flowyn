@@ -9,8 +9,9 @@ export default function CtaSection() {
   const isInView = useInView(ref, { once: true })
 
   return (
-    <section className="bg-[#070908] px-4 py-20 md:py-32">
-      <div ref={ref} className="mx-auto max-w-4xl text-center">
+    <section className="relative bg-[#070908] px-4 py-16 md:py-24">
+      <div className="bg-noise absolute inset-0 opacity-[0.03] pointer-events-none" />
+      <div ref={ref} className="relative mx-auto max-w-4xl text-center">
         <motion.h2
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}

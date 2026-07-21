@@ -23,8 +23,9 @@ export default function PricingSection() {
   const { handleMouseMove, handleMouseLeave } = useTilt(ref)
 
   return (
-    <section id="custos" className="bg-[#070908] px-4 py-20 md:px-6 md:py-32">
-      <div className="mx-auto max-w-lg">
+    <section id="custos" className="relative bg-[#070908] px-4 py-16 md:px-6 md:py-24">
+      <div className="bg-noise absolute inset-0 opacity-[0.03] pointer-events-none" />
+      <div className="relative mx-auto max-w-lg">
         <motion.div
           ref={ref}
           initial={{ opacity: 0, y: 30 }}

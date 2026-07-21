@@ -167,8 +167,8 @@ function TiltCard({ children, className }: { children: React.ReactNode; classNam
 
 export default function FeaturesSection() {
   return (
-    <section id="checkout" className="relative bg-[#070908] px-4 py-20 md:px-6 md:py-32 overflow-hidden">
-      <div className="bg-noise absolute inset-0 opacity-[0.08] pointer-events-none" />
+    <section id="checkout" className="relative bg-[#070908] px-4 py-16 md:px-6 md:py-24 overflow-hidden">
+      <div className="bg-noise absolute inset-0 opacity-[0.03] pointer-events-none" />
 
       <div className="relative mx-auto max-w-7xl">
         {/* Header */}
