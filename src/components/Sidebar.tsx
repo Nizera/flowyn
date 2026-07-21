@@ -19,6 +19,7 @@ import {
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
+import { ThemeToggle } from './ThemeToggle'
 
 type NavItem = {
   href: string
@@ -115,6 +116,7 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
               <p className="truncate text-sm font-bold text-slate-950">{profile.full_name || 'Usuario'}</p>
               <p className="truncate text-xs text-slate-400">Conta Flowyn</p>
             </div>
+            <ThemeToggle />
           </div>
         )}
         <form action={signOutAction}>

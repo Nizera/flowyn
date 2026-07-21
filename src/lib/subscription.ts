@@ -35,8 +35,12 @@ export async function checkSubscription(userId: string): Promise<SubscriptionChe
 
   const isGracePeriod = subscription?.status === 'grace_period'
 
+  const periodNotExpired =
+    !subscription?.current_period_ends_at ||
+    new Date(subscription.current_period_ends_at).getTime() > now.getTime()
+
   const hasActiveRow =
-    subscription?.status === 'active' ||
+    (subscription?.status === 'active' && periodNotExpired) ||
     isTrialing ||
     isGracePeriod
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { GlobalPixels } from "@/components/GlobalPixels";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -35,10 +36,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`${inter.variable} ${playfair.variable} h-full antialiased`}>
-      <body className="min-h-full" suppressHydrationWarning>
-        <GlobalPixels />
-        {children}
+    <html lang="pt-BR" className={`${inter.variable} ${playfair.variable} h-full antialiased`} suppressHydrationWarning>
+      <body className="min-h-full">
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+          <GlobalPixels />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

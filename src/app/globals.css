@@ -19,6 +19,14 @@
   --font-display: var(--font-playfair);
 }
 
+.dark {
+  --color-background: #1a1c20;
+  --color-card: #25282e;
+  --color-surface: #25282e;
+  --color-surface-elevated: #2d3138;
+  --color-border: rgba(255, 255, 255, 0.05);
+}
+
 body {
   background-color: #070908;
   color: #ffffff;
