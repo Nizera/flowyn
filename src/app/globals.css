@@ -145,7 +145,6 @@ body {
 
 .problem-section {
   position: relative;
-  overflow: hidden;
 }
 
 .problem-section::before {
@@ -162,28 +161,4 @@ body {
   );
   pointer-events: none;
   z-index: 0;
-}
-
-.problem-section::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 120px;
-  background: linear-gradient(to bottom, transparent, #070908);
-  pointer-events: none;
-  z-index: 5;
-}
-
-.problem-card-fade {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 120px;
-  background: linear-gradient(to bottom, transparent, #070908);
-  pointer-events: none;
-  z-index: 10;
-  border-radius: 0 0 1.5rem 1.5rem;
 }
