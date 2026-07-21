@@ -129,3 +129,52 @@ body {
 .nav-glow {
   box-shadow: 0 0 40px rgba(249, 115, 22, 0.12);
 }
+
+/* ── Hero → Problem Section Transition ── */
+.hero-fade::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  background: linear-gradient(to bottom, transparent, #070908);
+  pointer-events: none;
+  z-index: 40;
+}
+
+.problem-section {
+  position: relative;
+  overflow: hidden;
+}
+
+.problem-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 60%;
+  height: 300px;
+  background: radial-gradient(
+    circle at top right,
+    rgba(255, 122, 26, 0.06),
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.problem-section::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 300px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
