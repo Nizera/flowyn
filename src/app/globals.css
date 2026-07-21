@@ -145,7 +145,6 @@ body {
 
 .problem-section {
   position: relative;
-  overflow: hidden;
 }
 
 .problem-section::before {
@@ -164,14 +163,14 @@ body {
   z-index: 0;
 }
 
-.problem-section::after {
+.features-section::before {
   content: '';
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
   right: 0;
   height: 200px;
   background: linear-gradient(to bottom, #101412, #070908);
   pointer-events: none;
-  z-index: 5;
+  z-index: 0;
 }
