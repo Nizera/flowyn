@@ -48,7 +48,7 @@ export default function AdsAccountsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f6f7f9]">
+    <div className="min-h-screen bg-background">
       <div className="border-b border-border bg-card">
         <div className="mx-auto max-w-[1600px] px-6 py-4">
           <div className="flex items-center justify-between">
@@ -118,7 +118,7 @@ export default function AdsAccountsPage() {
                         className="focus:outline-none"
                       >
                         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          acc.sync_enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-surface text-muted'
+                          acc.sync_enabled ? 'bg-emerald-500/15 text-emerald-500' : 'bg-surface text-muted'
                         }`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${acc.sync_enabled ? 'bg-emerald-500' : 'bg-muted'}`} />
                           {acc.sync_enabled ? 'Ativa' : 'Inativa'}
