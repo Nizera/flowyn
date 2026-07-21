@@ -42,10 +42,9 @@ export default function ProblemSection() {
   const charRef = useRef<HTMLDivElement>(null)
 
   return (
-    <section id="produto" className="relative bg-[#070908] px-4 py-16 md:px-6 md:py-24 problem-section -mt-px">
-      <div className="bg-noise absolute inset-0 opacity-[0.03] pointer-events-none" />
+    <section id="produto" className="bg-[#070908] px-4 py-20 md:px-6 md:py-32 problem-section">
       <div className="mx-auto max-w-6xl">
-        <div className="relative z-10 bg-[#101412] rounded-3xl p-6 md:p-12 lg:p-16">
+        <div className="bg-[#101412] rounded-3xl p-6 md:p-12 lg:p-16">
           <span className="text-[#f97316] text-[10px] sm:text-xs uppercase tracking-widest font-semibold">
             O problema
           </span>
