@@ -42,7 +42,7 @@ export default function ProblemSection() {
   const charRef = useRef<HTMLDivElement>(null)
 
   return (
-    <section id="produto" className="bg-[#070908] px-4 py-16 md:px-6 md:py-24 problem-section">
+    <section id="produto" className="bg-[#070908] px-4 py-16 pb-4 md:px-6 md:py-24 md:pb-8 problem-section">
       <div className="mx-auto max-w-6xl">
         <div className="relative z-10 bg-[#101412] rounded-3xl p-6 md:p-12 lg:p-16 overflow-hidden">
           <div className="problem-card-fade" />
