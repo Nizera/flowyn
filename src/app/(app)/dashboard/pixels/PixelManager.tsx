@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Loader2, Plus, Trash2, ToggleLeft, ToggleRight, X } from 'lucide-react'
-import { createPixel, deletePixel, togglePixel } from './actions'
+import { Loader2, Plus, Trash2, ToggleLeft, ToggleRight, X, KeyRound } from 'lucide-react'
+import { createPixel, deletePixel, togglePixel, updatePixelCapiToken } from './actions'
 
 const PLATFORMS = [
-  { id: 'meta', label: 'Meta Ads', sublabel: 'Facebook & Instagram', icon: '/meta.png', color: 'bg-orange-50 border-orange-100 text-orange-600', hint: 'Ex: 1234567890123456' },
-  { id: 'google', label: 'Google Ads', sublabel: 'Search & Display', icon: '/google.png', color: 'bg-red-50 border-red-100 text-red-700', hint: 'Ex: AW-123456789' },
-  { id: 'tiktok', label: 'TikTok Ads', sublabel: 'TikTok & Reels', icon: '/tiktok.png', color: 'bg-surface border-border text-muted', hint: 'Ex: C1AB2DEF3GH' },
+  { id: 'meta', label: 'Meta Ads', sublabel: 'Facebook & Instagram', icon: '/meta.png', color: 'bg-orange-50 border-orange-100 text-orange-600', hint: 'Ex: 1234567890123456', supportsCapi: true },
+  { id: 'google', label: 'Google Ads', sublabel: 'Search & Display', icon: '/google.png', color: 'bg-red-50 border-red-100 text-red-700', hint: 'Ex: AW-123456789', supportsCapi: false },
+  { id: 'tiktok', label: 'TikTok Ads', sublabel: 'TikTok & Reels', icon: '/tiktok.png', color: 'bg-surface border-border text-muted', hint: 'Ex: C1AB2DEF3GH', supportsCapi: false },
 ]
 
 function getPlatform(id: string) {
@@ -21,6 +21,7 @@ interface Pixel {
   pixel_id: string
   is_active: boolean
   created_at: string
+  capi_access_token?: string | null  // encriptado no DB — frontend só vê null | não-null
 }
 
 export function PixelManager({ initialPixels }: { initialPixels: Pixel[] }) {
@@ -28,6 +29,9 @@ export function PixelManager({ initialPixels }: { initialPixels: Pixel[] }) {
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [capiEditingId, setCapiEditingId] = useState<string | null>(null)
+  const [capiDraft, setCapiDraft] = useState('')
+  const [capiStatus, setCapiStatus] = useState<string | null>(null)
 
   function handleCreate(formData: FormData) {
     setError(null)
@@ -49,6 +53,28 @@ export function PixelManager({ initialPixels }: { initialPixels: Pixel[] }) {
   function handleDelete(pixelId: string) {
     if (!confirm('Remover este pixel?')) return
     startTransition(() => deletePixel(pixelId))
+  }
+
+  function openCapiEditor(pixel: Pixel) {
+    setCapiEditingId(pixel.id)
+    setCapiDraft('')
+    setCapiStatus(pixel.capi_access_token ? 'token-definido' : 'sem-token')
+  }
+
+  function saveCapiToken(pixelId: string) {
+    if (!capiDraft.trim()) {
+      if (!confirm('Limpar o token CAPI deste pixel?')) return
+    }
+    startTransition(async () => {
+      const result = await updatePixelCapiToken(pixelId, capiDraft)
+      if (result?.error) {
+        setCapiStatus(`Erro: ${result.error}`)
+      } else {
+        setCapiEditingId(null)
+        setCapiDraft('')
+        setCapiStatus(result?.has_token ? 'token-definido' : 'sem-token')
+      }
+    })
   }
 
   return (
@@ -96,6 +122,7 @@ export function PixelManager({ initialPixels }: { initialPixels: Pixel[] }) {
                     <th className="px-5 py-4">Plataforma</th>
                     <th className="px-5 py-4">ID do pixel</th>
                     <th className="px-5 py-4 text-center">Status</th>
+                    <th className="px-5 py-4 text-center">CAPI Token</th>
                     <th className="px-5 py-4 text-right">Acoes</th>
                   </tr>
                 </thead>
@@ -126,6 +153,38 @@ export function PixelManager({ initialPixels }: { initialPixels: Pixel[] }) {
                               </>
                             )}
                           </button>
+                        </td>
+                        <td className="px-5 py-4 text-center">
+                          {plat.supportsCapi ? (
+                            capiEditingId === pixel.id ? (
+                              <div className="flex flex-col gap-2">
+                                <input
+                                  type="password"
+                                  value={capiDraft}
+                                  onChange={(e) => setCapiDraft(e.target.value)}
+                                  placeholder="Cole aqui o Access Token da Conversions API"
+                                  className="h-10 w-full rounded-lg border border-border bg-surface px-3 text-xs font-mono"
+                                />
+                                <div className="flex gap-2 justify-center">
+                                  <button type="button" onClick={() => saveCapiToken(pixel.id)} className="rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-600">
+                                    Salvar
+                                  </button>
+                                  <button type="button" onClick={() => { setCapiEditingId(null); setCapiDraft('') }} className="rounded-lg px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface">
+                                    Cancelar
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button onClick={() => openCapiEditor(pixel)} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs transition hover:bg-surface">
+                                <KeyRound className={`h-4 w-4 ${pixel.capi_access_token ? 'text-emerald-600' : 'text-muted'}`} />
+                                <span className={pixel.capi_access_token ? 'text-emerald-700 font-medium' : 'text-muted'}>
+                                  {capiStatus === 'token-definido' || pixel.capi_access_token ? 'Configurado' : 'Configurar'}
+                                </span>
+                              </button>
+                            )
+                          ) : (
+                            <span className="text-xs text-muted opacity-60">N/A</span>
+                          )}
                         </td>
                         <td className="px-5 py-4 text-right">
                           <button onClick={() => handleDelete(pixel.id)} className="rounded-lg p-2 text-muted transition hover:bg-red-50 hover:text-red-600">
@@ -175,6 +234,20 @@ export function PixelManager({ initialPixels }: { initialPixels: Pixel[] }) {
               <Field label="ID do pixel">
                 <input name="pixel_id" required placeholder={selectedPlatform ? getPlatform(selectedPlatform).hint : 'Selecione a plataforma primeiro'} className={`${inputClass} font-mono`} />
               </Field>
+
+              {selectedPlatform === 'meta' && (
+                <Field label="Conversions API Token (opcional)">
+                  <input
+                    name="capi_access_token"
+                    type="password"
+                    placeholder="Cole o Access Token da Conversions API"
+                    className={`${inputClass} font-mono`}
+                  />
+                  <p className="mt-1.5 text-xs text-muted">
+                    Gerado em Business Manager {'>'} Events Manager {'>'} Settings {'>'} Conversions API. <strong>Por produtor</strong> — cada pixel deve ter o seu próprio. Sem token, CAPI tenta usar o access_token da conta Meta Ads conectada.
+                  </p>
+                </Field>
+              )}
 
               {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-xs text-red-700 ring-1 ring-red-100">{error}</p>}
 

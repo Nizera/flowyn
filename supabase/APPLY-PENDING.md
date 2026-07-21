@@ -21,3 +21,15 @@ ALTER TABLE public.ad_accounts
 
 COMMENT ON COLUMN public.ad_accounts.sync_lock_until IS 'Timestamp até o qual um sync está em andamento. NULL ou no passado = livre.';
 ```
+
+### `supabase/migrations/20260721002_add_capi_access_token_to_pixels.sql`
+Adiciona coluna `capi_access_token TEXT` em `pixels` para permitir que cada produtor
+cadastre o Access Token da Conversions API específico do seu pixel (encriptado em
+AES-256-GCM). Sem essa coluna, o CAPI vai pular pixels sem token próprio.
+
+```sql
+ALTER TABLE public.pixels
+  ADD COLUMN IF NOT EXISTS capi_access_token TEXT;
+
+COMMENT ON COLUMN public.pixels.capi_access_token IS 'Access Token da Conversions API da Meta (encriptado). Opcional. Aplicável a platform=meta.';
+```

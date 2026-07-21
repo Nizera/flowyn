@@ -12,6 +12,8 @@ export async function createPixel(formData: FormData) {
   const name = formData.get('name') as string
   const platform = formData.get('platform') as string
   const pixel_id = formData.get('pixel_id') as string
+  // CAPI token opcional — só usado para platform=meta. Encriptado antes de salvar.
+  const capi_access_token = (formData.get('capi_access_token') as string | null)?.trim() || ''
 
   if (!name || !platform || !pixel_id) return { error: 'Preencha todos os campos' }
 
@@ -25,11 +27,17 @@ export async function createPixel(formData: FormData) {
     return { error: `Formato de Pixel ID inválido para ${platform}` }
   }
 
+  // CAPI token só faz sentido para Meta. Defensive: clear se plataforma != meta.
+  const encryptedCapiToken = (platform === 'meta' && capi_access_token)
+    ? encryptApiKey(capi_access_token)
+    : null
+
   const { error } = await supabase.from('pixels').insert({
     user_id: user.id,
     name,
     platform,
     pixel_id: encryptApiKey(pixel_id),
+    capi_access_token: encryptedCapiToken,
     is_active: true,
   })
 
@@ -50,6 +58,27 @@ export async function togglePixel(pixelId: string, isActive: boolean) {
     .eq('user_id', user.id)
 
   revalidatePath('/dashboard/pixels')
+}
+
+// Atualiza apenas o token CAPI de um pixel existente ( META Conversions API ).
+// Aceita string vazia para limpar. Retorna { success: true } ou { error: string }.
+export async function updatePixelCapiToken(pixelId: string, capiToken: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Não autenticado' }
+
+  const token = (capiToken || '').trim()
+  const encrypted = token ? encryptApiKey(token) : null
+
+  const { error } = await supabase
+    .from('pixels')
+    .update({ capi_access_token: encrypted })
+    .eq('id', pixelId)
+    .eq('user_id', user.id)
+
+  if (error) return { error: error.message }
+  revalidatePath('/dashboard/pixels')
+  return { success: true, has_token: Boolean(token) }
 }
 
 export async function deletePixel(pixelId: string) {
