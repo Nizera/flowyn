@@ -522,7 +522,12 @@ export default function CampaignManagementPage() {
                     { key: 'ctr' as const, label: 'CTR' },
                     { key: 'cpc' as const, label: 'CPC' },
                     { key: 'cpm' as const, label: 'CPM' },
+                    { key: 'landingPageViews' as const, label: 'Visitas LP' },
+                    { key: 'cpv' as const, label: 'CPV' },
+                    { key: 'initiateCheckout' as const, label: 'Init. Checkout' },
+                    { key: 'cpi' as const, label: 'CPI' },
                     { key: 'conversions' as const, label: 'Conversoes' },
+                    { key: 'cpa' as const, label: 'CPA' },
                     { key: 'conversionValue' as const, label: 'Valor Conv.' },
                     { key: 'roas' as const, label: 'ROAS' },
                   ].map(col => (
@@ -693,8 +698,13 @@ export default function CampaignManagementPage() {
                   {visibleColumns.clicks && <th className="px-4 py-3 text-right min-w-[100px]">Cliques</th>}
                   {visibleColumns.ctr && <th className="px-4 py-3 text-right min-w-[80px]">CTR</th>}
                   {visibleColumns.cpc && <th className="px-4 py-3 text-right min-w-[100px]">CPC</th>}
-                  {visibleColumns.cpm && <th className="px-4 py-3 text-right min-w-[100px]">CPM</th>}
-                  {visibleColumns.conversions && <th className="px-4 py-3 text-right min-w-[100px]">Conversoes</th>}
+                   {visibleColumns.cpm && <th className="px-4 py-3 text-right min-w-[100px]">CPM</th>}
+                   {visibleColumns.landingPageViews && <th className="px-4 py-3 text-right min-w-[100px]">Visitas LP</th>}
+                   {visibleColumns.cpv && <th className="px-4 py-3 text-right min-w-[100px]">CPV</th>}
+                   {visibleColumns.initiateCheckout && <th className="px-4 py-3 text-right min-w-[100px]">Init. Checkout</th>}
+                   {visibleColumns.cpi && <th className="px-4 py-3 text-right min-w-[100px]">CPI</th>}
+                   {visibleColumns.conversions && <th className="px-4 py-3 text-right min-w-[100px]">Conversoes</th>}
+                   {visibleColumns.cpa && <th className="px-4 py-3 text-right min-w-[100px]">CPA</th>}
                   {visibleColumns.conversionValue && <th className="px-4 py-3 text-right min-w-[120px]">Valor Conv.</th>}
                   {visibleColumns.roas && <th className="px-4 py-3 text-right min-w-[100px]">ROAS</th>}
                   <th className="px-4 py-3 w-16"></th>
@@ -703,10 +713,13 @@ export default function CampaignManagementPage() {
               <tbody>
                 {filtered.map((item) => {
                   const id = getId(item)
-                  const ins = item.insights || { spend: 0, impressions: 0, clicks: 0, reach: 0, conversions: 0, conversion_value: 0 }
+                  const ins = item.insights || { spend: 0, impressions: 0, clicks: 0, reach: 0, conversions: 0, conversion_value: 0, landing_page_views: 0, initiate_checkout: 0, cpc: null, cpm: null, ctr: null, cpv: null, cpi: null, cpa: null, roas: null }
                   const cpc = ins.clicks > 0 ? ins.spend / ins.clicks : 0
                   const cpm = ins.impressions > 0 ? (ins.spend / ins.impressions) * 1000 : 0
                   const ctr = ins.impressions > 0 ? (ins.clicks / ins.impressions) * 100 : 0
+                  const cpv = ins.landing_page_views > 0 ? ins.spend / ins.landing_page_views : 0
+                  const cpi = ins.initiate_checkout > 0 ? ins.spend / ins.initiate_checkout : 0
+                  const cpa = ins.conversions > 0 ? ins.spend / ins.conversions : 0
                   const roas = ins.spend > 0 ? ins.conversion_value / ins.spend : 0
                   const isToggling = togglingId === id
 
@@ -747,8 +760,13 @@ export default function CampaignManagementPage() {
                       {visibleColumns.clicks && <td className="px-4 py-3 text-right"><MetricCell value={ins.clicks} /></td>}
                       {visibleColumns.ctr && <td className="px-4 py-3 text-right"><MetricCell value={ctr} suffix="%" decimals={2} /></td>}
                       {visibleColumns.cpc && <td className="px-4 py-3 text-right"><MetricCell value={cpc} prefix="R$ " decimals={2} /></td>}
-                      {visibleColumns.cpm && <td className="px-4 py-3 text-right"><MetricCell value={cpm} prefix="R$ " decimals={2} /></td>}
-                      {visibleColumns.conversions && <td className="px-4 py-3 text-right"><MetricCell value={ins.conversions} /></td>}
+                       {visibleColumns.cpm && <td className="px-4 py-3 text-right"><MetricCell value={cpm} prefix="R$ " decimals={2} /></td>}
+                       {visibleColumns.landingPageViews && <td className="px-4 py-3 text-right"><MetricCell value={ins.landing_page_views || 0} /></td>}
+                       {visibleColumns.cpv && <td className="px-4 py-3 text-right"><MetricCell value={cpv} prefix="R$ " decimals={2} /></td>}
+                       {visibleColumns.initiateCheckout && <td className="px-4 py-3 text-right"><MetricCell value={ins.initiate_checkout || 0} /></td>}
+                       {visibleColumns.cpi && <td className="px-4 py-3 text-right"><MetricCell value={cpi} prefix="R$ " decimals={2} /></td>}
+                       {visibleColumns.conversions && <td className="px-4 py-3 text-right"><MetricCell value={ins.conversions} /></td>}
+                       {visibleColumns.cpa && <td className="px-4 py-3 text-right"><MetricCell value={cpa} prefix="R$ " decimals={2} /></td>}
                       {visibleColumns.conversionValue && (
                         <td className="px-4 py-3 text-right font-medium text-emerald-600">
                           <MetricCell value={ins.conversion_value} prefix="R$ " decimals={2} />

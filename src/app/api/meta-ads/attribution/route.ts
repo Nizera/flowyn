@@ -11,9 +11,14 @@ type CampaignAttribution = {
   total_impressions: number
   total_reach: number
   total_leads: number
+  total_landing_page_views: number
+  total_initiate_checkout: number
   avg_cpc: number
   avg_cpm: number
   avg_ctr: number
+  avg_cpv: number
+  avg_cpi: number
+  avg_cpa: number
   attributed_orders: number
   attributed_revenue: number
   gross_profit: number
@@ -116,9 +121,14 @@ export async function POST(req: NextRequest) {
           total_impressions: 0,
           total_reach: 0,
           total_leads: 0,
+          total_landing_page_views: 0,
+          total_initiate_checkout: 0,
           avg_cpc: 0,
           avg_cpm: 0,
           avg_ctr: 0,
+          avg_cpv: 0,
+          avg_cpi: 0,
+          avg_cpa: 0,
           attributed_orders: 0,
           attributed_revenue: 0,
           gross_profit: 0,
@@ -137,6 +147,8 @@ export async function POST(req: NextRequest) {
       campaign.total_impressions += insight.impressions || 0
       campaign.total_reach += insight.reach || 0
       campaign.total_leads += insight.leads || 0
+      campaign.total_landing_page_views += insight.landing_page_views || 0
+      campaign.total_initiate_checkout += insight.initiate_checkout || 0
     }
 
     // 5. Attribute orders to campaigns based on utm_campaign matching campaign_id
@@ -202,6 +214,15 @@ export async function POST(req: NextRequest) {
         : 0
       campaign.avg_ctr = campaign.total_impressions > 0 
         ? (campaign.total_clicks / campaign.total_impressions) * 100 
+        : 0
+      campaign.avg_cpv = campaign.total_landing_page_views > 0 
+        ? campaign.total_spend / campaign.total_landing_page_views 
+        : 0
+      campaign.avg_cpi = campaign.total_initiate_checkout > 0 
+        ? campaign.total_spend / campaign.total_initiate_checkout 
+        : 0
+      campaign.avg_cpa = campaign.attributed_orders > 0 
+        ? campaign.total_spend / campaign.attributed_orders 
         : 0
     }
 
