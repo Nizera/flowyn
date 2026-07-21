@@ -38,7 +38,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${inter.variable} ${playfair.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full">
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <GlobalPixels />
           {children}
         </ThemeProvider>

@@ -73,7 +73,7 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
   return (
     <aside className="flex h-screen w-full flex-col overflow-y-auto border-r border-border bg-background sidebar-scrollbar">
       <Link href="/dashboard" className="flex h-20 items-center justify-center border-b border-border px-4 lg:justify-start">
-        <img src="/brand/logo-black-transparent.png" alt="Flowyn" className="h-10 w-auto lg:h-11" />
+        <Logo className="h-10 w-auto lg:h-11" />
       </Link>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-4 py-5 sidebar-scrollbar">
