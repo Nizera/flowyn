@@ -40,10 +40,11 @@ export async function checkSubscription(userId: string): Promise<SubscriptionChe
     isTrialing ||
     isGracePeriod
 
-  const isActive = hasActiveRow && plan !== 'free'
+  const effectivePlan: UserPlan = hasActiveRow && plan === 'free' ? 'pro' : plan
+  const isActive = hasActiveRow && effectivePlan !== 'free'
 
   return {
-    plan,
+    plan: effectivePlan,
     isActive,
     trialEndsAt: subscription?.trial_ends_at || null,
     currentPeriodEndsAt: subscription?.current_period_ends_at || null,

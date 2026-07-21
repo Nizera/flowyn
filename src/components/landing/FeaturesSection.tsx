@@ -81,12 +81,12 @@ function AnimatedFunnel() {
   }, [])
 
   return (
-    <div ref={sectionRef} className="relative max-w-3xl mx-auto py-10">
+    <div ref={sectionRef} className="relative max-w-3xl mx-auto py-10 px-4 md:px-0">
       {/* Base line */}
-      <div className="absolute left-[39px] md:left-1/2 top-0 bottom-0 w-[2px] bg-white/10 -translate-x-1/2" />
+      <div className="absolute left-[31px] md:left-1/2 top-0 bottom-0 w-[2px] bg-white/10 -translate-x-1/2" />
       {/* Animated fill line */}
       <div
-        className="absolute left-[39px] md:left-1/2 top-0 w-[2px] -translate-x-1/2 z-0 transition-all duration-200 ease-out"
+        className="absolute left-[31px] md:left-1/2 top-0 w-[2px] -translate-x-1/2 z-0 transition-all duration-200 ease-out"
         style={{
           height: `${lineHeight}%`,
           background: 'linear-gradient(to bottom, #f97316, #fb923c)',
@@ -100,7 +100,7 @@ function AnimatedFunnel() {
           return (
             <div key={step.label} className="flex flex-col md:flex-row items-center gap-6 relative z-10">
               {/* Left side (odd steps) */}
-              <div className={`md:w-1/2 ${i % 2 === 0 ? 'flex justify-end md:pr-16 text-left md:text-right w-full pl-24 md:pl-0 order-2 md:order-1' : 'hidden md:block order-1'}`}>
+              <div className={`md:w-1/2 ${i % 2 === 0 ? 'flex justify-end md:pr-16 text-left md:text-right w-full pl-20 md:pl-0 order-2 md:order-1' : 'hidden md:block order-1'}`}>
                 {i % 2 === 0 && (
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
@@ -118,19 +118,19 @@ function AnimatedFunnel() {
                 initial={{ scale: 0 }}
                 animate={isInView && isActive ? { scale: 1 } : {}}
                 transition={{ duration: 0.4, type: 'spring', stiffness: 200 }}
-                className={`absolute left-0 md:left-1/2 -translate-x-1/2 w-20 h-20 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${
+                className={`absolute left-4 md:left-1/2 -translate-x-1/2 w-16 h-16 md:w-20 md:h-20 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${
                   isActive
                     ? 'bg-[#f97316]/15 border-[#f97316] shadow-[0_0_30px_rgba(249,115,22,0.4)]'
                     : 'bg-[#1a1f1c] border-white/10'
                 }`}
               >
-                <span className={`text-3xl transition-all duration-500 ${isActive ? '' : 'opacity-40'}`}>
+                <span className={`text-2xl md:text-3xl transition-all duration-500 ${isActive ? '' : 'opacity-40'}`}>
                   {step.icon}
                 </span>
               </motion.div>
 
               {/* Right side (even steps) */}
-              <div className={`md:w-1/2 ${i % 2 !== 0 ? 'flex justify-start md:pl-16 text-left w-full pl-24 md:pl-0 order-3' : 'hidden md:block order-3'}`}>
+              <div className={`md:w-1/2 ${i % 2 !== 0 ? 'flex justify-start md:pl-16 text-left w-full pl-20 md:pl-0 order-3' : 'hidden md:block order-3'}`}>
                 {i % 2 !== 0 && (
                   <motion.div
                     initial={{ opacity: 0, x: 20 }}
