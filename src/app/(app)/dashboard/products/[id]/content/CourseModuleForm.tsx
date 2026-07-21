@@ -41,11 +41,11 @@ export function CourseModuleForm({ createModule }: CourseModuleFormProps) {
 function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-slate-700">
+      <span className="mb-2 block text-sm font-medium text-foreground">
         {label}{required && <span className="text-red-500">*</span>}
       </span>
       {children}
-      {hint && <span className="mt-1.5 block text-xs leading-5 text-slate-400">{hint}</span>}
+      {hint && <span className="mt-1.5 block text-xs leading-5 text-muted">{hint}</span>}
     </label>
   )
 }
@@ -60,4 +60,4 @@ function FormMessage({ state }: { state: CourseContentFormState }) {
   )
 }
 
-const inputClass = 'h-12 w-full rounded-xl border-0 bg-[#f4f4f6] px-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20'
+const inputClass = 'h-12 w-full rounded-xl border-0 bg-surface px-4 text-sm font-medium text-foreground outline-none transition placeholder:text-muted focus:bg-card focus:ring-2 focus:ring-orange-500/20'

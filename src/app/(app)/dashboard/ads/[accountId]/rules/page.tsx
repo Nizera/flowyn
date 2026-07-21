@@ -260,19 +260,19 @@ export default function RulesPage() {
   const showBudgetField = form.action_type === 'increase_budget' || form.action_type === 'decrease_budget'
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="border-b border-slate-200">
+    <div className="min-h-screen bg-card">
+      <div className="border-b border-border">
         <div className="max-w-[1600px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href={`/dashboard/ads/${accountId}`} className="text-slate-400 hover:text-slate-600 transition-colors">
+              <Link href={`/dashboard/ads/${accountId}`} className="text-muted hover:text-muted transition-colors">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </Link>
               <div>
-                <h1 className="text-lg font-bold text-slate-900">Regras Automatizadas</h1>
-                <p className="text-sm text-slate-500">Conta: {accountId}</p>
+                <h1 className="text-lg font-bold text-foreground">Regras Automatizadas</h1>
+                <p className="text-sm text-muted">Conta: {accountId}</p>
               </div>
             </div>
             <button onClick={openCreate}
@@ -287,7 +287,7 @@ export default function RulesPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-slate-200">
+      <div className="border-b border-border">
         <div className="max-w-[1600px] mx-auto px-6">
           <div className="flex gap-0">
             {[
@@ -297,11 +297,11 @@ export default function RulesPage() {
               <button key={t.key}
                 onClick={() => setActiveTab(t.key)}
                 className={`px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
-                  activeTab === t.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+                  activeTab === t.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-muted hover:text-foreground'
                 }`}>
                 {t.label}
                 {t.count !== null && (
-                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${activeTab === t.key ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${activeTab === t.key ? 'bg-blue-100 text-blue-700' : 'bg-surface text-muted'}`}>
                     {t.count}
                   </span>
                 )}
@@ -316,7 +316,7 @@ export default function RulesPage() {
         <div className="max-w-[1600px] mx-auto">
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <div className="flex items-center gap-3 text-slate-500">
+              <div className="flex items-center gap-3 text-muted">
                 <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -325,7 +325,7 @@ export default function RulesPage() {
               </div>
             </div>
           ) : rules.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+            <div className="flex flex-col items-center justify-center py-20 text-muted">
               <svg className="w-12 h-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
               </svg>
@@ -339,8 +339,8 @@ export default function RulesPage() {
           ) : (
             <div className="overflow-x-auto light-scrollbar">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-white z-10 border-b border-slate-200">
-                  <tr className="text-left text-slate-500 text-xs uppercase">
+                <thead className="sticky top-0 bg-card z-10 border-b border-border">
+                  <tr className="text-left text-muted text-xs uppercase">
                     <th className="px-4 py-3 min-w-[200px]">Nome</th>
                     <th className="px-4 py-3 min-w-[200px]">Condicao</th>
                     <th className="px-4 py-3 min-w-[160px]">Acao</th>
@@ -355,41 +355,41 @@ export default function RulesPage() {
                 </thead>
                 <tbody>
                   {rules.map(rule => (
-                    <tr key={rule.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                    <tr key={rule.id} className="border-t border-border hover:bg-surface transition-colors">
                       <td className="px-4 py-3">
-                        <div className="font-semibold text-slate-900">{rule.name}</div>
-                        <div className="text-xs text-slate-400 mt-0.5">Criada em {formatDate(rule.created_at)}</div>
+                        <div className="font-semibold text-foreground">{rule.name}</div>
+                        <div className="text-xs text-muted mt-0.5">Criada em {formatDate(rule.created_at)}</div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm text-slate-700">
+                        <span className="text-sm text-foreground">
                           {getMetricLabel(rule.condition_metric)} {getOperatorLabel(rule.condition_operator)} {rule.condition_value}
                         </span>
-                        <div className="text-xs text-slate-400 mt-0.5">Ultimas {rule.condition_period}h</div>
+                        <div className="text-xs text-muted mt-0.5">Ultimas {rule.condition_period}h</div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm text-slate-700">{getActionLabel(rule.action_type)}</span>
+                        <span className="text-sm text-foreground">{getActionLabel(rule.action_type)}</span>
                         {rule.action_value != null && (
-                          <div className="text-xs text-slate-400 mt-0.5">
+                          <div className="text-xs text-muted mt-0.5">
                             {rule.action_value}{rule.action_value_type === 'percentage' ? '%' : ' (R$)'}
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-600">{getLevelLabel(rule.entity_level)}</td>
-                      <td className="px-4 py-3 text-sm text-slate-600">{rule.cooldown_hours}h</td>
+                      <td className="px-4 py-3 text-sm text-muted">{getLevelLabel(rule.entity_level)}</td>
+                      <td className="px-4 py-3 text-sm text-muted">{rule.cooldown_hours}h</td>
                       <td className="px-4 py-3 text-center">
                         <button onClick={() => handleToggle(rule)} className="focus:outline-none">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                            rule.enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                            rule.enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-surface text-muted'
                           }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${rule.enabled ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                            <span className={`w-1.5 h-1.5 rounded-full ${rule.enabled ? 'bg-emerald-500' : 'bg-muted'}`} />
                             {rule.enabled ? 'Ativa' : 'Inativa'}
                           </span>
                         </button>
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-600">
-                        {rule.last_triggered_at ? formatDate(rule.last_triggered_at) : <span className="text-slate-400">Nunca</span>}
+                      <td className="px-4 py-3 text-sm text-muted">
+                        {rule.last_triggered_at ? formatDate(rule.last_triggered_at) : <span className="text-muted">Nunca</span>}
                       </td>
-                      <td className="px-4 py-3 text-center text-sm font-medium text-slate-700">{rule.trigger_count}</td>
+                      <td className="px-4 py-3 text-center text-sm font-medium text-foreground">{rule.trigger_count}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
                           {rule.notify_email && (
@@ -406,13 +406,13 @@ export default function RulesPage() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           <button onClick={() => openEdit(rule)}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                            className="p-1.5 text-muted hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                           </button>
                           <button onClick={() => handleDelete(rule)}
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                            className="p-1.5 text-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
@@ -432,7 +432,7 @@ export default function RulesPage() {
       {activeTab === 'log' && (
         <div className="max-w-[1600px] mx-auto">
           {logs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+            <div className="flex flex-col items-center justify-center py-20 text-muted">
               <svg className="w-12 h-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
@@ -442,8 +442,8 @@ export default function RulesPage() {
           ) : (
             <div className="overflow-x-auto light-scrollbar">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-white z-10 border-b border-slate-200">
-                  <tr className="text-left text-slate-500 text-xs uppercase">
+                <thead className="sticky top-0 bg-card z-10 border-b border-border">
+                  <tr className="text-left text-muted text-xs uppercase">
                     <th className="px-4 py-3">Data</th>
                     <th className="px-4 py-3">Entidade</th>
                     <th className="px-4 py-3">Condicao</th>
@@ -454,18 +454,18 @@ export default function RulesPage() {
                 </thead>
                 <tbody>
                   {logs.map(log => (
-                    <tr key={log.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-3 text-sm text-slate-600">{formatDate(log.created_at)}</td>
+                    <tr key={log.id} className="border-t border-border hover:bg-surface transition-colors">
+                      <td className="px-4 py-3 text-sm text-muted">{formatDate(log.created_at)}</td>
                       <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-slate-900">{log.entity_name || log.entity_id}</div>
-                        <div className="text-xs text-slate-400">{getLevelLabel(log.entity_level)}</div>
+                        <div className="text-sm font-medium text-foreground">{log.entity_name || log.entity_id}</div>
+                        <div className="text-xs text-muted">{getLevelLabel(log.entity_level)}</div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-600">
+                      <td className="px-4 py-3 text-sm text-muted">
                         {log.condition_met?.metric && (
                           <span>{getMetricLabel(log.condition_met.metric)} {getOperatorLabel(log.condition_met.operator)} {log.condition_met.threshold} = {Number(log.condition_met.actual_value).toFixed(2)}</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-600">{getActionLabel(log.action_taken)}</td>
+                      <td className="px-4 py-3 text-sm text-muted">{getActionLabel(log.action_taken)}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
                           log.action_result === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
@@ -486,11 +486,11 @@ export default function RulesPage() {
       {/* Modal Form */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowForm(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto sidebar-scrollbar" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-slate-200">
+          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto sidebar-scrollbar" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-border">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-slate-900">{editingRule ? 'Editar Regra' : 'Nova Regra'}</h2>
-                <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600">
+                <h2 className="text-lg font-bold text-foreground">{editingRule ? 'Editar Regra' : 'Nova Regra'}</h2>
+                <button onClick={() => setShowForm(false)} className="text-muted hover:text-muted">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -501,65 +501,65 @@ export default function RulesPage() {
             <div className="px-6 py-4 space-y-5">
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nome da Regra</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Nome da Regra</label>
                 <input type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
                   placeholder="Ex: Pausar se ROAS baixo"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
 
               {/* Entity Level */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nivel de aplicacao</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Nivel de aplicacao</label>
                 <select value={form.entity_level} onChange={e => setForm(p => ({ ...p, entity_level: e.target.value, entity_ids: [] }))}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   {ENTITY_LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
                 </select>
-                <p className="text-xs text-slate-400 mt-1">Deixe vazio para aplicar a todas as entidades deste nivel</p>
+                <p className="text-xs text-muted mt-1">Deixe vazio para aplicar a todas as entidades deste nivel</p>
               </div>
 
               {/* Condition */}
-              <div className="bg-slate-50 rounded-xl p-4 space-y-3">
-                <h3 className="text-sm font-semibold text-slate-700">Condicao</h3>
+              <div className="bg-surface rounded-xl p-4 space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Condicao</h3>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Metrica</label>
+                    <label className="block text-xs font-medium text-muted mb-1">Metrica</label>
                     <select value={form.condition_metric} onChange={e => setForm(p => ({ ...p, condition_metric: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                       {METRICS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Operador</label>
+                    <label className="block text-xs font-medium text-muted mb-1">Operador</label>
                     <select value={form.condition_operator} onChange={e => setForm(p => ({ ...p, condition_operator: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                       {OPERATORS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Valor</label>
+                    <label className="block text-xs font-medium text-muted mb-1">Valor</label>
                     <input type="number" step="0.01" value={form.condition_value}
                       onChange={e => setForm(p => ({ ...p, condition_value: e.target.value }))}
                       placeholder="Ex: 1.5"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Periodo de avaliacao</label>
+                  <label className="block text-xs font-medium text-muted mb-1">Periodo de avaliacao</label>
                   <select value={form.condition_period} onChange={e => setForm(p => ({ ...p, condition_period: Number(e.target.value) }))}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     {PERIODS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                   </select>
                 </div>
               </div>
 
               {/* Action */}
-              <div className="bg-slate-50 rounded-xl p-4 space-y-3">
-                <h3 className="text-sm font-semibold text-slate-700">Acao</h3>
+              <div className="bg-surface rounded-xl p-4 space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Acao</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Tipo de acao</label>
+                    <label className="block text-xs font-medium text-muted mb-1">Tipo de acao</label>
                     <select value={form.action_type} onChange={e => setForm(p => ({ ...p, action_type: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                       {ACTIONS.filter(a => a.levels.includes(form.entity_level)).map(a => (
                         <option key={a.value} value={a.value}>{a.label}</option>
                       ))}
@@ -567,15 +567,15 @@ export default function RulesPage() {
                   </div>
                   {showBudgetField && (
                     <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Valor</label>
+                      <label className="block text-xs font-medium text-muted mb-1">Valor</label>
                       <div className="flex gap-2">
                         <input type="number" step="1" value={form.action_value}
                           onChange={e => setForm(p => ({ ...p, action_value: e.target.value }))}
                           placeholder="20"
-                          className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                          className="flex-1 px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                         <select value={form.action_value_type}
                           onChange={e => setForm(p => ({ ...p, action_value_type: e.target.value }))}
-                          className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                           <option value="percentage">%</option>
                           <option value="absolute">R$</option>
                         </select>
@@ -584,9 +584,9 @@ export default function RulesPage() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Cooldown entre execucoes</label>
+                  <label className="block text-xs font-medium text-muted mb-1">Cooldown entre execucoes</label>
                   <select value={form.cooldown_hours} onChange={e => setForm(p => ({ ...p, cooldown_hours: Number(e.target.value) }))}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value={1}>1 hora</option>
                     <option value={2}>2 horas</option>
                     <option value={6}>6 horas</option>
@@ -598,46 +598,46 @@ export default function RulesPage() {
               </div>
 
               {/* Notifications */}
-              <div className="bg-slate-50 rounded-xl p-4 space-y-3">
-                <h3 className="text-sm font-semibold text-slate-700">Notificacoes</h3>
+              <div className="bg-surface rounded-xl p-4 space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Notificacoes</h3>
                 <div className="flex flex-wrap gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={form.notify_email}
                       onChange={e => setForm(p => ({ ...p, notify_email: e.target.checked }))}
-                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-                    <span className="text-sm text-slate-700">Email</span>
+                      className="w-4 h-4 rounded border-border text-blue-600 focus:ring-blue-500" />
+                    <span className="text-sm text-foreground">Email</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={form.notify_whatsapp}
                       onChange={e => setForm(p => ({ ...p, notify_whatsapp: e.target.checked }))}
-                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-                    <span className="text-sm text-slate-700">WhatsApp</span>
+                      className="w-4 h-4 rounded border-border text-blue-600 focus:ring-blue-500" />
+                    <span className="text-sm text-foreground">WhatsApp</span>
                   </label>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Webhook URL (opcional)</label>
+                  <label className="block text-xs font-medium text-muted mb-1">Webhook URL (opcional)</label>
                   <input type="url" value={form.webhook_url}
                     onChange={e => setForm(p => ({ ...p, webhook_url: e.target.value }))}
                     placeholder="https://seu-crm.com/api/webhook"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  <p className="text-xs text-slate-400 mt-1">URL do webhook para enviar os dados quando a regra disparar.</p>
+                    className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <p className="text-xs text-muted mt-1">URL do webhook para enviar os dados quando a regra disparar.</p>
                 </div>
                 {form.webhook_url && (
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Webhook Secret (HMAC)</label>
+                    <label className="block text-xs font-medium text-muted mb-1">Webhook Secret (HMAC)</label>
                     <input type="text" value={form.webhook_secret}
                       onChange={e => setForm(p => ({ ...p, webhook_secret: e.target.value }))}
                       placeholder="Chave secreta para assinar o payload"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <p className="text-xs text-slate-400 mt-1">Se configurado, o payload sera assinado com HMAC-SHA256 no header X-Flowyn-Signature.</p>
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <p className="text-xs text-muted mt-1">Se configurado, o payload sera assinado com HMAC-SHA256 no header X-Flowyn-Signature.</p>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3">
+            <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
               <button onClick={() => setShowForm(false)}
-                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+                className="px-4 py-2 text-sm font-medium text-foreground hover:bg-surface rounded-lg transition-colors">
                 Cancelar
               </button>
               <button onClick={handleSave} disabled={saving}

@@ -56,18 +56,18 @@ export function FunnelChart({ adAccountId }: { adAccountId?: string }) {
 
   if (loading) {
     return (
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <h3 className="font-bold mb-4 text-slate-900">Funil de Conversão</h3>
-        <div className="py-8 text-center text-sm text-slate-400">Carregando...</div>
+      <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
+        <h3 className="font-bold mb-4 text-foreground">Funil de Conversão</h3>
+        <div className="py-8 text-center text-sm text-muted">Carregando...</div>
       </div>
     )
   }
 
   if (error || stages.length === 0) {
     return (
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <h3 className="font-bold mb-4 text-slate-900">Funil de Conversão</h3>
-        <div className="py-8 text-center text-sm text-slate-400">
+      <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
+        <h3 className="font-bold mb-4 text-foreground">Funil de Conversão</h3>
+        <div className="py-8 text-center text-sm text-muted">
           {error || 'Nenhum dado de funil disponível'}
         </div>
       </div>
@@ -77,8 +77,8 @@ export function FunnelChart({ adAccountId }: { adAccountId?: string }) {
   const maxValue = Math.max(...stages.map(s => s.value), 1)
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-      <h4 className="text-lg font-bold text-slate-900 mb-6">Funil de Conversão</h4>
+    <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
+      <h4 className="text-lg font-bold text-foreground mb-6">Funil de Conversão</h4>
       <div className="flex flex-col gap-3">
         {stages.map((stage, i) => {
           const width = (stage.value / maxValue) * 100
@@ -89,7 +89,7 @@ export function FunnelChart({ adAccountId }: { adAccountId?: string }) {
           return (
             <div key={stage.name} className="relative">
               <div className="flex items-center">
-                <div className="w-full bg-slate-100 rounded-lg h-12 overflow-hidden relative flex items-center px-4 justify-between group hover:bg-slate-200 transition-colors">
+                <div className="w-full bg-surface rounded-lg h-12 overflow-hidden relative flex items-center px-4 justify-between group hover:bg-surface transition-colors">
                   <div
                     className="absolute left-0 top-0 bottom-0 rounded-lg transition-all duration-500"
                     style={{
@@ -97,13 +97,13 @@ export function FunnelChart({ adAccountId }: { adAccountId?: string }) {
                       backgroundColor: `${stage.color}20`,
                     }}
                   />
-                  <span className="text-sm font-medium relative z-10 text-slate-700">{stage.name}</span>
-                  <span className="text-base font-bold relative z-10 text-slate-900">{stage.value.toLocaleString('pt-BR')}</span>
+                  <span className="text-sm font-medium relative z-10 text-foreground">{stage.name}</span>
+                  <span className="text-base font-bold relative z-10 text-foreground">{stage.value.toLocaleString('pt-BR')}</span>
                 </div>
               </div>
               {i < stages.length - 1 && (
                 <div className="flex justify-center -my-1.5 relative z-20">
-                  <div className="bg-white border border-slate-200 rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-500 shadow-sm">
+                  <div className="bg-card border border-border rounded-full px-2 py-0.5 text-[10px] font-bold text-muted shadow-sm">
                     {convRate.toFixed(1).replace('.', ',')}%
                   </div>
                 </div>

@@ -22,15 +22,15 @@ export default async function AdsLayout({
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-500">
             <Lock className="h-10 w-10 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-950">
+          <h2 className="text-2xl font-bold text-foreground">
             Meta Ads requer plano Pro
           </h2>
-          <p className="mt-3 text-slate-500">
+          <p className="mt-3 text-muted">
             Conecte suas contas de anúncio, gerencie campanhas e acompanhe métricas de ROAS e lucro com o plano Pro.
           </p>
-          <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+          <div className="mt-4 rounded-xl bg-surface p-4 text-sm text-muted">
             <p className="font-semibold">Plano Pro — R$97/mês</p>
-            <p className="mt-1 text-slate-400">7 dias de teste grátis. Sem taxa por venda.</p>
+            <p className="mt-1 text-muted">7 dias de teste grátis. Sem taxa por venda.</p>
           </div>
           <Link
             href="/dashboard/settings/subscription"

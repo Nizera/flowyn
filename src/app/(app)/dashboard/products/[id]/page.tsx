@@ -84,15 +84,15 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
   const p = productDetails
 
   return (
-    <section className="overflow-hidden rounded-[10px] bg-white px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+    <section className="overflow-hidden rounded-[10px] bg-card px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
-          <Link href="/dashboard/products" className="mt-1 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600">
+          <Link href="/dashboard/products" className="mt-1 flex h-10 w-10 items-center justify-center rounded-xl border border-border text-muted transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h2 className="text-2xl font-semibold text-slate-950">Produto</h2>
-            <p className="mt-2 text-sm text-slate-400">Edite informacoes, entrega e configuracoes de {product.name}.</p>
+            <h2 className="text-2xl font-semibold text-foreground">Produto</h2>
+            <p className="mt-2 text-sm text-muted">Edite informacoes, entrega e configuracoes de {product.name}.</p>
           </div>
         </div>
         <button form="product-details-form" type="submit" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-7 text-sm font-semibold text-white transition hover:from-orange-600 hover:to-amber-600">
@@ -104,18 +104,18 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
       <ProductTabs productId={id} active="details" />
 
       <form id="product-details-form" action={updateProduct} className="mt-10 max-w-6xl">
-        <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-[#f8fafc] px-5 py-4 mb-6">
+        <div className="flex items-center gap-4 rounded-xl border border-border bg-[#f8fafc] px-5 py-4 mb-6">
           <label className="relative inline-flex cursor-pointer items-center">
             <input type="checkbox" name="is_public" defaultChecked={product.is_public} className="peer sr-only" />
-            <div className="h-6 w-11 rounded-full bg-slate-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-orange-500 peer-checked:after:translate-x-full" />
+            <div className="h-6 w-11 rounded-full bg-surface after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-card after:transition-all peer-checked:bg-orange-500 peer-checked:after:translate-x-full" />
           </label>
           <div>
-            <span className="text-sm font-semibold text-slate-800">{product.is_public ? 'Publicado' : 'Rascunho'}</span>
-            <p className="text-xs text-slate-400">Quando publicado, o checkout fica acessivel para compradores.</p>
+            <span className="text-sm font-semibold text-foreground">{product.is_public ? 'Publicado' : 'Rascunho'}</span>
+            <p className="text-xs text-muted">Quando publicado, o checkout fica acessivel para compradores.</p>
           </div>
         </div>
 
-        <div className="grid border-y border-slate-200 md:grid-cols-[240px_1fr]">
+        <div className="grid border-y border-border md:grid-cols-[240px_1fr]">
           <RowTitle title="Informacoes" description="Nome, tipo, categoria e descricao." />
           <div className="space-y-5 py-6 md:pl-8">
             <Field label="Nome do produto" required>
@@ -150,8 +150,8 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
   )
 }
 
-const inputClass = 'h-12 w-full rounded-xl border-0 bg-[#f4f4f6] px-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20'
-const textareaClass = 'w-full resize-none rounded-xl border-0 bg-[#f4f4f6] px-4 py-3 text-sm font-medium leading-6 text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20'
+const inputClass = 'h-12 w-full rounded-xl border-0 bg-surface px-4 text-sm font-medium text-foreground outline-none transition placeholder:text-muted focus:bg-card focus:ring-2 focus:ring-orange-500/20'
+const textareaClass = 'w-full resize-none rounded-xl border-0 bg-surface px-4 py-3 text-sm font-medium leading-6 text-foreground outline-none transition placeholder:text-muted focus:bg-card focus:ring-2 focus:ring-orange-500/20'
 
 function ProductTabs({ productId, active }: { productId: string; active: string }) {
   const tabs = [
@@ -163,12 +163,12 @@ function ProductTabs({ productId, active }: { productId: string; active: string 
     { href: `/dashboard/products/${productId}/order-bumps`, label: 'Order Bumps', icon: ShoppingBag, key: 'order-bumps' },
   ]
   return (
-    <div className="mt-8 flex gap-2 overflow-x-auto border-b border-slate-200">
+    <div className="mt-8 flex gap-2 overflow-x-auto border-b border-border">
       {tabs.map(tab => {
         const Icon = tab.icon
         const isActive = tab.key === active
         return (
-          <Link key={tab.key} href={tab.href} className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${isActive ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-900'}`}>
+          <Link key={tab.key} href={tab.href} className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${isActive ? 'border-orange-500 text-orange-600' : 'border-transparent text-muted hover:text-foreground'}`}>
             <Icon className="h-4 w-4" />
             {tab.label}
           </Link>
@@ -181,8 +181,8 @@ function ProductTabs({ productId, active }: { productId: string; active: string 
 function RowTitle({ title, description }: { title: string; description: string }) {
   return (
     <div className="py-6 md:pr-8">
-      <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
-      <p className="mt-1 text-sm leading-6 text-slate-400">{description}</p>
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      <p className="mt-1 text-sm leading-6 text-muted">{description}</p>
     </div>
   )
 }
@@ -190,11 +190,11 @@ function RowTitle({ title, description }: { title: string; description: string }
 function Field({ label, required = false, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-slate-700">
+      <span className="mb-2 block text-sm font-medium text-foreground">
         {label}{required && <span className="text-red-500">*</span>}
       </span>
       {children}
-      {hint && <span className="mt-2 block text-xs leading-5 text-slate-400">{hint}</span>}
+      {hint && <span className="mt-2 block text-xs leading-5 text-muted">{hint}</span>}
     </label>
   )
 }

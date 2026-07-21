@@ -39,7 +39,7 @@ export default async function OrderBumpsPage({ params }: Props) {
     .order('price', { ascending: true })
 
   return (
-    <section className="overflow-hidden rounded-[10px] bg-white px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+    <section className="overflow-hidden rounded-[10px] bg-card px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
       <ProductTabs productId={productId} active="order-bumps" />
 
       <OrderBumpManager
@@ -65,12 +65,12 @@ function ProductTabs({ productId, active }: { productId: string; active: string 
     { href: `/dashboard/products/${productId}/order-bumps`, label: 'Order Bumps', icon: ShoppingBag, key: 'order-bumps' },
   ]
   return (
-    <div className="mt-8 flex gap-2 overflow-x-auto border-b border-slate-200">
+    <div className="mt-8 flex gap-2 overflow-x-auto border-b border-border">
       {tabs.map(tab => {
         const Icon = tab.icon
         const isActive = tab.key === active
         return (
-          <Link key={tab.key} href={tab.href} className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${isActive ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-900'}`}>
+          <Link key={tab.key} href={tab.href} className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${isActive ? 'border-orange-500 text-orange-600' : 'border-transparent text-muted hover:text-foreground'}`}>
             <Icon className="h-4 w-4" />
             {tab.label}
           </Link>

@@ -47,15 +47,15 @@ export default async function SalesPage() {
   const averageTicket = paidCount > 0 ? totalRevenue / paidCount : 0
 
   return (
-    <section className="overflow-hidden rounded-[10px] bg-white px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+    <section className="overflow-hidden rounded-[10px] bg-card px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-950">Minhas vendas</h2>
-          <p className="mt-2 text-sm text-slate-400">Acompanhe transacoes, status e valores recebidos.</p>
+          <h2 className="text-2xl font-semibold text-foreground">Minhas vendas</h2>
+          <p className="mt-2 text-sm text-muted">Acompanhe transacoes, status e valores recebidos.</p>
         </div>
       </div>
 
-      <div className="mt-10 border-y border-slate-200">
+      <div className="mt-10 border-y border-border">
         <RowTitle title="Resumo" description="Indicadores principais." />
         <div className="grid gap-6 py-6 md:grid-cols-4">
           <Summary label="Faturamento" value={currency(totalRevenue)} />
@@ -65,18 +65,18 @@ export default async function SalesPage() {
         </div>
       </div>
 
-      <div className="border-b border-slate-200">
+      <div className="border-b border-border">
         <RowTitle title="Transacoes" description="Historico de pedidos." />
         <div className="py-6">
           {orders.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-200 px-6 py-12 text-center">
-              <h3 className="font-semibold text-slate-950">Nenhuma transacao ainda</h3>
-              <p className="mt-1 text-sm text-slate-400">Quando alguem comprar seus produtos, as vendas aparecerao aqui.</p>
+            <div className="rounded-lg border border-dashed border-border px-6 py-12 text-center">
+              <h3 className="font-semibold text-foreground">Nenhuma transacao ainda</h3>
+              <p className="mt-1 text-sm text-muted">Quando alguem comprar seus produtos, as vendas aparecerao aqui.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[850px] text-left text-sm">
-                <thead className="border-b border-slate-200 text-sm font-medium text-slate-700">
+                <thead className="border-b border-border text-sm font-medium text-foreground">
                   <tr>
                     <th className="px-5 py-4">Cliente</th>
                     <th className="px-5 py-4">Produto / Plano</th>
@@ -85,22 +85,22 @@ export default async function SalesPage() {
                     <th className="px-5 py-4 text-right">Data</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-border">
                   {orders.map(order => (
-                    <tr key={order.id} className="transition hover:bg-slate-50">
+                    <tr key={order.id} className="transition hover:bg-surface">
                       <td className="whitespace-nowrap px-5 py-4">
-                        <p className="font-semibold text-slate-950">{order.customer_name}</p>
-                        <p className="text-xs text-slate-400">{order.customer_email}</p>
+                        <p className="font-semibold text-foreground">{order.customer_name}</p>
+                        <p className="text-xs text-muted">{order.customer_email}</p>
                       </td>
                       <td className="whitespace-nowrap px-5 py-4">
-                        <p className="font-medium text-slate-900">{order.product?.name || '-'}</p>
-                        <p className="text-xs text-slate-400">{order.plan?.name || '-'}</p>
+                        <p className="font-medium text-foreground">{order.product?.name || '-'}</p>
+                        <p className="text-xs text-muted">{order.plan?.name || '-'}</p>
                       </td>
-                      <td className="whitespace-nowrap px-5 py-4 text-right font-bold text-slate-950">{currency(Number(order.amount))}</td>
+                      <td className="whitespace-nowrap px-5 py-4 text-right font-bold text-foreground">{currency(Number(order.amount))}</td>
                       <td className="whitespace-nowrap px-5 py-4 text-center">
                         <Status status={order.status} />
                       </td>
-                      <td className="whitespace-nowrap px-5 py-4 text-right text-xs text-slate-400">
+                      <td className="whitespace-nowrap px-5 py-4 text-right text-xs text-muted">
                         {new Date(order.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
                       </td>
                     </tr>
@@ -118,8 +118,8 @@ export default async function SalesPage() {
 function Summary({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-2 text-xl font-semibold text-slate-950">{value}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</p>
+      <p className="mt-2 text-xl font-semibold text-foreground">{value}</p>
     </div>
   )
 }
@@ -137,8 +137,8 @@ function Status({ status }: { status: string }) {
 function RowTitle({ title, description }: { title: string; description: string }) {
   return (
     <div className="pt-6">
-      <h3 className="text-base font-semibold text-slate-950">{title}</h3>
-      <p className="mt-1 text-sm text-slate-400">{description}</p>
+      <h3 className="text-base font-semibold text-foreground">{title}</h3>
+      <p className="mt-1 text-sm text-muted">{description}</p>
     </div>
   )
 }

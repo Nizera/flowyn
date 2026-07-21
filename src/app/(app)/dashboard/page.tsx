@@ -10,11 +10,11 @@ import { currency } from '@/lib/format'
 
 const FunnelChart = dynamic(
   () => import('./FunnelChart').then(m => ({ default: m.FunnelChart })),
-  { loading: () => <div className="h-[200px] animate-pulse rounded-xl bg-slate-100" /> },
+  { loading: () => <div className="h-[200px] animate-pulse rounded-xl bg-surface" /> },
 )
 const RevenueSpendChart = dynamic(
   () => import('./RevenueSpendChart').then(m => ({ default: m.RevenueSpendChart })),
-  { loading: () => <div className="h-[300px] animate-pulse rounded-xl bg-slate-100" /> },
+  { loading: () => <div className="h-[300px] animate-pulse rounded-xl bg-surface" /> },
 )
 const RevenueShaderBackground = dynamic(
   () => import('./RevenueShaderBackground').then(m => ({ default: m.RevenueShaderBackground })),
@@ -98,7 +98,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-500 font-medium">Carregando painel...</p>
+          <p className="text-sm text-muted font-medium">Carregando painel...</p>
         </div>
       </div>
     )
@@ -109,7 +109,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4 text-center">
           <AlertCircle className="w-12 h-12 text-rose-500" />
-          <p className="text-sm text-slate-700 font-medium">{error}</p>
+          <p className="text-sm text-foreground font-medium">{error}</p>
           <button
             onClick={() => window.location.reload()}
             className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-bold text-white hover:bg-orange-600"
@@ -127,33 +127,33 @@ export default function DashboardPage() {
 
       {/* Revenue Hero */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <section className="lg:col-span-8 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative overflow-hidden">
+        <section className="lg:col-span-8 bg-card rounded-2xl p-6 border border-border shadow-sm relative overflow-hidden">
           {/* WebGL shader background: orange flow + mouse glow */}
           <RevenueShaderBackground />
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Faturamento</span>
+              <span className="text-xs font-bold text-muted uppercase tracking-wider">Faturamento</span>
               {s.total_revenue > 0 && (
                 <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
                   +{s.total_orders} vendas
                 </span>
               )}
             </div>
-            <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+            <h2 className="text-3xl md:text-4xl font-black text-foreground tracking-tight">
               {currency(s.total_revenue)}
             </h2>
           </div>
-          <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100 relative z-10">
+          <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border relative z-10">
             <div>
-              <p className="text-xs font-bold text-slate-500">Vendas</p>
-              <p className="text-lg font-black text-slate-900">{s.total_orders}</p>
+              <p className="text-xs font-bold text-muted">Vendas</p>
+              <p className="text-lg font-black text-foreground">{s.total_orders}</p>
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-500">Ticket Médio</p>
-              <p className="text-lg font-black text-slate-900">{currency(s.arpu)}</p>
+              <p className="text-xs font-bold text-muted">Ticket Médio</p>
+              <p className="text-lg font-black text-foreground">{currency(s.arpu)}</p>
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-500">ROI</p>
+              <p className="text-xs font-bold text-muted">ROI</p>
               <p className="text-lg font-black text-emerald-600">{s.roi.toFixed(1)}%</p>
             </div>
           </div>
@@ -180,8 +180,8 @@ export default function DashboardPage() {
           <FunnelChart />
         </section>
 
-        <section className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col items-center">
-          <h3 className="text-lg font-bold text-slate-900 mb-6 self-start w-full">Receita por Status</h3>
+        <section className="lg:col-span-2 bg-card rounded-2xl p-6 border border-border shadow-sm flex flex-col items-center">
+          <h3 className="text-lg font-bold text-foreground mb-6 self-start w-full">Receita por Status</h3>
           {(() => {
             const statusColors: Record<string, string> = {
               paid: '#10b981',
@@ -241,7 +241,7 @@ export default function DashboardPage() {
                     ))}
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <CreditCard className="w-8 h-8 text-slate-400" />
+                    <CreditCard className="w-8 h-8 text-muted" />
                   </div>
                   {tooltip && (
                     <div
@@ -256,7 +256,7 @@ export default function DashboardPage() {
                   {segments.map((seg, i) => (
                     <div key={i} className="flex items-center gap-2 group relative">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: seg.color }} />
-                      <span className="text-sm text-slate-600">{seg.label}</span>
+                      <span className="text-sm text-muted">{seg.label}</span>
                       <div className="absolute bottom-full left-0 mb-1 px-2 py-1 text-xs font-bold text-white bg-slate-900 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
                         {seg.label}: {currency(seg.value)}
                       </div>
@@ -264,7 +264,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
                 {segments.length === 0 && (
-                  <p className="text-sm text-slate-400 mt-4">Nenhum dado de receita disponível.</p>
+                  <p className="text-sm text-muted mt-4">Nenhum dado de receita disponível.</p>
                 )}
               </>
             )
@@ -273,14 +273,14 @@ export default function DashboardPage() {
       </div>
 
       {/* Revenue vs Spend Chart */}
-      <section className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+      <section className="bg-card rounded-2xl p-6 border border-border shadow-sm">
         <RevenueSpendChart data={data?.spend_over_time || []} />
       </section>
 
       {/* Recent Activity */}
-      <section className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mb-8">
+      <section className="bg-card rounded-2xl p-6 border border-border shadow-sm mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-slate-900">Vendas Recentes</h3>
+          <h3 className="text-lg font-bold text-foreground">Vendas Recentes</h3>
           <Link href="/dashboard/sales" className="text-sm font-medium text-orange-600 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 rounded">
             Ver todas
           </Link>
@@ -289,20 +289,20 @@ export default function DashboardPage() {
           <table className="w-full text-left border-collapse">
             <caption className="sr-only">Lista de vendas recentes</caption>
             <thead>
-              <tr className="border-b border-slate-200">
-                <th scope="col" className="py-3 px-4 text-xs font-bold text-slate-500">Cliente</th>
-                <th scope="col" className="py-3 px-4 text-xs font-bold text-slate-500">Produto</th>
-                <th scope="col" className="py-3 px-4 text-xs font-bold text-slate-500">Valor</th>
-                <th scope="col" className="py-3 px-4 text-xs font-bold text-slate-500">Status</th>
+              <tr className="border-b border-border">
+                <th scope="col" className="py-3 px-4 text-xs font-bold text-muted">Cliente</th>
+                <th scope="col" className="py-3 px-4 text-xs font-bold text-muted">Produto</th>
+                <th scope="col" className="py-3 px-4 text-xs font-bold text-muted">Valor</th>
+                <th scope="col" className="py-3 px-4 text-xs font-bold text-muted">Status</th>
               </tr>
             </thead>
             <tbody>
               {Array.isArray(data?.recent_sales) && data.recent_sales.length > 0 ? (
                 data.recent_sales.slice(0, 5).map((sale, i) => (
-                  <tr key={sale.id || `${sale.customer_name}-${sale.amount}-${i}`} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3 px-4 text-sm font-medium text-slate-900">{sale.customer_name || 'Cliente'}</td>
-                    <td className="py-3 px-4 text-sm text-slate-600">{sale.product_name || 'Produto'}</td>
-                    <td className="py-3 px-4 text-sm font-medium text-slate-900">{currency(sale.amount)}</td>
+                  <tr key={sale.id || `${sale.customer_name}-${sale.amount}-${i}`} className="border-b border-border hover:bg-surface/50 transition-colors">
+                    <td className="py-3 px-4 text-sm font-medium text-foreground">{sale.customer_name || 'Cliente'}</td>
+                    <td className="py-3 px-4 text-sm text-muted">{sale.product_name || 'Produto'}</td>
+                    <td className="py-3 px-4 text-sm font-medium text-foreground">{currency(sale.amount)}</td>
                     <td className="py-3 px-4">
                       <StatusBadge status={sale.status} />
                     </td>
@@ -310,7 +310,7 @@ export default function DashboardPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-sm text-slate-400">
+                  <td colSpan={4} className="py-8 text-center text-sm text-muted">
                     Nenhuma venda recente
                   </td>
                 </tr>
@@ -325,14 +325,14 @@ export default function DashboardPage() {
 
 function MetricPill({ label, value, positive = true }: { label: string; value: string; positive?: boolean }) {
   return (
-    <div className="bg-white rounded-2xl p-3 border border-slate-200 shadow-sm flex flex-col gap-1 relative overflow-hidden">
+    <div className="bg-card rounded-2xl p-3 border border-border shadow-sm flex flex-col gap-1 relative overflow-hidden">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-slate-500 truncate">{label}</span>
+        <span className="text-xs font-bold text-muted truncate">{label}</span>
         <span className={`text-[10px] font-bold flex items-center ${positive ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'} px-1.5 py-0.5 rounded`}>
           {positive ? <TrendingUp className="w-3 h-3" /> : <TrendingUp className="w-3 h-3 rotate-180" />}
         </span>
       </div>
-      <span className="text-base font-bold text-slate-900">{value}</span>
+      <span className="text-base font-bold text-foreground">{value}</span>
     </div>
   )
 }

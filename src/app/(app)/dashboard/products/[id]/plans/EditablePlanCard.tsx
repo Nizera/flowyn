@@ -13,7 +13,7 @@ interface Plan {
   billing_type?: string | null
 }
 
-const inputClass = 'w-full rounded-lg border-0 bg-white px-3 py-2 text-sm text-slate-800 outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-orange-500/20'
+const inputClass = 'w-full rounded-lg border-0 bg-card px-3 py-2 text-sm text-foreground outline-none ring-1 ring-border focus:ring-2 focus:ring-orange-500/20'
 
 export function EditablePlanCard({ plan, productId }: { plan: Plan; productId: string }) {
   const [isEditing, setIsEditing] = useState(false)
@@ -75,7 +75,7 @@ export function EditablePlanCard({ plan, productId }: { plan: Plan; productId: s
           </div>
 
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setIsEditing(false)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-500 transition hover:text-slate-900">
+            <button type="button" onClick={() => setIsEditing(false)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-muted transition hover:text-foreground">
               <X className="h-3.5 w-3.5" />
               Cancelar
             </button>
@@ -90,17 +90,17 @@ export function EditablePlanCard({ plan, productId }: { plan: Plan; productId: s
   }
 
   return (
-    <div className="group flex flex-col justify-between gap-4 p-5 transition hover:bg-slate-50 md:flex-row md:items-center">
+    <div className="group flex flex-col justify-between gap-4 p-5 transition hover:bg-surface md:flex-row md:items-center">
       <div className="flex items-center gap-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 ring-1 ring-slate-200 transition group-hover:bg-orange-50 group-hover:ring-orange-100">
-          <Package className="h-5 w-5 text-slate-400 transition group-hover:text-orange-600" />
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-surface ring-1 ring-border transition group-hover:bg-orange-50 group-hover:ring-orange-100">
+          <Package className="h-5 w-5 text-muted transition group-hover:text-orange-600" />
         </div>
         <div>
-          <h3 className="font-bold text-slate-950">{plan.name}</h3>
+          <h3 className="font-bold text-foreground">{plan.name}</h3>
           <div className="mt-0.5 flex items-center gap-2">
-            <p className="font-mono text-xs text-slate-400">ID: {plan.id.slice(0, 12)}...</p>
+            <p className="font-mono text-xs text-muted">ID: {plan.id.slice(0, 12)}...</p>
             {plan.plan_identifier && (
-              <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500">
+              <span className="rounded-md bg-surface px-2 py-0.5 text-[10px] font-bold uppercase text-muted">
                 {plan.plan_identifier}
               </span>
             )}
@@ -110,17 +110,17 @@ export function EditablePlanCard({ plan, productId }: { plan: Plan; productId: s
 
       <div className="flex w-full items-center justify-between gap-4 md:w-auto md:justify-end md:gap-6">
         <div className="text-left md:text-right">
-          <span className="text-xl font-extrabold text-slate-950">
+          <span className="text-xl font-extrabold text-foreground">
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(plan.price)}
           </span>
-          <span className="ml-1 text-xs font-medium text-slate-400">{plan.billing_type === 'recurring' ? '/mes' : 'unico'}</span>
+          <span className="ml-1 text-xs font-medium text-muted">{plan.billing_type === 'recurring' ? '/mes' : 'unico'}</span>
         </div>
 
         <div className="flex items-center gap-2">
-          <button onClick={() => setIsEditing(true)} className="rounded-lg p-2.5 text-slate-400 transition hover:bg-orange-50 hover:text-orange-600" title="Editar plano">
+          <button onClick={() => setIsEditing(true)} className="rounded-lg p-2.5 text-muted transition hover:bg-orange-50 hover:text-orange-600" title="Editar plano">
             <Pencil className="h-4 w-4" />
           </button>
-          <a href={`/checkout/${plan.id}`} target="_blank" className="rounded-lg p-2.5 text-slate-400 transition hover:bg-orange-50 hover:text-orange-600" title="Ver checkout">
+          <a href={`/checkout/${plan.id}`} target="_blank" className="rounded-lg p-2.5 text-muted transition hover:bg-orange-50 hover:text-orange-600" title="Ver checkout">
             <ExternalLink className="h-4 w-4" />
           </a>
         </div>
@@ -132,7 +132,7 @@ export function EditablePlanCard({ plan, productId }: { plan: Plan; productId: s
 function EditField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-400">{label}</span>
+      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted">{label}</span>
       {children}
     </label>
   )

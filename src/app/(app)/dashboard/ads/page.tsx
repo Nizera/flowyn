@@ -49,12 +49,12 @@ export default function AdsAccountsPage() {
 
   return (
     <div className="min-h-screen bg-[#f6f7f9]">
-      <div className="border-b border-slate-200 bg-white">
+      <div className="border-b border-border bg-card">
         <div className="mx-auto max-w-[1600px] px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-bold text-slate-900">Contas Meta Ads</h1>
-              <p className="text-sm text-slate-500">Gerencie suas contas de anuncios conectadas</p>
+              <h1 className="text-lg font-bold text-foreground">Contas Meta Ads</h1>
+              <p className="text-sm text-muted">Gerencie suas contas de anuncios conectadas</p>
             </div>
             <a href="/api/meta-ads/connect"
               className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">
@@ -70,7 +70,7 @@ export default function AdsAccountsPage() {
       <div className="mx-auto max-w-[1600px] px-6 py-6">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="flex items-center gap-3 text-slate-500">
+            <div className="flex items-center gap-3 text-muted">
               <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -79,7 +79,7 @@ export default function AdsAccountsPage() {
             </div>
           </div>
         ) : accounts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+          <div className="flex flex-col items-center justify-center py-20 text-muted">
             <svg className="mb-3 h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
             </svg>
@@ -93,8 +93,8 @@ export default function AdsAccountsPage() {
         ) : (
           <div className="overflow-x-auto light-scrollbar">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 z-10 border-b border-slate-200 bg-white">
-                <tr className="text-left text-xs uppercase text-slate-500">
+              <thead className="sticky top-0 z-10 border-b border-border bg-card">
+                <tr className="text-left text-xs uppercase text-muted">
                   <th className="min-w-[300px] px-4 py-3">Conta</th>
                   <th className="w-32 px-4 py-3">ID</th>
                   <th className="w-40 px-4 py-3 text-center">Sincronizacao</th>
@@ -104,12 +104,12 @@ export default function AdsAccountsPage() {
               </thead>
               <tbody>
                 {accounts.map(acc => (
-                  <tr key={acc.id} className="border-t border-slate-100 bg-white transition hover:bg-slate-50">
+                  <tr key={acc.id} className="border-t border-border bg-card transition hover:bg-surface">
                     <td className="px-4 py-4">
-                      <div className="font-semibold text-slate-900">{acc.ad_account_name || 'Sem nome'}</div>
+                      <div className="font-semibold text-foreground">{acc.ad_account_name || 'Sem nome'}</div>
                     </td>
                     <td className="px-4 py-4">
-                      <span className="font-mono text-xs text-slate-400">{acc.ad_account_id}</span>
+                      <span className="font-mono text-xs text-muted">{acc.ad_account_id}</span>
                     </td>
                     <td className="px-4 py-4 text-center">
                       <button
@@ -118,16 +118,16 @@ export default function AdsAccountsPage() {
                         className="focus:outline-none"
                       >
                         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          acc.sync_enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                          acc.sync_enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-surface text-muted'
                         }`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${acc.sync_enabled ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                          <span className={`h-1.5 w-1.5 rounded-full ${acc.sync_enabled ? 'bg-emerald-500' : 'bg-muted'}`} />
                           {acc.sync_enabled ? 'Ativa' : 'Inativa'}
                         </span>
                       </button>
                     </td>
                     <td className="px-4 py-4">
-                      <span className="text-sm text-slate-600">
-                        {acc.last_sync_at ? `${formatTimeAgo(acc.last_sync_at)} atras` : <span className="text-slate-400">Nunca</span>}
+                      <span className="text-sm text-muted">
+                        {acc.last_sync_at ? `${formatTimeAgo(acc.last_sync_at)} atras` : <span className="text-muted">Nunca</span>}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-right">

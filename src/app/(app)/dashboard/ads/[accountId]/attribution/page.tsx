@@ -199,43 +199,43 @@ export default function AttributionPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href={`/dashboard/ads/${accountId}`} className="text-slate-400 hover:text-slate-600">
+        <Link href={`/dashboard/ads/${accountId}`} className="text-muted hover:text-muted">
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
           </svg>
         </Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-black text-slate-950">Atribuição & Lucro</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-2xl font-black text-foreground">Atribuição & Lucro</h1>
+          <p className="mt-1 text-sm text-muted">
             Conta: {accountId} • Cruze vendas com gastos de anúncios para calcular lucro real
           </p>
         </div>
         <button
           onClick={() => setShowCostModal(true)}
-          className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+          className="rounded-xl border border-border bg-card px-4 py-2 text-sm font-bold text-foreground transition hover:bg-surface"
         >
           Configurar Custos
         </button>
       </div>
 
       {/* Date filter */}
-      <div className="flex items-end gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-end gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
         <div>
-          <label className="mb-1 block text-xs font-bold text-slate-500">Data inicial</label>
+          <label className="mb-1 block text-xs font-bold text-muted">Data inicial</label>
           <input
             type="date"
             value={startDate}
             onChange={e => setStartDate(e.target.value)}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="rounded-lg border border-border px-3 py-2 text-sm text-foreground focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-bold text-slate-500">Data final</label>
+          <label className="mb-1 block text-xs font-bold text-muted">Data final</label>
           <input
             type="date"
             value={endDate}
             onChange={e => setEndDate(e.target.value)}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="rounded-lg border border-border px-3 py-2 text-sm text-foreground focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
         <button
@@ -263,62 +263,62 @@ export default function AttributionPage() {
         <>
           {/* Summary cards */}
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase text-slate-400">Gasto Total</p>
-              <p className="mt-1 text-2xl font-black text-slate-950">{formatBRL(data.summary.total_spend)}</p>
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <p className="text-xs font-bold uppercase text-muted">Gasto Total</p>
+              <p className="mt-1 text-2xl font-black text-foreground">{formatBRL(data.summary.total_spend)}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase text-slate-400">Receita</p>
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <p className="text-xs font-bold uppercase text-muted">Receita</p>
               <p className="mt-1 text-2xl font-black text-emerald-600">{formatBRL(data.summary.total_revenue)}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase text-slate-400">Lucro Líquido</p>
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <p className="text-xs font-bold uppercase text-muted">Lucro Líquido</p>
               <p className={`mt-1 text-2xl font-black ${data.summary.total_net_profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                 {formatBRL(data.summary.total_net_profit)}
               </p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase text-slate-400">Pedidos</p>
-              <p className="mt-1 text-2xl font-black text-slate-950">{formatNumber(data.summary.total_orders)}</p>
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <p className="text-xs font-bold uppercase text-muted">Pedidos</p>
+              <p className="mt-1 text-2xl font-black text-foreground">{formatNumber(data.summary.total_orders)}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase text-slate-400">ROAS Geral</p>
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <p className="text-xs font-bold uppercase text-muted">ROAS Geral</p>
               <p className="mt-1 text-2xl font-black text-blue-600">{data.summary.overall_roas.toFixed(2)}x</p>
             </div>
           </div>
 
           {/* Campaign attribution table */}
           {data.campaigns.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-12 text-center">
-              <p className="text-sm text-slate-500">Nenhum dado de atribuição encontrado para este período.</p>
+            <div className="rounded-2xl border border-dashed border-border bg-surface p-12 text-center">
+              <p className="text-sm text-muted">Nenhum dado de atribuição encontrado para este período.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
               <table className="w-full min-w-[1000px]">
                 <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50">
-                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Campanha</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-slate-500">Gasto</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-slate-500">Cliques</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-slate-500">CTR</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-slate-500">CPC</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-slate-500">Pedidos</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-slate-500">Receita</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-slate-500">ROAS</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-slate-500">Lucro Líquido</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-slate-500">ROI</th>
+                  <tr className="border-b border-border bg-surface">
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-muted">Campanha</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-muted">Gasto</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-muted">Cliques</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-muted">CTR</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-muted">CPC</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-muted">Pedidos</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-muted">Receita</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-muted">ROAS</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-muted">Lucro Líquido</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-muted">ROI</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-border">
                   {data.campaigns.map((campaign) => (
-                    <tr key={campaign.campaign_id} className="transition hover:bg-slate-50">
+                    <tr key={campaign.campaign_id} className="transition hover:bg-surface">
                       <td className="px-4 py-3">
-                        <p className="font-bold text-slate-900">{campaign.campaign_name || campaign.campaign_id}</p>
+                        <p className="font-bold text-foreground">{campaign.campaign_name || campaign.campaign_id}</p>
                       </td>
-                      <td className="px-4 py-3 text-right text-sm font-bold text-slate-900">{formatBRL(campaign.total_spend)}</td>
-                      <td className="px-4 py-3 text-right text-sm text-slate-700">{formatNumber(campaign.total_clicks)}</td>
-                      <td className="px-4 py-3 text-right text-sm text-slate-700">{formatPercent(campaign.avg_ctr)}</td>
-                      <td className="px-4 py-3 text-right text-sm text-slate-700">{formatBRL(campaign.avg_cpc)}</td>
+                      <td className="px-4 py-3 text-right text-sm font-bold text-foreground">{formatBRL(campaign.total_spend)}</td>
+                      <td className="px-4 py-3 text-right text-sm text-foreground">{formatNumber(campaign.total_clicks)}</td>
+                      <td className="px-4 py-3 text-right text-sm text-foreground">{formatPercent(campaign.avg_ctr)}</td>
+                      <td className="px-4 py-3 text-right text-sm text-foreground">{formatBRL(campaign.avg_cpc)}</td>
                       <td className="px-4 py-3 text-right text-sm font-bold text-blue-600">{formatNumber(campaign.attributed_orders)}</td>
                       <td className="px-4 py-3 text-right text-sm font-bold text-emerald-600">{formatBRL(campaign.attributed_revenue)}</td>
                       <td className="px-4 py-3 text-right">
@@ -347,11 +347,11 @@ export default function AttributionPage() {
 
       {/* UTM Report Section */}
       {!loading && data && data.campaigns.length > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="mb-4 text-lg font-black text-slate-950">Receita por Dimensao</h3>
-          <p className="mb-4 text-sm text-slate-500">Visualize a receita atribuida por diferentes dimensoes de rastreamento.</p>
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <h3 className="mb-4 text-lg font-black text-foreground">Receita por Dimensao</h3>
+          <p className="mb-4 text-sm text-muted">Visualize a receita atribuida por diferentes dimensoes de rastreamento.</p>
 
-          <div className="mb-4 flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
+          <div className="mb-4 flex gap-1 rounded-xl border border-border bg-surface p-1">
             {[
               { key: 'utm_source', label: 'Fonte' },
               { key: 'utm_medium', label: 'Medium' },
@@ -364,8 +364,8 @@ export default function AttributionPage() {
                 onClick={() => fetchUtmReport(tab.key)}
                 className={`rounded-lg px-4 py-2 text-xs font-bold transition ${
                   utmDimension === tab.key
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700'
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'text-muted hover:text-foreground'
                 }`}
               >
                 {tab.label}
@@ -374,39 +374,39 @@ export default function AttributionPage() {
           </div>
 
           {utmLoading ? (
-            <div className="py-8 text-center text-sm text-slate-400">Carregando...</div>
+            <div className="py-8 text-center text-sm text-muted">Carregando...</div>
           ) : utmData?.results.length === 0 ? (
-            <div className="py-8 text-center text-sm text-slate-400">Nenhum dado encontrado</div>
+            <div className="py-8 text-center text-sm text-muted">Nenhum dado encontrado</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-slate-100">
-                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">Dimensao</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold uppercase text-slate-500">Pedidos</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold uppercase text-slate-500">Receita</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold uppercase text-slate-500">% do Total</th>
+                  <tr className="border-b border-border">
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase text-muted">Dimensao</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase text-muted">Pedidos</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase text-muted">Receita</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase text-muted">% do Total</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-border">
                   {utmData?.results.map(item => {
                     const totalRevenue = utmData.results.reduce((s, r) => s + r.revenue, 0)
                     const pct = totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0
                     return (
-                      <tr key={item.name} className="transition hover:bg-slate-50">
+                      <tr key={item.name} className="transition hover:bg-surface">
                         <td className="px-4 py-3">
-                          <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
+                          <span className="inline-flex items-center rounded-lg bg-surface px-2.5 py-1 text-xs font-bold text-foreground">
                             {item.name}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right text-sm font-bold text-slate-900">{formatNumber(item.orders)}</td>
+                        <td className="px-4 py-3 text-right text-sm font-bold text-foreground">{formatNumber(item.orders)}</td>
                         <td className="px-4 py-3 text-right text-sm font-bold text-emerald-600">{formatBRL(item.revenue)}</td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <div className="h-2 w-24 overflow-hidden rounded-full bg-slate-100">
+                            <div className="h-2 w-24 overflow-hidden rounded-full bg-surface">
                               <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
                             </div>
-                            <span className="text-xs font-bold text-slate-600">{pct.toFixed(1)}%</span>
+                            <span className="text-xs font-bold text-muted">{pct.toFixed(1)}%</span>
                           </div>
                         </td>
                       </tr>
@@ -422,28 +422,28 @@ export default function AttributionPage() {
       {/* Cost Config Modal */}
       {showCostModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="mb-4 text-lg font-black text-slate-950">Configurar Custos</h2>
+          <div className="w-full max-w-lg rounded-2xl bg-card p-6 shadow-xl">
+            <h2 className="mb-4 text-lg font-black text-foreground">Configurar Custos</h2>
             
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-500">Impostos (%)</label>
+                <label className="mb-1 block text-xs font-bold text-muted">Impostos (%)</label>
                 <input
                   type="number"
                   step="0.01"
                   value={costConfig.tax_percentage}
                   onChange={e => setCostConfig(prev => ({ ...prev, tax_percentage: parseFloat(e.target.value) || 0 }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-500">Custos de Produção</label>
+                <label className="mb-1 block text-xs font-bold text-muted">Custos de Produção</label>
                 <div className="space-y-2">
                   {costConfig.product_costs.map((item, index) => (
                     <div key={index} className="flex items-center gap-2">
-                      <span className="flex-1 text-sm text-slate-700">{item.name}</span>
-                      <span className="text-sm font-bold text-slate-900">{formatBRL(item.cost)}</span>
+                      <span className="flex-1 text-sm text-foreground">{item.name}</span>
+                      <span className="text-sm font-bold text-foreground">{formatBRL(item.cost)}</span>
                       <button
                         onClick={() => removeProductCost(index)}
                         className="text-red-500 hover:text-red-700"
@@ -460,7 +460,7 @@ export default function AttributionPage() {
                       placeholder="Nome do custo"
                       value={newCostName}
                       onChange={e => setNewCostName(e.target.value)}
-                      className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="flex-1 rounded-lg border border-border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     <input
                       type="number"
@@ -468,11 +468,11 @@ export default function AttributionPage() {
                       placeholder="R$ 0,00"
                       value={newCostValue}
                       onChange={e => setNewCostValue(e.target.value)}
-                      className="w-28 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-28 rounded-lg border border-border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     <button
                       onClick={addProductCost}
-                      className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-200"
+                      className="rounded-lg bg-surface px-3 py-2 text-sm font-bold text-foreground hover:bg-surface"
                     >
                       +
                     </button>
@@ -484,7 +484,7 @@ export default function AttributionPage() {
             <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={() => setShowCostModal(false)}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                className="rounded-xl border border-border px-4 py-2 text-sm font-bold text-foreground transition hover:bg-surface"
               >
                 Cancelar
               </button>

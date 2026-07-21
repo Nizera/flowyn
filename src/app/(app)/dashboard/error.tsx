@@ -9,8 +9,8 @@ export default function DashboardError({
 }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] p-8">
-      <h2 className="text-xl font-bold text-slate-900 mb-2">Erro no painel</h2>
-      <p className="text-sm text-slate-500 mb-6 text-center max-w-md">
+      <h2 className="text-xl font-bold text-foreground mb-2">Erro no painel</h2>
+      <p className="text-sm text-muted mb-6 text-center max-w-md">
         {error.message || 'Ocorreu um erro ao carregar o painel.'}
       </p>
       <button

@@ -274,15 +274,15 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
   const intakeQuestions = Array.isArray(program?.intake_questions) ? program.intake_questions.join('\n') : ''
 
   return (
-    <section className="overflow-hidden rounded-[10px] bg-white px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+    <section className="overflow-hidden rounded-[10px] bg-card px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
-          <Link href={`/dashboard/products/${id}`} className="mt-1 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600">
+          <Link href={`/dashboard/products/${id}`} className="mt-1 flex h-10 w-10 items-center justify-center rounded-xl border border-border text-muted transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h2 className="text-2xl font-semibold text-slate-950">Mentoria</h2>
-            <p className="mt-2 text-sm text-slate-400">Configure diagnostico, agenda, tarefas e sessoes de {product.name}.</p>
+            <h2 className="text-2xl font-semibold text-foreground">Mentoria</h2>
+            <p className="mt-2 text-sm text-muted">Configure diagnostico, agenda, tarefas e sessoes de {product.name}.</p>
           </div>
         </div>
       </div>
@@ -290,15 +290,15 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
       <ProductTabs productId={id} active="journey" />
 
       {!isMentorship ? (
-        <div className="mt-10 grid border-y border-slate-200 md:grid-cols-[240px_1fr]">
+        <div className="mt-10 grid border-y border-border md:grid-cols-[240px_1fr]">
           <RowTitle title="Indisponivel" description="Produto nao e mentoria." />
           <div className="py-6 md:pl-8">
-            <p className="max-w-2xl text-sm leading-6 text-slate-500">Altere o tipo para Mentoria / Coaching nos detalhes do produto para usar esta area.</p>
+            <p className="max-w-2xl text-sm leading-6 text-muted">Altere o tipo para Mentoria / Coaching nos detalhes do produto para usar esta area.</p>
           </div>
         </div>
       ) : (
         <div className="mt-10 max-w-6xl">
-          <div className="grid border-y border-slate-200 md:grid-cols-[240px_1fr]">
+          <div className="grid border-y border-border md:grid-cols-[240px_1fr]">
             <RowTitle title="Resumo" description="Jornada da mentoria." />
             <div className="grid gap-6 py-6 md:grid-cols-4 md:pl-8">
               <Metric label="Etapas" value={sessionRows.length} />
@@ -308,7 +308,7 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
             </div>
           </div>
 
-          <div className="grid border-b border-slate-200 md:grid-cols-[240px_1fr]">
+          <div className="grid border-b border-border md:grid-cols-[240px_1fr]">
             <RowTitle title="Programa" description="Promessa, formato e diagnostico." />
             <form action={saveProgram} className="grid gap-5 py-6 md:pl-8 lg:grid-cols-2">
               <Field label="Headline da jornada"><Input name="headline" defaultValue={program?.headline || ''} placeholder={product.name} /></Field>
@@ -338,7 +338,7 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
             </form>
           </div>
 
-          <div className="grid border-b border-slate-200 md:grid-cols-[240px_1fr]">
+          <div className="grid border-b border-border md:grid-cols-[240px_1fr]">
             <RowTitle title="Etapas" description="Mapa da transformacao." />
             <div className="space-y-5 py-6 md:pl-8">
               <form action={createSession} className="grid gap-5 lg:grid-cols-2">
@@ -356,22 +356,22 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
               </form>
 
               {sessionRows.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-slate-200 px-6 py-12 text-center">
-                  <Route className="mx-auto h-10 w-10 text-slate-300" />
-                  <p className="mt-3 text-sm text-slate-400">Crie as etapas da jornada: diagnostico, estrategia, execucao e revisao.</p>
+                <div className="rounded-lg border border-dashed border-border px-6 py-12 text-center">
+                  <Route className="mx-auto h-10 w-10 text-muted" />
+                  <p className="mt-3 text-sm text-muted">Crie as etapas da jornada: diagnostico, estrategia, execucao e revisao.</p>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-lg border border-slate-200">
+                <div className="overflow-hidden rounded-lg border border-border">
                   {sessionRows.map((session, index) => (
-                    <details key={session.id} className="group border-b border-slate-100 p-5 last:border-b-0">
+                    <details key={session.id} className="group border-b border-border p-5 last:border-b-0">
                       <summary className="flex cursor-pointer list-none items-start justify-between gap-4 [&::-webkit-details-marker]:hidden">
                         <div className="flex gap-4">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 font-semibold text-orange-600">{index + 1}</div>
-                          <div><h3 className="font-semibold text-slate-950">{session.title}</h3>{session.description && <p className="mt-1 text-sm text-slate-400">{session.description}</p>}</div>
+                          <div><h3 className="font-semibold text-foreground">{session.title}</h3>{session.description && <p className="mt-1 text-sm text-muted">{session.description}</p>}</div>
                         </div>
-                        <Pencil className="h-4 w-4 text-slate-300 transition group-open:text-orange-500" />
+                        <Pencil className="h-4 w-4 text-muted transition group-open:text-orange-500" />
                       </summary>
-                      <form action={editSession} className="mt-5 grid gap-3 rounded-xl bg-slate-50 p-4 md:grid-cols-2">
+                      <form action={editSession} className="mt-5 grid gap-3 rounded-xl bg-surface p-4 md:grid-cols-2">
                         <input type="hidden" name="session_id" value={session.id} />
                         <Input name="title" defaultValue={session.title} placeholder="Título" required />
                         <Input name="sort_order" type="number" defaultValue={String(session.sort_order ?? index)} placeholder="Ordem" />
@@ -391,7 +391,7 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
             </div>
           </div>
 
-          <div className="grid border-b border-slate-200 md:grid-cols-[240px_1fr]">
+          <div className="grid border-b border-border md:grid-cols-[240px_1fr]">
             <RowTitle title="Agenda" description="Horarios disponiveis." />
             <div className="space-y-5 py-6 md:pl-8">
               <form action={createSlot} className="grid gap-5 lg:grid-cols-[1fr_160px_1fr_auto] lg:items-end">
@@ -404,13 +404,13 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
                 </button>
               </form>
               {slotRows.length > 0 && (
-                <div className="overflow-hidden rounded-lg border border-slate-200">
+                <div className="overflow-hidden rounded-lg border border-border">
                   {slotRows.slice(0, 8).map(slot => (
-                    <div key={slot.id} className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-sm last:border-b-0">
-                      <span className="text-slate-700">{new Date(slot.starts_at).toLocaleString('pt-BR')} até {new Date(slot.ends_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <div key={slot.id} className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 text-sm last:border-b-0">
+                      <span className="text-foreground">{new Date(slot.starts_at).toLocaleString('pt-BR')} até {new Date(slot.ends_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                       <div className="flex items-center gap-2">
                         <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${slot.booked_by ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>{slot.booked_by ? 'Reservado' : 'Livre'}</span>
-                        {!slot.booked_by && <form action={deleteSlot}><input type="hidden" name="slot_id" value={slot.id} /><button className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500"><Trash2 className="h-4 w-4" /></button></form>}
+                        {!slot.booked_by && <form action={deleteSlot}><input type="hidden" name="slot_id" value={slot.id} /><button className="rounded-lg p-1.5 text-muted hover:bg-red-50 hover:text-red-500"><Trash2 className="h-4 w-4" /></button></form>}
                       </div>
                     </div>
                   ))}
@@ -419,7 +419,7 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
             </div>
           </div>
 
-          <div className="grid border-b border-slate-200 md:grid-cols-[240px_1fr]">
+          <div className="grid border-b border-border md:grid-cols-[240px_1fr]">
             <RowTitle title="Tarefas" description="Atribua atividades individuais." />
             <form action={createTask} className="grid gap-5 py-6 md:pl-8 lg:grid-cols-2">
               <Field label="Aluno" required>
@@ -446,30 +446,30 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
             </form>
           </div>
 
-          <div className="grid border-b border-slate-200 md:grid-cols-[240px_1fr]">
+          <div className="grid border-b border-border md:grid-cols-[240px_1fr]">
             <RowTitle title="Mentorados" description="Acompanhamento individual e notas privadas." />
             <div className="space-y-4 py-6 md:pl-8">
-              {studentRows.length === 0 ? <p className="text-sm text-slate-400">Nenhum mentorado com acesso ainda.</p> : studentRows.map(student => {
+              {studentRows.length === 0 ? <p className="text-sm text-muted">Nenhum mentorado com acesso ainda.</p> : studentRows.map(student => {
                 const sessionsForStudent = studentSessionRows.filter(session => session.student_id === student.user_id)
                 const tasksForStudent = studentTaskRows.filter(task => task.student_id === student.user_id)
                 const intakeForStudent = intakeRows.find(intake => intake.student_id === student.user_id)
                 const notesForStudent = noteRows.filter(note => note.student_id === student.user_id)
                 const completedTasks = tasksForStudent.filter(task => task.completed_at).length
                 return (
-                  <details key={student.user_id} className="group overflow-hidden rounded-xl border border-slate-200 bg-white">
+                  <details key={student.user_id} className="group overflow-hidden rounded-xl border border-border bg-card">
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 [&::-webkit-details-marker]:hidden">
-                      <div><p className="font-semibold text-slate-950">{student.profile?.full_name || student.access_email || 'Aluno'}</p><p className="mt-1 text-xs text-slate-400">{sessionsForStudent.length} sessões · {completedTasks}/{tasksForStudent.length} tarefas · {intakeForStudent ? 'diagnóstico enviado' : 'diagnóstico pendente'}</p></div>
-                      <Users className="h-5 w-5 text-slate-300 transition group-open:text-orange-500" />
+                      <div><p className="font-semibold text-foreground">{student.profile?.full_name || student.access_email || 'Aluno'}</p><p className="mt-1 text-xs text-muted">{sessionsForStudent.length} sessões · {completedTasks}/{tasksForStudent.length} tarefas · {intakeForStudent ? 'diagnóstico enviado' : 'diagnóstico pendente'}</p></div>
+                      <Users className="h-5 w-5 text-muted transition group-open:text-orange-500" />
                     </summary>
-                    <div className="grid gap-5 border-t border-slate-100 bg-slate-50/60 p-5 lg:grid-cols-2">
-                      <section className="rounded-xl bg-white p-4 ring-1 ring-slate-100">
-                        <h4 className="flex items-center gap-2 text-sm font-semibold text-slate-900"><CalendarClock className="h-4 w-4 text-orange-500" />Sessões</h4>
+                    <div className="grid gap-5 border-t border-border bg-surface/60 p-5 lg:grid-cols-2">
+                      <section className="rounded-xl bg-card p-4 ring-1 ring-border">
+                        <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground"><CalendarClock className="h-4 w-4 text-orange-500" />Sessões</h4>
                         <div className="mt-3 space-y-2">
-                          {sessionsForStudent.length === 0 ? <p className="text-xs text-slate-400">Nenhuma sessão individual.</p> : sessionsForStudent.map(session => (
-                            <form key={session.id} action={updateStudentSession} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 p-3">
+                          {sessionsForStudent.length === 0 ? <p className="text-xs text-muted">Nenhuma sessão individual.</p> : sessionsForStudent.map(session => (
+                            <form key={session.id} action={updateStudentSession} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3">
                               <input type="hidden" name="session_id" value={session.id} />
-                              <div><p className="text-sm font-medium text-slate-800">{session.title}</p><p className="text-xs text-slate-400">{session.scheduled_at ? new Date(session.scheduled_at).toLocaleString('pt-BR') : 'Sem data'} · {session.reschedule_count || 0} reagendamentos</p></div>
-                              <select name="status" defaultValue={session.status} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs">
+                              <div><p className="text-sm font-medium text-foreground">{session.title}</p><p className="text-xs text-muted">{session.scheduled_at ? new Date(session.scheduled_at).toLocaleString('pt-BR') : 'Sem data'} · {session.reschedule_count || 0} reagendamentos</p></div>
+                              <select name="status" defaultValue={session.status} className="rounded-lg border border-border bg-card px-2 py-1.5 text-xs">
                                 <option value="scheduled">Agendada</option><option value="done">Realizada</option><option value="missed">Falta</option><option value="cancelled">Cancelada</option>
                               </select>
                               <button className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white">Salvar</button>
@@ -477,15 +477,15 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
                           ))}
                         </div>
                       </section>
-                      <section className="rounded-xl bg-white p-4 ring-1 ring-slate-100">
-                        <h4 className="flex items-center gap-2 text-sm font-semibold text-slate-900"><CheckCircle2 className="h-4 w-4 text-emerald-500" />Tarefas</h4>
-                        <div className="mt-3 space-y-2">{tasksForStudent.length === 0 ? <p className="text-xs text-slate-400">Nenhuma tarefa.</p> : tasksForStudent.map(task => <div key={task.id} className="rounded-lg border border-slate-100 p-3"><p className="text-sm font-medium text-slate-800">{task.title}</p><p className="mt-1 text-xs text-slate-400">{task.completed_at ? 'Concluída' : task.due_at ? `Prazo: ${new Date(task.due_at).toLocaleString('pt-BR')}` : 'Pendente'}</p></div>)}</div>
+                      <section className="rounded-xl bg-card p-4 ring-1 ring-border">
+                        <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground"><CheckCircle2 className="h-4 w-4 text-emerald-500" />Tarefas</h4>
+                        <div className="mt-3 space-y-2">{tasksForStudent.length === 0 ? <p className="text-xs text-muted">Nenhuma tarefa.</p> : tasksForStudent.map(task => <div key={task.id} className="rounded-lg border border-border p-3"><p className="text-sm font-medium text-foreground">{task.title}</p><p className="mt-1 text-xs text-muted">{task.completed_at ? 'Concluída' : task.due_at ? `Prazo: ${new Date(task.due_at).toLocaleString('pt-BR')}` : 'Pendente'}</p></div>)}</div>
                       </section>
-                      <section className="rounded-xl bg-white p-4 ring-1 ring-slate-100 lg:col-span-2">
-                        <h4 className="flex items-center gap-2 text-sm font-semibold text-slate-900"><FileLock2 className="h-4 w-4 text-violet-500" />Notas privadas do mentor</h4>
-                        <p className="mt-1 text-xs text-slate-400">Visíveis somente para o proprietário desta mentoria.</p>
+                      <section className="rounded-xl bg-card p-4 ring-1 ring-border lg:col-span-2">
+                        <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground"><FileLock2 className="h-4 w-4 text-violet-500" />Notas privadas do mentor</h4>
+                        <p className="mt-1 text-xs text-muted">Visíveis somente para o proprietário desta mentoria.</p>
                         <form action={addPrivateNote} className="mt-3 flex flex-col gap-2 sm:flex-row"><input type="hidden" name="student_id" value={student.user_id} /><textarea name="body" required maxLength={10000} className={`${textareaClass} min-h-20 flex-1`} placeholder="Registre contexto, decisões e próximos passos..." /><button className="h-11 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white">Adicionar nota</button></form>
-                        <div className="mt-3 space-y-2">{notesForStudent.map(note => <div key={note.id} className="flex items-start justify-between gap-3 rounded-lg bg-violet-50/60 p-3"><div><p className="whitespace-pre-wrap text-sm text-slate-700">{note.body}</p><p className="mt-1 text-[10px] text-slate-400">{new Date(note.created_at).toLocaleString('pt-BR')}</p></div><form action={deletePrivateNote}><input type="hidden" name="note_id" value={note.id} /><button className="p-1 text-slate-300 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button></form></div>)}</div>
+                        <div className="mt-3 space-y-2">{notesForStudent.map(note => <div key={note.id} className="flex items-start justify-between gap-3 rounded-lg bg-violet-50/60 p-3"><div><p className="whitespace-pre-wrap text-sm text-foreground">{note.body}</p><p className="mt-1 text-[10px] text-muted">{new Date(note.created_at).toLocaleString('pt-BR')}</p></div><form action={deletePrivateNote}><input type="hidden" name="note_id" value={note.id} /><button className="p-1 text-muted hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button></form></div>)}</div>
                       </section>
                     </div>
                   </details>
@@ -494,19 +494,19 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
             </div>
           </div>
 
-          <div className="grid border-b border-slate-200 md:grid-cols-[240px_1fr]">
+          <div className="grid border-b border-border md:grid-cols-[240px_1fr]">
             <RowTitle title="Diagnosticos" description="Respostas dos alunos." />
             <div className="py-6 md:pl-8">
               {intakeRows.length === 0 ? (
-                <p className="text-sm text-slate-400">Nenhum aluno respondeu o diagnostico ainda.</p>
+                <p className="text-sm text-muted">Nenhum aluno respondeu o diagnostico ainda.</p>
               ) : (
-                <div className="overflow-hidden rounded-lg border border-slate-200">
+                <div className="overflow-hidden rounded-lg border border-border">
                   {intakeRows.slice(0, 6).map((intake) => (
-                    <div key={intake.student_id} className="border-b border-slate-100 p-4 last:border-b-0">
-                      <p className="text-sm font-semibold text-slate-950">{intake.profile?.full_name || 'Aluno'}</p>
+                    <div key={intake.student_id} className="border-b border-border p-4 last:border-b-0">
+                      <p className="text-sm font-semibold text-foreground">{intake.profile?.full_name || 'Aluno'}</p>
                       <div className="mt-2 space-y-1">
                         {Object.entries(intake.answers || {}).slice(0, 4).map(([key, value]) => (
-                          <p key={key} className="text-xs text-slate-500">{String(value)}</p>
+                          <p key={key} className="text-xs text-muted">{String(value)}</p>
                         ))}
                       </div>
                     </div>
@@ -521,8 +521,8 @@ export default async function MentorshipJourneyPage(props: { params: Promise<{ i
   )
 }
 
-const inputClass = 'h-12 w-full rounded-xl border-0 bg-[#f4f4f6] px-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20'
-const textareaClass = 'min-h-24 w-full resize-y rounded-xl border-0 bg-[#f4f4f6] px-4 py-3 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20'
+const inputClass = 'h-12 w-full rounded-xl border-0 bg-surface px-4 text-sm font-medium text-foreground outline-none transition placeholder:text-muted focus:bg-card focus:ring-2 focus:ring-orange-500/20'
+const textareaClass = 'min-h-24 w-full resize-y rounded-xl border-0 bg-surface px-4 py-3 text-sm font-medium text-foreground outline-none transition placeholder:text-muted focus:bg-card focus:ring-2 focus:ring-orange-500/20'
 
 function ProductTabs({ productId, active }: { productId: string; active: string }) {
   const tabs = [
@@ -534,12 +534,12 @@ function ProductTabs({ productId, active }: { productId: string; active: string 
     { href: `/dashboard/products/${productId}/order-bumps`, label: 'Order Bumps', icon: ShoppingBag, key: 'order-bumps' },
   ]
   return (
-    <div className="mt-8 flex gap-2 overflow-x-auto border-b border-slate-200">
+    <div className="mt-8 flex gap-2 overflow-x-auto border-b border-border">
       {tabs.map(tab => {
         const Icon = tab.icon
         const isActive = tab.key === active
         return (
-          <Link key={tab.key} href={tab.href} className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${isActive ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-900'}`}>
+          <Link key={tab.key} href={tab.href} className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${isActive ? 'border-orange-500 text-orange-600' : 'border-transparent text-muted hover:text-foreground'}`}>
             <Icon className="h-4 w-4" />
             {tab.label}
           </Link>
@@ -552,8 +552,8 @@ function ProductTabs({ productId, active }: { productId: string; active: string 
 function RowTitle({ title, description }: { title: string; description: string }) {
   return (
     <div className="py-6 md:pr-8">
-      <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
-      <p className="mt-1 text-sm leading-6 text-slate-400">{description}</p>
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      <p className="mt-1 text-sm leading-6 text-muted">{description}</p>
     </div>
   )
 }
@@ -561,8 +561,8 @@ function RowTitle({ title, description }: { title: string; description: string }
 function Metric({ label, value }: { label: string; value: string | number }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-2 text-xl font-semibold text-slate-950">{value}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</p>
+      <p className="mt-2 text-xl font-semibold text-foreground">{value}</p>
     </div>
   )
 }
@@ -570,11 +570,11 @@ function Metric({ label, value }: { label: string; value: string | number }) {
 function Field({ label, required = false, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-slate-700">
+      <span className="mb-2 block text-sm font-medium text-foreground">
         {label}{required && <span className="text-red-500">*</span>}
       </span>
       {children}
-      {hint && <span className="mt-1.5 block text-xs leading-5 text-slate-400">{hint}</span>}
+      {hint && <span className="mt-1.5 block text-xs leading-5 text-muted">{hint}</span>}
     </label>
   )
 }

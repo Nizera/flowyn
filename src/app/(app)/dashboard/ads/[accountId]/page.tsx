@@ -66,9 +66,9 @@ function StatusBadge({ status }: { status: string }) {
   const isActive = status === 'ACTIVE'
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-      isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
+      isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-surface text-muted'
     }`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+      <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-muted'}`} />
       {isActive ? 'Ativo' : 'Pausado'}
     </span>
   )
@@ -79,13 +79,13 @@ function BudgetDisplay({ daily, lifetime }: { daily?: string | number; lifetime?
   const l = typeof lifetime === 'string' ? parseFloat(lifetime) : (lifetime || 0)
   if (d > 0) return <span className="text-sm">{formatBRL(d / 100)}/dia</span>
   if (l > 0) return <span className="text-sm">{formatBRL(l / 100)} total</span>
-  return <span className="text-slate-400 text-sm">Sem limite</span>
+  return <span className="text-muted text-sm">Sem limite</span>
 }
 
 function MetricCell({ value, prefix = '', suffix = '', decimals = 0 }: {
   value: number; prefix?: string; suffix?: string; decimals?: number
 }) {
-  if (value === 0) return <span className="text-slate-400">&mdash;</span>
+  if (value === 0) return <span className="text-muted">&mdash;</span>
   const formatted = value.toLocaleString('pt-BR', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
@@ -150,6 +150,7 @@ export default function CampaignManagementPage() {
   const [savingBulkBudget, setSavingBulkBudget] = useState(false)
 
   const [visibleColumns, setVisibleColumns] = useState({
+    budget: true,
     reach: true,
     impressions: true,
     clicks: true,
@@ -424,24 +425,24 @@ export default function CampaignManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="border-b border-slate-200">
+    <div className="min-h-screen bg-card">
+      <div className="border-b border-border">
         <div className="max-w-[1600px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href="/dashboard/ads" className="text-slate-400 hover:text-slate-600 transition-colors">
+              <Link href="/dashboard/ads" className="text-muted hover:text-muted transition-colors">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </Link>
               <div>
-                <h1 className="text-lg font-bold text-slate-900">Gestao de Campanhas</h1>
-                <p className="text-sm text-slate-500">Conta: {accountId}</p>
+                <h1 className="text-lg font-bold text-foreground">Gestao de Campanhas</h1>
+                <p className="text-sm text-muted">Conta: {accountId}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Link href={`/dashboard/ads/${accountId}/rules`}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors">
+                className="flex items-center gap-2 px-4 py-2 bg-card border border-border text-foreground text-sm font-semibold rounded-lg hover:bg-surface transition-colors">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                 </svg>
@@ -472,7 +473,7 @@ export default function CampaignManagementPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-slate-200">
+      <div className="border-b border-border">
         <div className="max-w-[1600px] mx-auto px-6">
           <div className="flex gap-0">
             {tabs.map(t => (
@@ -489,10 +490,10 @@ export default function CampaignManagementPage() {
                   router.push(`?tab=${t.key}`)
                 }}
                 className={`px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
-                  tab === t.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+                  tab === t.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-muted hover:text-foreground'
                 }`}>
                 {t.label}
-                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${tab === t.key ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${tab === t.key ? 'bg-blue-100 text-blue-700' : 'bg-surface text-muted'}`}>
                   {t.count}
                 </span>
               </button>
@@ -502,20 +503,21 @@ export default function CampaignManagementPage() {
       </div>
 
       {/* Action Bar - estilo Utmify/Meta */}
-      <div className="border-b border-slate-200 bg-white">
+      <div className="border-b border-border bg-card">
         <div className="max-w-[1600px] mx-auto px-6 py-2">
           <div className="flex items-center gap-2 flex-wrap">
             {/* Colunas */}
             <div className="relative">
               <button onClick={() => { setShowColumnMenu(!showColumnMenu); setShowGroupMenu(false); setShowDatePicker(false) }}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-surface transition-colors">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
                 Colunas
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
               </button>
               {showColumnMenu && (
-                <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-50 py-1">
+                <div className="absolute top-full left-0 mt-1 w-56 bg-card border border-border rounded-xl shadow-lg z-50 py-1">
                   {[
+                    { key: 'budget' as const, label: 'Orcamento' },
                     { key: 'reach' as const, label: 'Alcance' },
                     { key: 'impressions' as const, label: 'Impressoes' },
                     { key: 'clicks' as const, label: 'Cliques' },
@@ -532,8 +534,8 @@ export default function CampaignManagementPage() {
                     { key: 'roas' as const, label: 'ROAS' },
                   ].map(col => (
                     <button key={col.key} onClick={() => toggleColumn(col.key)}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${visibleColumns[col.key] ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground hover:bg-surface">
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${visibleColumns[col.key] ? 'bg-blue-600 border-blue-600' : 'border-border'}`}>
                         {visibleColumns[col.key] && (
                           <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                         )}
@@ -546,7 +548,7 @@ export default function CampaignManagementPage() {
             </div>
 
             {/* Detalhamento */}
-            <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+            <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-surface transition-colors">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
               Detalhamento
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
@@ -555,16 +557,16 @@ export default function CampaignManagementPage() {
             {/* Agrupamento */}
             <div className="relative">
               <button onClick={() => { setShowGroupMenu(!showGroupMenu); setShowColumnMenu(false); setShowDatePicker(false) }}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-surface transition-colors">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                 Agrupamento
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
               </button>
               {showGroupMenu && (
-                <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-lg z-50 py-1">
+                <div className="absolute top-full left-0 mt-1 w-48 bg-card border border-border rounded-xl shadow-lg z-50 py-1">
                   {['Nenhum', 'Campanha', 'Conjunto de anuncio', 'Anuncio'].map(g => (
                     <button key={g} onClick={() => setShowGroupMenu(false)}
-                      className="w-full px-3 py-2 text-sm text-left text-slate-700 hover:bg-slate-50">
+                      className="w-full px-3 py-2 text-sm text-left text-foreground hover:bg-surface">
                       {g}
                     </button>
                   ))}
@@ -572,36 +574,36 @@ export default function CampaignManagementPage() {
               )}
             </div>
 
-            <div className="h-5 w-px bg-slate-200 mx-1" />
+            <div className="h-5 w-px bg-surface mx-1" />
 
             {/* Date Picker */}
             <div className="relative">
               <button onClick={() => { setShowDatePicker(!showDatePicker); setShowColumnMenu(false); setShowGroupMenu(false) }}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-surface transition-colors">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                 {formatDateRange()}
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
               </button>
               {showDatePicker && (
-                <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-4">
+                <div className="absolute top-full left-0 mt-1 w-72 bg-card border border-border rounded-xl shadow-lg z-50 p-4">
                   <div className="flex gap-2 mb-4">
                     <div className="flex-1">
-                      <label className="block text-xs font-medium text-slate-500 mb-1">De</label>
+                      <label className="block text-xs font-medium text-muted mb-1">De</label>
                       <input type="date" value={dateRange.from}
                         onChange={e => setDateRange(prev => ({ ...prev, from: e.target.value }))}
-                        className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        className="w-full px-3 py-1.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
                     <div className="flex-1">
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Ate</label>
+                      <label className="block text-xs font-medium text-muted mb-1">Ate</label>
                       <input type="date" value={dateRange.to}
                         onChange={e => setDateRange(prev => ({ ...prev, to: e.target.value }))}
-                        className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        className="w-full px-3 py-1.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
                   </div>
-                  <div className="border-t border-slate-100 pt-3 space-y-1">
+                  <div className="border-t border-border pt-3 space-y-1">
                     {DATE_PRESETS.map(preset => (
                       <button key={preset.label} onClick={() => applyDatePreset(preset)}
-                        className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
+                        className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-surface rounded-lg transition-colors">
                         {preset.label}
                       </button>
                     ))}
@@ -614,16 +616,16 @@ export default function CampaignManagementPage() {
       </div>
 
       {/* Search + Bulk */}
-      <div className="border-b border-slate-200 bg-slate-50">
+      <div className="border-b border-border bg-surface">
         <div className="max-w-[1600px] mx-auto px-6 py-3">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <input type="text" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)}
-                  className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  className="pl-9 pr-4 py-2 bg-card border border-border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
               </div>
               {tab !== 'campaigns' && selectedCampaignFilter.size > 0 && (
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
@@ -638,7 +640,7 @@ export default function CampaignManagementPage() {
               )}
               {selected.size > 0 && (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-500">{selected.size} selecionado(s)</span>
+                  <span className="text-sm text-muted">{selected.size} selecionado(s)</span>
                   {tab === 'campaigns' && (
                     <button onClick={openDuplicateModal}
                       className="px-3 py-1.5 bg-purple-600 text-white text-xs font-semibold rounded-lg hover:bg-purple-700">Duplicar</button>
@@ -664,7 +666,7 @@ export default function CampaignManagementPage() {
       <div className="max-w-[1600px] mx-auto">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="flex items-center gap-3 text-slate-500">
+            <div className="flex items-center gap-3 text-muted">
               <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -673,7 +675,7 @@ export default function CampaignManagementPage() {
             </div>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+          <div className="flex flex-col items-center justify-center py-20 text-muted">
             <svg className="w-12 h-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
             </svg>
@@ -683,15 +685,15 @@ export default function CampaignManagementPage() {
         ) : (
           <div className="overflow-x-auto light-scrollbar">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-white z-10 border-b border-slate-200">
-                <tr className="text-left text-slate-500 text-xs uppercase">
+              <thead className="sticky top-0 bg-card z-10 border-b border-border">
+                <tr className="text-left text-muted text-xs uppercase">
                   <th className="w-12 px-4 py-3">
                     <input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0}
-                      onChange={toggleSelectAll} className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                      onChange={toggleSelectAll} className="w-4 h-4 rounded border-border text-blue-600 focus:ring-blue-500" />
                   </th>
                   <th className="px-4 py-3 min-w-[280px]">Nome</th>
                   <th className="px-4 py-3 w-32">Status</th>
-                  {(tab === 'campaigns' || tab === 'adsets') && <th className="px-4 py-3 min-w-[160px]">Orcamento</th>}
+                   {visibleColumns.budget && (tab === 'campaigns' || tab === 'adsets') && <th className="px-4 py-3 min-w-[160px]">Orcamento</th>}
                   <th className="px-4 py-3 text-right min-w-[120px]">Gasto</th>
                   {visibleColumns.reach && <th className="px-4 py-3 text-right min-w-[100px]">Alcance</th>}
                   {visibleColumns.impressions && <th className="px-4 py-3 text-right min-w-[110px]">Impressoes</th>}
@@ -724,21 +726,21 @@ export default function CampaignManagementPage() {
                   const isToggling = togglingId === id
 
                   return (
-                    <tr key={id} className={`border-t border-slate-100 hover:bg-slate-50 transition-colors ${selected.has(id) ? 'bg-blue-50' : ''}`}>
+                    <tr key={id} className={`border-t border-border hover:bg-surface transition-colors ${selected.has(id) ? 'bg-blue-50' : ''}`}>
                       <td className="px-4 py-3">
                         <input type="checkbox" checked={selected.has(id)} onChange={() => toggleSelect(id)}
-                          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                          className="w-4 h-4 rounded border-border text-blue-600 focus:ring-blue-500" />
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-semibold text-slate-900">{item.name}</div>
+                        <div className="font-semibold text-foreground">{item.name}</div>
                         {tab === 'campaigns' && (item as CampaignItem).objective && (
-                          <div className="text-xs text-slate-400 mt-0.5">{(item as CampaignItem).objective}</div>
+                          <div className="text-xs text-muted mt-0.5">{(item as CampaignItem).objective}</div>
                         )}
                       </td>
                       <td className="px-4 py-3">
                         <button onClick={() => handleToggle(item, level)} disabled={isToggling} className="focus:outline-none">
                           {isToggling ? (
-                            <svg className="animate-spin w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                             </svg>
@@ -747,7 +749,7 @@ export default function CampaignManagementPage() {
                           )}
                         </button>
                       </td>
-                      {(tab === 'campaigns' || tab === 'adsets') && (
+                       {visibleColumns.budget && (tab === 'campaigns' || tab === 'adsets') && (
                         <td className="px-4 py-3 cursor-pointer hover:bg-blue-50 transition-colors group"
                           onClick={() => openBudgetEdit(item as CampaignItem | AdSetItem)}>
                           <BudgetDisplay daily={(item as CampaignItem | AdSetItem).daily_budget} lifetime={(item as CampaignItem | AdSetItem).lifetime_budget} />
@@ -774,13 +776,13 @@ export default function CampaignManagementPage() {
                       )}
                       {visibleColumns.roas && (
                         <td className="px-4 py-3 text-right">
-                          <span className={`font-semibold ${roas >= 1 ? 'text-emerald-600' : roas > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                          <span className={`font-semibold ${roas >= 1 ? 'text-emerald-600' : roas > 0 ? 'text-amber-600' : 'text-muted'}`}>
                             <MetricCell value={roas} suffix="x" decimals={2} />
                           </span>
                         </td>
                       )}
                       <td className="px-4 py-3">
-                        <button className="text-slate-400 hover:text-slate-600">
+                        <button className="text-muted hover:text-muted">
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                           </svg>
@@ -798,11 +800,11 @@ export default function CampaignManagementPage() {
       {/* Duplicate Modal */}
       {showDuplicateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowDuplicateModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-slate-200">
+          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-border">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-slate-900">Duplicar Campanha{selected.size > 1 ? 's' : ''}</h2>
-                <button onClick={() => setShowDuplicateModal(false)} className="text-slate-400 hover:text-slate-600">
+                <h2 className="text-lg font-bold text-foreground">Duplicar Campanha{selected.size > 1 ? 's' : ''}</h2>
+                <button onClick={() => setShowDuplicateModal(false)} className="text-muted hover:text-muted">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -811,54 +813,54 @@ export default function CampaignManagementPage() {
             </div>
             <div className="px-6 py-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Conta de destino</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Conta de destino</label>
                 <select value={duplicateTarget} onChange={e => setDuplicateTarget(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="">Mesma conta</option>
                   {accounts.filter(a => a.ad_account_id !== accountId).map(a => (
                     <option key={a.ad_account_id} value={a.ad_account_id}>{a.ad_account_name || a.ad_account_id}</option>
                   ))}
                 </select>
-                {!duplicateTarget && <p className="text-xs text-slate-400 mt-1">A campanha sera criada nesta mesma conta</p>}
+                {!duplicateTarget && <p className="text-xs text-muted mt-1">A campanha sera criada nesta mesma conta</p>}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Quantidade</label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Quantidade</label>
                   <input type="number" min={1} max={duplicateLimit?.max_copies || 20} value={duplicateQuantity}
                     onChange={e => setDuplicateQuantity(Math.min(duplicateLimit?.max_copies || 20, Math.max(1, Number(e.target.value) || 1)))}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   {duplicateLimit ? (
-                    <p className="text-xs text-slate-400 mt-1">Max. {duplicateLimit.max_copies} copias</p>
+                    <p className="text-xs text-muted mt-1">Max. {duplicateLimit.max_copies} copias</p>
                   ) : (
-                    <p className="text-xs text-slate-400 mt-1">Carregando...</p>
+                    <p className="text-xs text-muted mt-1">Carregando...</p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Sufixo (opcional)</label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Sufixo (opcional)</label>
                   <input type="text" value={duplicateNameSuffix} onChange={e => setDuplicateNameSuffix(e.target.value)}
                     placeholder="Ex: Copy"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  <p className="text-xs text-slate-400 mt-1">Ex: &quot;Nome - Copia 1&quot;</p>
+                    className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <p className="text-xs text-muted mt-1">Ex: &quot;Nome - Copia 1&quot;</p>
                 </div>
               </div>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={duplicateStartPaused}
                   onChange={e => setDuplicateStartPaused(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-                <span className="text-sm text-slate-700">Criar pausada (recomendado)</span>
+                  className="w-4 h-4 rounded border-border text-blue-600 focus:ring-blue-500" />
+                <span className="text-sm text-foreground">Criar pausada (recomendado)</span>
               </label>
               {duplicateLimit && (
-                <div className="bg-slate-50 rounded-lg px-3 py-2 text-xs text-slate-500 space-y-0.5">
+                <div className="bg-surface rounded-lg px-3 py-2 text-xs text-muted space-y-0.5">
                   <p>{duplicateLimit.ad_sets} conjunto(s) de anuncio(s), {duplicateLimit.total_ads} anuncio(s)</p>
                   <p>{duplicateLimit.api_cost_per_copy} chamadas API por copia</p>
                   <p>Limite: 1.000 chamadas/operacao (25% do limite horario)</p>
                 </div>
               )}
-              <p className="text-xs text-slate-400">Campanhas, conjuntos, anuncios e criativos serao copiados.</p>
+              <p className="text-xs text-muted">Campanhas, conjuntos, anuncios e criativos serao copiados.</p>
             </div>
-            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3">
+            <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
               <button onClick={() => setShowDuplicateModal(false)}
-                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button>
+                className="px-4 py-2 text-sm font-medium text-foreground hover:bg-surface rounded-lg transition-colors">Cancelar</button>
               <button onClick={handleDuplicate} disabled={duplicating}
                 className="px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors">
                 {duplicating ? 'Duplicando...' : `Duplicar ${selected.size > 1 ? `${selected.size} campanhas` : 'campanha'}${duplicateQuantity > 1 ? ` x${duplicateQuantity}` : ''}`}
@@ -871,33 +873,33 @@ export default function CampaignManagementPage() {
       {/* Individual Budget Edit Modal */}
       {budgetModalOpen && budgetEditItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setBudgetModalOpen(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-slate-200">
-              <h2 className="text-lg font-bold text-slate-900">Alterar Orcamento</h2>
-              <p className="text-sm text-slate-500 mt-1">{budgetEditItem.name}</p>
+          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-foreground">Alterar Orcamento</h2>
+              <p className="text-sm text-muted mt-1">{budgetEditItem.name}</p>
             </div>
             <div className="px-6 py-4 space-y-4">
               <div className="flex gap-2">
                 <button onClick={() => setBudgetType('daily')}
-                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${budgetType === 'daily' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${budgetType === 'daily' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-border text-muted hover:bg-surface'}`}>
                   Diario
                 </button>
                 <button onClick={() => setBudgetType('lifetime')}
-                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${budgetType === 'lifetime' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${budgetType === 'lifetime' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-border text-muted hover:bg-surface'}`}>
                   Total
                 </button>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Valor (R$)</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Valor (R$)</label>
                 <input type="number" step="0.01" min="0" value={budgetValue}
                   onChange={e => setBudgetValue(e.target.value)}
                   placeholder="Ex: 50.00"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3">
+            <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
               <button onClick={() => setBudgetModalOpen(false)}
-                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button>
+                className="px-4 py-2 text-sm font-medium text-foreground hover:bg-surface rounded-lg transition-colors">Cancelar</button>
               <button onClick={handleSaveBudget} disabled={savingBudget || !budgetValue}
                 className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
                 {savingBudget ? 'Salvando...' : 'Salvar'}
@@ -910,49 +912,49 @@ export default function CampaignManagementPage() {
       {/* Bulk Budget Edit Modal */}
       {bulkBudgetModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setBulkBudgetModalOpen(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-slate-200">
-              <h2 className="text-lg font-bold text-slate-900">Alterar Orcamento em Lote</h2>
-              <p className="text-sm text-slate-500 mt-1">{selected.size} item(ns) selecionado(s)</p>
+          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-foreground">Alterar Orcamento em Lote</h2>
+              <p className="text-sm text-muted mt-1">{selected.size} item(ns) selecionado(s)</p>
             </div>
             <div className="px-6 py-4 space-y-4">
               <div className="flex gap-2">
                 <button onClick={() => setBulkBudgetAction('increase')}
-                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${bulkBudgetAction === 'increase' ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${bulkBudgetAction === 'increase' ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'border-border text-muted hover:bg-surface'}`}>
                   Aumentar %
                 </button>
                 <button onClick={() => setBulkBudgetAction('decrease')}
-                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${bulkBudgetAction === 'decrease' ? 'bg-amber-50 border-amber-300 text-amber-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${bulkBudgetAction === 'decrease' ? 'bg-amber-50 border-amber-300 text-amber-700' : 'border-border text-muted hover:bg-surface'}`}>
                   Diminuir %
                 </button>
                 <button onClick={() => setBulkBudgetAction('set')}
-                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${bulkBudgetAction === 'set' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${bulkBudgetAction === 'set' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-border text-muted hover:bg-surface'}`}>
                   Definir R$
                 </button>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   {bulkBudgetAction === 'set' ? 'Novo valor (R$)' : 'Percentual (%)'}
                 </label>
                 <input type="number" step="0.01" min="0" value={bulkBudgetAmount}
                   onChange={e => setBulkBudgetAmount(e.target.value)}
                   placeholder={bulkBudgetAction === 'set' ? 'Ex: 50.00' : 'Ex: 20'}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="flex gap-2">
                 <button onClick={() => setBulkBudgetType('daily')}
-                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${bulkBudgetType === 'daily' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${bulkBudgetType === 'daily' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-border text-muted hover:bg-surface'}`}>
                   Diario
                 </button>
                 <button onClick={() => setBulkBudgetType('lifetime')}
-                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${bulkBudgetType === 'lifetime' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${bulkBudgetType === 'lifetime' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-border text-muted hover:bg-surface'}`}>
                   Total
                 </button>
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3">
+            <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
               <button onClick={() => setBulkBudgetModalOpen(false)}
-                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button>
+                className="px-4 py-2 text-sm font-medium text-foreground hover:bg-surface rounded-lg transition-colors">Cancelar</button>
               <button onClick={handleBulkBudget} disabled={savingBulkBudget || !bulkBudgetAmount}
                 className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors">
                 {savingBulkBudget ? 'Aplicando...' : 'Aplicar'}

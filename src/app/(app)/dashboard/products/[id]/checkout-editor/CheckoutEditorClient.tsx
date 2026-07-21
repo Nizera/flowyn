@@ -149,25 +149,25 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 border-b border-slate-200 pb-6 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-4 border-b border-border pb-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-orange-600">Checkout transparente</p>
-          <h3 className="mt-2 text-xl font-semibold text-slate-950">Construtor visual</h3>
-          <p className="mt-1 text-sm text-slate-400">
+          <h3 className="mt-2 text-xl font-semibold text-foreground">Construtor visual</h3>
+          <p className="mt-1 text-sm text-muted">
             {publishedAt ? `Publicado em ${new Date(publishedAt).toLocaleString('pt-BR')}` : 'Edite o rascunho e publique quando estiver pronto.'}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex rounded-xl bg-[#f4f4f6] p-1">
-            <button onClick={() => setViewport('desktop')} className={`rounded-lg p-2 transition ${viewport === 'desktop' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-700'}`} title="Desktop">
+          <div className="inline-flex rounded-xl bg-surface p-1">
+            <button onClick={() => setViewport('desktop')} className={`rounded-lg p-2 transition ${viewport === 'desktop' ? 'bg-card text-orange-600 shadow-sm' : 'text-muted hover:text-foreground'}`} title="Desktop">
               <Monitor className="h-4 w-4" />
             </button>
-            <button onClick={() => setViewport('mobile')} className={`rounded-lg p-2 transition ${viewport === 'mobile' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-700'}`} title="Mobile">
+            <button onClick={() => setViewport('mobile')} className={`rounded-lg p-2 transition ${viewport === 'mobile' ? 'bg-card text-orange-600 shadow-sm' : 'text-muted hover:text-foreground'}`} title="Mobile">
               <Smartphone className="h-4 w-4" />
             </button>
           </div>
-          <button disabled={isPending} onClick={handleSaveDraft} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">
+          <button disabled={isPending} onClick={handleSaveDraft} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-muted transition hover:bg-surface disabled:opacity-50">
             <Save className="h-4 w-4" />
             Salvar rascunho
           </button>
@@ -204,7 +204,7 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
           </Panel>
 
           <Panel title="Urgencia">
-            <label className="flex items-center justify-between rounded-xl bg-[#f4f4f6] px-4 py-3 text-sm font-medium text-slate-700">
+            <label className="flex items-center justify-between rounded-xl bg-surface px-4 py-3 text-sm font-medium text-foreground">
               Mostrar faixa de urgencia
               <input type="checkbox" checked={config.blocks.urgency} onChange={(event) => updateBlock('urgency', event.target.checked)} className="accent-orange-500" />
             </label>
@@ -223,7 +223,7 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
 
           <Panel title="Blocos">
             {Object.entries(config.blocks).filter(([key]) => key !== 'urgency').map(([key, value]) => (
-              <label key={key} className="flex items-center justify-between rounded-xl bg-[#f4f4f6] px-4 py-3 text-sm font-medium text-slate-700">
+              <label key={key} className="flex items-center justify-between rounded-xl bg-surface px-4 py-3 text-sm font-medium text-foreground">
                 {blockLabel(key)}
                 <input type="checkbox" checked={value} onChange={(event) => updateBlock(key as keyof CheckoutCustomizationConfig['blocks'], event.target.checked)} className="accent-orange-500" />
               </label>
@@ -232,23 +232,23 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
 
             {config.blocks.testimonials && (
               <div className="mt-2 space-y-2">
-                <p className="text-xs font-semibold text-slate-500">Depoimentos ({config.testimonials.length} de 6)</p>
+                <p className="text-xs font-semibold text-muted">Depoimentos ({config.testimonials.length} de 6)</p>
                 <TestimonialList items={config.testimonials} onChange={(items) => update('testimonials', items)} userId={userId} />
               </div>
             )}
 
             {config.blocks.faq && (
               <div className="mt-2 space-y-2">
-                <p className="text-xs font-semibold text-slate-500">FAQ ({config.faq.length} de 8)</p>
+                <p className="text-xs font-semibold text-muted">FAQ ({config.faq.length} de 8)</p>
                 <FaqList items={config.faq} onChange={(items) => update('faq', items)} />
               </div>
             )}
           </Panel>
         </aside>
 
-        <section className="min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-50 p-4 lg:p-6">
+        <section className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface p-4 lg:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+            <div className="flex items-center gap-2 text-sm font-semibold text-muted">
               <Eye className="h-4 w-4 text-orange-600" />
               Preview do checkout
               {autoSaved && (
@@ -261,11 +261,11 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
             <div className="flex items-center gap-2">
               {previewUrl && (
                 <>
-                  <button type="button" onClick={handleRefreshPreview} disabled={isPending} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50" title="Salvar rascunho e atualizar preview">
+                  <button type="button" onClick={handleRefreshPreview} disabled={isPending} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-muted transition hover:bg-surface disabled:opacity-50" title="Salvar rascunho e atualizar preview">
                     <RefreshCw className={`h-3.5 w-3.5 ${isPending ? 'animate-spin' : ''}`} />
                     Atualizar
                   </button>
-                  <a href={previewUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">
+                  <a href={previewUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-muted transition hover:bg-surface">
                     <ExternalLink className="h-3.5 w-3.5" />
                     Abrir
                   </a>
@@ -275,9 +275,9 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
           </div>
 
           {previewUrl ? (
-            <div ref={previewFrameRef} className={`relative mx-auto max-w-full overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm transition-all ${viewport === 'mobile' ? 'w-[390px]' : 'w-full'}`} style={{ height: previewHeight }}>
+            <div ref={previewFrameRef} className={`relative mx-auto max-w-full overflow-hidden rounded-[24px] border border-border bg-card shadow-sm transition-all ${viewport === 'mobile' ? 'w-[390px]' : 'w-full'}`} style={{ height: previewHeight }}>
               {previewLoading && (
-                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-white text-slate-500">
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-card text-muted">
                   <Loader2 className="h-6 w-6 animate-spin text-orange-600" />
                   <p className="text-sm font-semibold">Carregando preview real...</p>
                 </div>
@@ -298,7 +298,7 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
                   key={previewUrl}
                   src={previewUrl}
                   title="Preview real do checkout"
-                  className="block h-full w-full border-0 bg-white"
+                  className="block h-full w-full border-0 bg-card"
                   sandbox="allow-same-origin allow-scripts"
                   onLoad={() => {
                     if (previewTimeoutRef.current) window.clearTimeout(previewTimeoutRef.current)
@@ -309,7 +309,7 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
               </div>
             </div>
           ) : (
-            <div className="rounded-lg border border-dashed border-slate-200 bg-white p-8 text-center text-sm font-semibold text-slate-400">
+            <div className="rounded-lg border border-dashed border-border bg-card p-8 text-center text-sm font-semibold text-muted">
               Crie um plano para visualizar o checkout real.
             </div>
           )}
@@ -334,27 +334,27 @@ function TestimonialList({ items, onChange, userId }: { items: Array<{ name: str
   return (
     <div className="space-y-3">
       {items.map((item, i) => (
-        <div key={i} className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+        <div key={i} className="rounded-xl border border-border bg-card p-3 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400">#{i + 1}</span>
+            <span className="text-xs font-bold text-muted">#{i + 1}</span>
             <button type="button" onClick={() => remove(i)} className="inline-flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-700 transition">
               <Trash2 className="h-3 w-3" />
               Remover
             </button>
           </div>
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-slate-500">Nome</span>
-            <input value={item.name} onChange={(e) => update(i, 'name', e.target.value)} maxLength={100} className="h-10 w-full rounded-lg border-0 bg-[#f4f4f6] px-3 text-sm font-medium text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-orange-500/20" />
+            <span className="mb-1 block text-xs font-medium text-muted">Nome</span>
+            <input value={item.name} onChange={(e) => update(i, 'name', e.target.value)} maxLength={100} className="h-10 w-full rounded-lg border-0 bg-surface px-3 text-sm font-medium text-foreground outline-none focus:bg-card focus:ring-2 focus:ring-orange-500/20" />
           </label>
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-slate-500">Depoimento</span>
-            <textarea value={item.text} onChange={(e) => update(i, 'text', e.target.value)} maxLength={500} className="min-h-16 w-full rounded-lg border-0 bg-[#f4f4f6] px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-orange-500/20" />
+            <span className="mb-1 block text-xs font-medium text-muted">Depoimento</span>
+            <textarea value={item.text} onChange={(e) => update(i, 'text', e.target.value)} maxLength={500} className="min-h-16 w-full rounded-lg border-0 bg-surface px-3 py-2 text-sm font-medium text-foreground outline-none focus:bg-card focus:ring-2 focus:ring-orange-500/20" />
           </label>
           <div>
-            <span className="mb-1 block text-xs font-medium text-slate-500">Foto (opcional)</span>
+            <span className="mb-1 block text-xs font-medium text-muted">Foto (opcional)</span>
             {item.imageUrl ? (
               <div className="flex items-center gap-2">
-                <img src={item.imageUrl} alt="Avatar" className="h-10 w-10 rounded-full border border-slate-200 object-cover" />
+                <img src={item.imageUrl} alt="Avatar" className="h-10 w-10 rounded-full border border-border object-cover" />
                 <button type="button" onClick={() => update(i, 'imageUrl', '')} className="text-xs font-semibold text-red-500 hover:text-red-700 transition">
                   Remover foto
                 </button>
@@ -366,7 +366,7 @@ function TestimonialList({ items, onChange, userId }: { items: Array<{ name: str
         </div>
       ))}
       {items.length < 6 && (
-        <button type="button" onClick={add} className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 py-2.5 text-xs font-semibold text-slate-500 transition hover:border-orange-400 hover:text-orange-600">
+        <button type="button" onClick={add} className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2.5 text-xs font-semibold text-muted transition hover:border-orange-400 hover:text-orange-600">
           <Plus className="h-3.5 w-3.5" />
           Adicionar depoimento
         </button>
@@ -390,26 +390,26 @@ function FaqList({ items, onChange }: { items: Array<{ question: string; answer:
   return (
     <div className="space-y-3">
       {items.map((item, i) => (
-        <div key={i} className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+        <div key={i} className="rounded-xl border border-border bg-card p-3 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400">#{i + 1}</span>
+            <span className="text-xs font-bold text-muted">#{i + 1}</span>
             <button type="button" onClick={() => remove(i)} className="inline-flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-700 transition">
               <Trash2 className="h-3 w-3" />
               Remover
             </button>
           </div>
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-slate-500">Pergunta</span>
-            <input value={item.question} onChange={(e) => update(i, 'question', e.target.value)} maxLength={200} className="h-10 w-full rounded-lg border-0 bg-[#f4f4f6] px-3 text-sm font-medium text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-orange-500/20" />
+            <span className="mb-1 block text-xs font-medium text-muted">Pergunta</span>
+            <input value={item.question} onChange={(e) => update(i, 'question', e.target.value)} maxLength={200} className="h-10 w-full rounded-lg border-0 bg-surface px-3 text-sm font-medium text-foreground outline-none focus:bg-card focus:ring-2 focus:ring-orange-500/20" />
           </label>
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-slate-500">Resposta</span>
-            <textarea value={item.answer} onChange={(e) => update(i, 'answer', e.target.value)} maxLength={500} className="min-h-16 w-full rounded-lg border-0 bg-[#f4f4f6] px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-orange-500/20" />
+            <span className="mb-1 block text-xs font-medium text-muted">Resposta</span>
+            <textarea value={item.answer} onChange={(e) => update(i, 'answer', e.target.value)} maxLength={500} className="min-h-16 w-full rounded-lg border-0 bg-surface px-3 py-2 text-sm font-medium text-foreground outline-none focus:bg-card focus:ring-2 focus:ring-orange-500/20" />
           </label>
         </div>
       ))}
       {items.length < 8 && (
-        <button type="button" onClick={add} className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 py-2.5 text-xs font-semibold text-slate-500 transition hover:border-orange-400 hover:text-orange-600">
+        <button type="button" onClick={add} className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2.5 text-xs font-semibold text-muted transition hover:border-orange-400 hover:text-orange-600">
           <Plus className="h-3.5 w-3.5" />
           Adicionar pergunta
         </button>
@@ -420,8 +420,8 @@ function FaqList({ items, onChange }: { items: Array<{ question: string; answer:
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-4 border-b border-slate-200 pb-6">
-      <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
+    <div className="space-y-4 border-b border-border pb-6">
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       {children}
     </div>
   )
@@ -430,11 +430,11 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 function Field({ label, value, onChange, textarea = false }: { label: string; value: string; onChange: (value: string) => void; textarea?: boolean }) {
   return (
     <div className="block">
-      <span className="mb-2 block text-sm font-medium text-slate-700">{label}</span>
+      <span className="mb-2 block text-sm font-medium text-foreground">{label}</span>
       {textarea ? (
-        <textarea value={value} onChange={(event) => onChange(event.target.value)} className="min-h-24 w-full rounded-xl border-0 bg-[#f4f4f6] px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-orange-500/20" />
+        <textarea value={value} onChange={(event) => onChange(event.target.value)} className="min-h-24 w-full rounded-xl border-0 bg-surface px-4 py-3 text-sm font-medium text-foreground outline-none focus:bg-card focus:ring-2 focus:ring-orange-500/20" />
       ) : (
-        <input value={value} onChange={(event) => onChange(event.target.value)} className="h-12 w-full rounded-xl border-0 bg-[#f4f4f6] px-4 text-sm font-medium text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-orange-500/20" />
+        <input value={value} onChange={(event) => onChange(event.target.value)} className="h-12 w-full rounded-xl border-0 bg-surface px-4 text-sm font-medium text-foreground outline-none focus:bg-card focus:ring-2 focus:ring-orange-500/20" />
       )}
     </div>
   )
@@ -443,8 +443,8 @@ function Field({ label, value, onChange, textarea = false }: { label: string; va
 function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
     <label className="flex items-center justify-between gap-3">
-      <span className="text-sm font-medium text-slate-700">{label}</span>
-      <input type="color" value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-16 rounded-lg border border-slate-200 bg-transparent" />
+      <span className="text-sm font-medium text-foreground">{label}</span>
+      <input type="color" value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-16 rounded-lg border border-border bg-transparent" />
     </label>
   )
 }

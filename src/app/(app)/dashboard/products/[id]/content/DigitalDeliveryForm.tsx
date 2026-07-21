@@ -36,21 +36,21 @@ export function DigitalDeliveryForm({ userId, product, updateDigitalDelivery }: 
       <input type="hidden" name="delivery_type" value={deliveryType} />
       <input type="hidden" name="deliverable_file_paths" value={JSON.stringify(filePaths)} />
 
-      <div className="grid border-y border-slate-200 md:grid-cols-[240px_1fr]">
+      <div className="grid border-y border-border md:grid-cols-[240px_1fr]">
         <RowTitle title="Modo de entrega" description="O que o comprador recebe apos pagamento aprovado." />
         <div className="py-6 md:pl-8">
-          <div className="flex max-w-xl rounded-xl bg-[#f4f4f6] p-1">
-            <button type="button" onClick={() => setDeliveryType('external')} className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${deliveryType === 'external' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}>
+          <div className="flex max-w-xl rounded-xl bg-surface p-1">
+            <button type="button" onClick={() => setDeliveryType('external')} className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${deliveryType === 'external' ? 'bg-card text-orange-600 shadow-sm' : 'text-muted hover:text-foreground'}`}>
               Link externo
             </button>
-            <button type="button" onClick={() => setDeliveryType('platform')} className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${deliveryType === 'platform' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}>
+            <button type="button" onClick={() => setDeliveryType('platform')} className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${deliveryType === 'platform' ? 'bg-card text-orange-600 shadow-sm' : 'text-muted hover:text-foreground'}`}>
               Arquivos Flowyn
             </button>
           </div>
         </div>
       </div>
 
-      <div className="grid border-b border-slate-200 md:grid-cols-[240px_1fr]">
+      <div className="grid border-b border-border md:grid-cols-[240px_1fr]">
         <RowTitle title="Acesso" description="Link ou arquivos nativos." />
         <div className="space-y-5 py-6 md:pl-8">
           <Field label="Link de acesso" required={deliveryType === 'external'} hint={deliveryType === 'external' ? 'Obrigatorio para entrega por link externo.' : 'Opcional se voce tambem quiser enviar um link junto dos arquivos.'}>
@@ -74,7 +74,7 @@ export function DigitalDeliveryForm({ userId, product, updateDigitalDelivery }: 
         </div>
       </div>
 
-      <div className="grid border-b border-slate-200 md:grid-cols-[240px_1fr]">
+      <div className="grid border-b border-border md:grid-cols-[240px_1fr]">
         <RowTitle title="Checklist" description="Status da entrega digital." />
         <div className="grid gap-3 py-6 md:grid-cols-3 md:pl-8">
           <CheckItem done={deliveryType === 'platform' || Boolean(product.delivery_url)}>Modo definido</CheckItem>
@@ -98,8 +98,8 @@ export function DigitalDeliveryForm({ userId, product, updateDigitalDelivery }: 
 function RowTitle({ title, description }: { title: string; description: string }) {
   return (
     <div className="py-6 md:pr-8">
-      <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
-      <p className="mt-1 text-sm leading-6 text-slate-400">{description}</p>
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      <p className="mt-1 text-sm leading-6 text-muted">{description}</p>
     </div>
   )
 }
@@ -107,11 +107,11 @@ function RowTitle({ title, description }: { title: string; description: string }
 function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-slate-700">
+      <span className="mb-2 block text-sm font-medium text-foreground">
         {label}{required && <span className="text-red-500">*</span>}
       </span>
       {children}
-      {hint && <span className="mt-1.5 block text-xs leading-5 text-slate-400">{hint}</span>}
+      {hint && <span className="mt-1.5 block text-xs leading-5 text-muted">{hint}</span>}
     </label>
   )
 }
@@ -128,11 +128,11 @@ function FormMessage({ state }: { state: CourseContentFormState }) {
 
 function CheckItem({ done, children }: { done: boolean; children: ReactNode }) {
   return (
-    <div className="flex items-center gap-2 text-sm text-slate-600">
-      <CheckCircle2 className={`h-4 w-4 ${done ? 'text-emerald-600' : 'text-slate-300'}`} />
+    <div className="flex items-center gap-2 text-sm text-muted">
+      <CheckCircle2 className={`h-4 w-4 ${done ? 'text-emerald-600' : 'text-muted'}`} />
       {children}
     </div>
   )
 }
 
-const inputClass = 'h-12 w-full rounded-xl border-0 bg-[#f4f4f6] px-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20'
+const inputClass = 'h-12 w-full rounded-xl border-0 bg-surface px-4 text-sm font-medium text-foreground outline-none transition placeholder:text-muted focus:bg-card focus:ring-2 focus:ring-orange-500/20'

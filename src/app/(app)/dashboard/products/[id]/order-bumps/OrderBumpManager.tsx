@@ -49,8 +49,8 @@ type Props = {
   deleteOrderBump: (id: string, productId: string) => Promise<void>
 }
 
-const fieldClass = 'h-12 w-full rounded-xl border-0 bg-[#f4f4f6] px-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20'
-const labelClass = 'mb-2 block text-sm font-medium text-slate-700'
+const fieldClass = 'h-12 w-full rounded-xl border-0 bg-surface px-4 text-sm font-medium text-foreground outline-none transition placeholder:text-muted focus:bg-card focus:ring-2 focus:ring-orange-500/20'
+const labelClass = 'mb-2 block text-sm font-medium text-foreground'
 
 export function OrderBumpManager({ bumps, plans, productId, userId, createOrderBump, updateOrderBump, deleteOrderBump }: Props) {
   const [showForm, setShowForm] = useState(false)
@@ -139,8 +139,8 @@ export function OrderBumpManager({ bumps, plans, productId, userId, createOrderB
     <div className="mt-10 max-w-6xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900">Ofertas adicionais (Order Bumps)</h3>
-          <p className="mt-1 text-sm text-slate-400">Gerencie as ofertas extras exibidas no checkout.</p>
+          <h3 className="text-lg font-semibold text-foreground">Ofertas adicionais (Order Bumps)</h3>
+          <p className="mt-1 text-sm text-muted">Gerencie as ofertas extras exibidas no checkout.</p>
         </div>
         <button onClick={openNew} className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 text-sm font-semibold text-white transition hover:from-orange-600 hover:to-amber-600">
           <Plus className="h-4 w-4" />
@@ -149,47 +149,47 @@ export function OrderBumpManager({ bumps, plans, productId, userId, createOrderB
       </div>
 
       {bumps.length === 0 && !showForm && (
-        <div className="rounded-2xl border border-slate-200 bg-[#fafafa] px-8 py-12 text-center">
-          <p className="text-sm text-slate-400">Nenhum order bump cadastrado. Clique em &quot;Adicionar&quot; para criar o primeiro.</p>
+        <div className="rounded-2xl border border-border bg-[#fafafa] px-8 py-12 text-center">
+          <p className="text-sm text-muted">Nenhum order bump cadastrado. Clique em &quot;Adicionar&quot; para criar o primeiro.</p>
         </div>
       )}
 
       <div className="space-y-4">
         {bumps.map((bump) => (
-          <div key={bump.id} className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mt-1 text-slate-300">
+          <div key={bump.id} className="flex items-start gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <div className="mt-1 text-muted">
               <GripVertical className="h-5 w-5" />
             </div>
             {bump.image_url ? (
-              <img src={bump.image_url} alt="" className="h-20 w-20 flex-shrink-0 rounded-xl object-cover ring-1 ring-slate-200" />
+              <img src={bump.image_url} alt="" className="h-20 w-20 flex-shrink-0 rounded-xl object-cover ring-1 ring-border" />
             ) : (
-              <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl bg-[#f4f4f6] text-slate-300 ring-1 ring-slate-200">
+              <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl bg-surface text-muted ring-1 ring-border">
                 <ImageIcon className="h-6 w-6" />
               </div>
             )}
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-900">{bump.title}</h4>
+                  <h4 className="text-sm font-semibold text-foreground">{bump.title}</h4>
                   {bump.description && (
-                    <p className="mt-1 text-sm text-slate-500 line-clamp-2">{bump.description}</p>
+                    <p className="mt-1 text-sm text-muted line-clamp-2">{bump.description}</p>
                   )}
                 </div>
                 <div className="flex gap-1">
-                  <button onClick={() => openEdit(bump)} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600">
+                  <button onClick={() => openEdit(bump)} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition hover:bg-surface hover:text-muted">
                     <Pencil className="h-4 w-4" />
                   </button>
-                  <button onClick={() => handleDelete(bump)} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-500">
+                  <button onClick={() => handleDelete(bump)} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition hover:bg-red-50 hover:text-red-500">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
               <div className="mt-2 flex items-center gap-3">
-                <span className="text-sm font-bold text-slate-900">
+                <span className="text-sm font-bold text-foreground">
                   R$ {Number(bump.price).toFixed(2)}
                 </span>
                 {bump.original_price > 0 && bump.original_price > bump.price && (
-                  <span className="text-sm text-slate-400 line-through">
+                  <span className="text-sm text-muted line-through">
                     R$ {Number(bump.original_price).toFixed(2)}
                   </span>
                 )}
@@ -212,7 +212,7 @@ export function OrderBumpManager({ bumps, plans, productId, userId, createOrderB
                 </div>
               )}
               {(!bump.plan_ids || bump.plan_ids.length === 0) && (
-                <p className="mt-2 text-xs text-slate-400">Todos os planos</p>
+                <p className="mt-2 text-xs text-muted">Todos os planos</p>
               )}
             </div>
           </div>
@@ -222,12 +222,12 @@ export function OrderBumpManager({ bumps, plans, productId, userId, createOrderB
       {/* Add / Edit Form Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h3 className="text-lg font-semibold text-slate-900">
+          <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl bg-card shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border px-6 py-4">
+              <h3 className="text-lg font-semibold text-foreground">
                 {editing ? 'Editar Order Bump' : 'Novo Order Bump'}
               </h3>
-              <button onClick={closeForm} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600">
+              <button onClick={closeForm} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition hover:bg-surface hover:text-muted">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -237,7 +237,7 @@ export function OrderBumpManager({ bumps, plans, productId, userId, createOrderB
                 <span className={labelClass}>Imagem de capa</span>
                 {imageUrl ? (
                   <div className="relative mt-1 inline-block">
-                    <img src={imageUrl} alt="" className="h-28 w-44 rounded-xl border border-slate-200 object-cover" />
+                    <img src={imageUrl} alt="" className="h-28 w-44 rounded-xl border border-border object-cover" />
                     <button onClick={() => setImageUrl('')} className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow transition hover:bg-red-600">
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -254,7 +254,7 @@ export function OrderBumpManager({ bumps, plans, productId, userId, createOrderB
 
               <label className="block">
                 <span className={labelClass}>Descricao</span>
-                <textarea className="min-h-16 w-full resize-none rounded-xl border-0 bg-[#f4f4f6] px-4 py-3 text-sm font-medium leading-5 text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20" value={description} onChange={e => setDescription(e.target.value)} placeholder="O que esta sendo oferecido?" />
+                <textarea className="min-h-16 w-full resize-none rounded-xl border-0 bg-surface px-4 py-3 text-sm font-medium leading-5 text-foreground outline-none transition placeholder:text-muted focus:bg-card focus:ring-2 focus:ring-orange-500/20" value={description} onChange={e => setDescription(e.target.value)} placeholder="O que esta sendo oferecido?" />
               </label>
 
               <div className="grid grid-cols-2 gap-3">
@@ -271,9 +271,9 @@ export function OrderBumpManager({ bumps, plans, productId, userId, createOrderB
               <div className="block">
                 <span className={labelClass}>Arquivo de entrega (opcional)</span>
                 {filePath ? (
-                  <div className="mt-1 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                    <FileIcon className="h-4 w-4 shrink-0 text-slate-400" />
-                    <span className="min-w-0 flex-1 truncate text-xs text-slate-600">{filePath.split('/').pop()}</span>
+                  <div className="mt-1 flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2">
+                    <FileIcon className="h-4 w-4 shrink-0 text-muted" />
+                    <span className="min-w-0 flex-1 truncate text-xs text-muted">{filePath.split('/').pop()}</span>
                     <button onClick={() => setFilePath('')} className="shrink-0 text-xs font-semibold text-red-500 hover:text-red-700">Remover</button>
                   </div>
                 ) : (
@@ -284,10 +284,10 @@ export function OrderBumpManager({ bumps, plans, productId, userId, createOrderB
               {plans.length > 0 && (
                 <div className="block">
                   <span className={labelClass}>Planos vinculados</span>
-                  <p className="mb-2 text-xs text-slate-400">Nenhum = aparece em todos</p>
+                  <p className="mb-2 text-xs text-muted">Nenhum = aparece em todos</p>
                   <div className="flex flex-wrap gap-2">
                     {plans.map(plan => (
-                      <label key={plan.id} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition cursor-pointer ${selectedPlanIds.includes(plan.id) ? 'border-orange-300 bg-orange-50 text-orange-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
+                      <label key={plan.id} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition cursor-pointer ${selectedPlanIds.includes(plan.id) ? 'border-orange-300 bg-orange-50 text-orange-700' : 'border-border bg-card text-muted hover:bg-surface'}`}>
                         <input
                           type="checkbox"
                           checked={selectedPlanIds.includes(plan.id)}
@@ -314,8 +314,8 @@ export function OrderBumpManager({ bumps, plans, productId, userId, createOrderB
               )}
             </div>
 
-            <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-4">
-              <button onClick={closeForm} className="rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 transition hover:bg-slate-100">
+            <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
+              <button onClick={closeForm} className="rounded-xl px-4 py-2.5 text-sm font-medium text-muted transition hover:bg-surface">
                 Cancelar
               </button>
               <button onClick={handleSave} disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 text-sm font-semibold text-white transition hover:from-orange-600 hover:to-amber-600 disabled:opacity-60">

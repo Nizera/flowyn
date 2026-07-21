@@ -7,7 +7,7 @@ import { addPlanPixel, removePlanPixel } from '../../../pixels/actions'
 const PLATFORM_BADGES: Record<string, { label: string; icon: string; color: string }> = {
   meta: { label: 'Meta Ads', icon: '/meta.png', color: 'bg-orange-50 border-orange-100 text-orange-600' },
   google: { label: 'Google Ads', icon: '/google.png', color: 'bg-red-50 border-red-100 text-red-700' },
-  tiktok: { label: 'TikTok', icon: '/tiktok.png', color: 'bg-slate-50 border-slate-200 text-slate-600' },
+  tiktok: { label: 'TikTok', icon: '/tiktok.png', color: 'bg-surface border-border text-muted' },
 }
 
 interface Pixel { id: string; name: string; platform: string; pixel_id: string }
@@ -39,10 +39,10 @@ export function PlanPixelSection({ planId, planPixels, availablePixels }: Props)
   }
 
   return (
-    <div className="mt-0 border-t border-slate-100">
+    <div className="mt-0 border-t border-border">
       <button
         onClick={() => setOpen(v => !v)}
-        className="group flex w-full items-center justify-between px-5 py-3 text-xs text-slate-400 transition hover:text-slate-600"
+        className="group flex w-full items-center justify-between px-5 py-3 text-xs text-muted transition hover:text-muted"
       >
         <span className="flex items-center gap-2">
           <ScanLine className="h-3.5 w-3.5" />
@@ -59,22 +59,22 @@ export function PlanPixelSection({ planId, planPixels, availablePixels }: Props)
       {open && (
         <div className="space-y-3 px-5 pb-5">
           {planPixels.length === 0 ? (
-            <p className="text-xs italic text-slate-400">Nenhum pixel vinculado. Adicione um para rastrear conversoes deste plano.</p>
+            <p className="text-xs italic text-muted">Nenhum pixel vinculado. Adicione um para rastrear conversoes deste plano.</p>
           ) : (
             <div className="space-y-2">
               {planPixels.map(pp => {
                 const badge = PLATFORM_BADGES[pp.pixel.platform] ?? PLATFORM_BADGES.meta
                 return (
-                  <div key={pp.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5">
+                  <div key={pp.id} className="flex items-center justify-between rounded-xl border border-border bg-surface px-4 py-2.5">
                     <div className="flex items-center gap-3">
                       <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-0.5 text-[10px] font-bold ${badge.color}`}>
                         <img src={badge.icon} alt={badge.label} className="h-3.5 w-3.5 object-contain" />
                         {badge.label}
                       </span>
-                      <span className="text-sm font-medium text-slate-800">{pp.pixel.name}</span>
-                      <span className="font-mono text-xs text-slate-400">{pp.pixel.pixel_id}</span>
+                      <span className="text-sm font-medium text-foreground">{pp.pixel.name}</span>
+                      <span className="font-mono text-xs text-muted">{pp.pixel.pixel_id}</span>
                     </div>
-                    <button onClick={() => handleRemove(pp.id)} disabled={isPending} className="rounded-lg p-1.5 text-slate-300 transition hover:bg-red-50 hover:text-red-600">
+                    <button onClick={() => handleRemove(pp.id)} disabled={isPending} className="rounded-lg p-1.5 text-muted transition hover:bg-red-50 hover:text-red-600">
                       <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -93,7 +93,7 @@ export function PlanPixelSection({ planId, planPixels, availablePixels }: Props)
               <select
                 onChange={e => { if (e.target.value) handleAdd(e.target.value) }}
                 defaultValue=""
-                className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-orange-300"
+                className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-orange-300"
               >
                 <option value="" disabled>Selecionar pixel...</option>
                 {unlinked.map(p => (
@@ -102,8 +102,8 @@ export function PlanPixelSection({ planId, planPixels, availablePixels }: Props)
                   </option>
                 ))}
               </select>
-              {isPending && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-slate-400" />}
-              <button onClick={() => setShowSelect(false)} className="text-slate-400 transition hover:text-slate-700">
+              {isPending && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted" />}
+              <button onClick={() => setShowSelect(false)} className="text-muted transition hover:text-foreground">
                 <X className="h-4 w-4" />
               </button>
             </div>

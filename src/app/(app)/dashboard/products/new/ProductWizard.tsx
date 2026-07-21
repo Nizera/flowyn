@@ -70,8 +70,8 @@ const INITIAL: ProductDraft = {
   short_description: '',
 }
 
-const fieldClass = 'h-12 w-full rounded-xl border-0 bg-[#f4f4f6] px-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20'
-const textareaClass = 'min-h-28 w-full resize-none rounded-xl border-0 bg-[#f4f4f6] px-4 py-3 text-sm font-medium leading-6 text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20'
+const fieldClass = 'h-12 w-full rounded-xl border-0 bg-surface px-4 text-sm font-medium text-foreground outline-none transition placeholder:text-muted focus:bg-card focus:ring-2 focus:ring-orange-500/20'
+const textareaClass = 'min-h-28 w-full resize-none rounded-xl border-0 bg-surface px-4 py-3 text-sm font-medium leading-6 text-foreground outline-none transition placeholder:text-muted focus:bg-card focus:ring-2 focus:ring-orange-500/20'
 
 export function ProductWizard({
   createProductAction,
@@ -161,15 +161,15 @@ export function ProductWizard({
   }
 
   return (
-    <section className="overflow-hidden rounded-[10px] bg-white px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+    <section className="overflow-hidden rounded-[10px] bg-card px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
-          <Link href="/dashboard/products" className="mt-1 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600" aria-label="Voltar">
+          <Link href="/dashboard/products" className="mt-1 flex h-10 w-10 items-center justify-center rounded-xl border border-border text-muted transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600" aria-label="Voltar">
             <ChevronLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h2 className="text-2xl font-semibold text-slate-950">Criar produto</h2>
-            <p className="mt-2 text-sm text-slate-400">Cadastre a oferta principal. Depois voce configura checkout, entrega e conteudo.</p>
+            <h2 className="text-2xl font-semibold text-foreground">Criar produto</h2>
+            <p className="mt-2 text-sm text-muted">Cadastre a oferta principal. Depois voce configura checkout, entrega e conteudo.</p>
           </div>
         </div>
         <button
@@ -183,7 +183,7 @@ export function ProductWizard({
       </div>
 
       <div className="mt-12 max-w-5xl">
-        <div className="grid border-y border-slate-200 md:grid-cols-[240px_1fr]">
+        <div className="grid border-y border-border md:grid-cols-[240px_1fr]">
           <RowTitle title="Produto" description="Nome e formato da oferta." />
           <div className="space-y-5 py-6 md:pl-8">
             <div className="grid gap-5 lg:grid-cols-2">
@@ -213,21 +213,21 @@ export function ProductWizard({
           </div>
         </div>
 
-        <div className="grid border-b border-slate-200 md:grid-cols-[240px_1fr]">
+        <div className="grid border-b border-border md:grid-cols-[240px_1fr]">
           <RowTitle title="Preco" description="Valor e forma de cobranca." />
           <div className="space-y-5 py-6 md:pl-8">
-            <div className="flex max-w-md rounded-xl bg-[#f4f4f6] p-1">
+            <div className="flex max-w-md rounded-xl bg-surface p-1">
               <button
                 type="button"
                 onClick={() => setBillingType('one_time')}
-                className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${draft.billing_type === 'one_time' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+                className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${draft.billing_type === 'one_time' ? 'bg-card text-orange-600 shadow-sm' : 'text-muted hover:text-foreground'}`}
               >
                 Preco unico
               </button>
               <button
                 type="button"
                 onClick={() => setBillingType('recurring')}
-                className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${draft.billing_type === 'recurring' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+                className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${draft.billing_type === 'recurring' ? 'bg-card text-orange-600 shadow-sm' : 'text-muted hover:text-foreground'}`}
               >
                 Recorrente mensal
               </button>
@@ -245,14 +245,14 @@ export function ProductWizard({
                   placeholder="R$ 97,00"
                 />
               </Field>
-              <span className="pb-4 text-sm font-medium text-slate-400">
+              <span className="pb-4 text-sm font-medium text-muted">
                 {draft.billing_type === 'recurring' ? '/ mes' : 'pagamento unico'}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="grid border-b border-slate-200 md:grid-cols-[240px_1fr]">
+        <div className="grid border-b border-border md:grid-cols-[240px_1fr]">
           <RowTitle title="Checkout" description="Primeira mensagem da pagina de pagamento." />
           <div className="py-6 md:pl-8">
             <Field label="Descricao curta">
@@ -293,8 +293,8 @@ export function ProductWizard({
 function RowTitle({ title, description }: { title: string; description: string }) {
   return (
     <div className="py-6 md:pr-8">
-      <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
-      <p className="mt-1 text-sm leading-6 text-slate-400">{description}</p>
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      <p className="mt-1 text-sm leading-6 text-muted">{description}</p>
     </div>
   )
 }
@@ -312,11 +312,11 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-slate-700">
+      <span className="mb-2 block text-sm font-medium text-foreground">
         {label}{required && <span className="text-red-500">*</span>}
       </span>
       {children}
-      {hint && <span className="mt-2 block text-xs leading-5 text-slate-500">{hint}</span>}
+      {hint && <span className="mt-2 block text-xs leading-5 text-muted">{hint}</span>}
     </label>
   )
 }

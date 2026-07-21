@@ -221,15 +221,15 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
     : null
 
   return (
-    <section className="overflow-hidden rounded-[10px] bg-white px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+    <section className="overflow-hidden rounded-[10px] bg-card px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
-          <Link href={`/dashboard/products/${id}`} className="mt-1 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600">
+          <Link href={`/dashboard/products/${id}`} className="mt-1 flex h-10 w-10 items-center justify-center rounded-xl border border-border text-muted transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h2 className="text-2xl font-semibold text-slate-950">Conteudo</h2>
-            <p className="mt-2 text-sm text-slate-400">Configure a entrega de {product.name}.</p>
+            <h2 className="text-2xl font-semibold text-foreground">Conteudo</h2>
+            <p className="mt-2 text-sm text-muted">Configure a entrega de {product.name}.</p>
           </div>
         </div>
       </div>
@@ -237,13 +237,13 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
       <ProductTabs productId={id} active="content" />
 
       {isMentorship ? (
-        <div className="mt-10 border-y border-slate-200 py-6">
+        <div className="mt-10 border-y border-border py-6">
           <div className="mb-4">
-            <h3 className="text-sm font-semibold text-slate-950">Mentoria</h3>
-            <p className="mt-1 text-sm text-slate-400">Conteudo fica na jornada.</p>
+            <h3 className="text-sm font-semibold text-foreground">Mentoria</h3>
+            <p className="mt-1 text-sm text-muted">Conteudo fica na jornada.</p>
           </div>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <p className="max-w-2xl text-sm leading-6 text-slate-500">
+            <p className="max-w-2xl text-sm leading-6 text-muted">
               Para mentorias, use a aba Mentoria para configurar diagnostico, sessoes, tarefas e acompanhamento dos alunos.
             </p>
             <Link href={`/dashboard/products/${id}/journey`} className="inline-flex h-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 text-sm font-semibold text-white transition hover:from-orange-600 hover:to-amber-600">
@@ -258,9 +258,9 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
       ) : (
         <div className="mt-10 max-w-6xl space-y-0">
           {/* Resumo */}
-          <div className="border-b border-slate-200 py-6">
-            <h3 className="text-sm font-semibold text-slate-950">Resumo</h3>
-            <p className="mt-1 text-sm text-slate-400">Estrutura do curso.</p>
+          <div className="border-b border-border py-6">
+            <h3 className="text-sm font-semibold text-foreground">Resumo</h3>
+            <p className="mt-1 text-sm text-muted">Estrutura do curso.</p>
             <div className="mt-4 grid gap-6 md:grid-cols-3">
               <Metric label="Modulos" value={totalModules} />
               <Metric label="Aulas" value={lessonCount} />
@@ -269,20 +269,20 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
           </div>
 
           {/* Novo modulo */}
-          <div className="border-b border-slate-200 py-6">
-            <h3 className="text-sm font-semibold text-slate-950">Novo modulo</h3>
-            <p className="mt-1 text-sm text-slate-400">Organize a trilha em etapas.</p>
+          <div className="border-b border-border py-6">
+            <h3 className="text-sm font-semibold text-foreground">Novo modulo</h3>
+            <p className="mt-1 text-sm text-muted">Organize a trilha em etapas.</p>
             <div className="mt-4">
               <CourseModuleForm createModule={createModule} />
             </div>
           </div>
 
           {/* Modulos com paginacao */}
-          <div className="border-b border-slate-200 py-6">
+          <div className="border-b border-border py-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-slate-950">Modulos</h3>
-                <p className="mt-1 text-sm text-slate-400">Aulas e materiais do curso.</p>
+                <h3 className="text-sm font-semibold text-foreground">Modulos</h3>
+                <p className="mt-1 text-sm text-muted">Aulas e materiais do curso.</p>
               </div>
               {totalModules > 1 && (
                 <div className="flex items-center gap-2">
@@ -292,7 +292,7 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
                     icon={<ChevronLeft className="h-4 w-4" />}
                     label="Anterior"
                   />
-                  <span className="text-sm font-semibold text-slate-600">
+                  <span className="text-sm font-semibold text-muted">
                     {currentModuleIndex + 1} / {totalModules}
                   </span>
                   <PaginationButton
@@ -307,30 +307,30 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
 
             <div className="mt-4">
               {totalModules === 0 ? (
-                <div className="rounded-lg border border-dashed border-slate-200 px-6 py-12 text-center">
-                  <BookOpen className="mx-auto h-10 w-10 text-slate-300" />
-                  <h3 className="mt-4 font-semibold text-slate-950">Nenhum modulo ainda</h3>
-                  <p className="mt-1 text-sm text-slate-400">Crie o primeiro modulo para comecar a montar a trilha do aluno.</p>
+                <div className="rounded-lg border border-dashed border-border px-6 py-12 text-center">
+                  <BookOpen className="mx-auto h-10 w-10 text-muted" />
+                  <h3 className="mt-4 font-semibold text-foreground">Nenhum modulo ainda</h3>
+                  <p className="mt-1 text-sm text-muted">Crie o primeiro modulo para comecar a montar a trilha do aluno.</p>
                 </div>
               ) : currentModule ? (
                 (() => {
                   const lessons = [...(currentModule.lessons || [])].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
                   const moduleIndex = currentModuleIndex
                   return (
-                    <div className="rounded-lg border border-slate-200">
-                      <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-5">
+                    <div className="rounded-lg border border-border">
+                      <div className="flex items-start justify-between gap-4 border-b border-border p-5">
                         <div className="flex gap-3">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 font-semibold text-orange-600">
                             {moduleIndex + 1}
                           </div>
                           <div>
-                            <h3 className="font-semibold text-slate-950">{currentModule.title}</h3>
-                            {currentModule.description && <p className="mt-1 text-sm text-slate-400">{currentModule.description}</p>}
+                            <h3 className="font-semibold text-foreground">{currentModule.title}</h3>
+                            {currentModule.description && <p className="mt-1 text-sm text-muted">{currentModule.description}</p>}
                           </div>
                         </div>
                         <form action={deleteModule}>
                           <input type="hidden" name="module_id" value={currentModule.id} />
-                          <button className="rounded-xl p-2 text-slate-300 transition hover:bg-red-50 hover:text-red-600" aria-label="Excluir modulo">
+                          <button className="rounded-xl p-2 text-muted transition hover:bg-red-50 hover:text-red-600" aria-label="Excluir modulo">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </form>
@@ -338,16 +338,16 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
 
                       <div className="flex flex-wrap gap-2 p-5">
                         {lessons.length === 0 ? (
-                          <p className="w-full text-sm text-slate-400">Nenhuma aula neste modulo ainda.</p>
+                          <p className="w-full text-sm text-muted">Nenhuma aula neste modulo ainda.</p>
                         ) : lessons.map((lesson) => (
-                          <div key={lesson.id} className="flex items-center gap-2 rounded-xl bg-slate-50 pl-3 pr-1.5 py-1.5 ring-1 ring-slate-200/50">
-                            <Clapperboard className="h-4 w-4 shrink-0 text-slate-400" />
-                            <span className="max-w-36 truncate text-sm font-semibold text-slate-950">{lesson.title}</span>
-                            {lesson.duration_minutes && <span className="text-xs text-slate-400">{lesson.duration_minutes}min</span>}
+                          <div key={lesson.id} className="flex items-center gap-2 rounded-xl bg-surface pl-3 pr-1.5 py-1.5 ring-1 ring-border/50">
+                            <Clapperboard className="h-4 w-4 shrink-0 text-muted" />
+                            <span className="max-w-36 truncate text-sm font-semibold text-foreground">{lesson.title}</span>
+                            {lesson.duration_minutes && <span className="text-xs text-muted">{lesson.duration_minutes}min</span>}
                             {lesson.is_free_preview && <span className="text-[10px] font-bold uppercase text-emerald-600">Preview</span>}
                             <form action={deleteLesson}>
                               <input type="hidden" name="lesson_id" value={lesson.id} />
-                              <button className="rounded-lg p-1.5 text-slate-300 transition hover:bg-red-50 hover:text-red-600" aria-label="Excluir aula">
+                              <button className="rounded-lg p-1.5 text-muted transition hover:bg-red-50 hover:text-red-600" aria-label="Excluir aula">
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
                             </form>
@@ -378,13 +378,13 @@ export default async function CourseContentPage(props: { params: Promise<{ id: s
 function PaginationButton({ href, disabled, icon, label }: { href: string; disabled: boolean; icon: ReactNode; label: string }) {
   if (disabled) {
     return (
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-300">
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted">
         {icon}
       </span>
     )
   }
   return (
-    <Link href={href} scroll={false} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-orange-200 hover:text-orange-600" aria-label={label}>
+    <Link href={href} scroll={false} className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted transition hover:border-orange-200 hover:text-orange-600" aria-label={label}>
       {icon}
     </Link>
   )
@@ -400,12 +400,12 @@ function ProductTabs({ productId, active }: { productId: string; active: string 
     { href: `/dashboard/products/${productId}/order-bumps`, label: 'Order Bumps', icon: ShoppingBag, key: 'order-bumps' },
   ]
   return (
-    <div className="mt-8 flex gap-2 overflow-x-auto border-b border-slate-200">
+    <div className="mt-8 flex gap-2 overflow-x-auto border-b border-border">
       {tabs.map(tab => {
         const Icon = tab.icon
         const isActive = tab.key === active
         return (
-          <Link key={tab.key} href={tab.href} className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${isActive ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-900'}`}>
+          <Link key={tab.key} href={tab.href} className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${isActive ? 'border-orange-500 text-orange-600' : 'border-transparent text-muted hover:text-foreground'}`}>
             <Icon className="h-4 w-4" />
             {tab.label}
           </Link>
@@ -418,8 +418,8 @@ function ProductTabs({ productId, active }: { productId: string; active: string 
 function Metric({ label, value }: { label: string; value: string | number }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-2 text-xl font-semibold text-slate-950">{value}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</p>
+      <p className="mt-2 text-xl font-semibold text-foreground">{value}</p>
     </div>
   )
 }

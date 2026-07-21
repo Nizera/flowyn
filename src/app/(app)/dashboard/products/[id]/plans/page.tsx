@@ -93,15 +93,15 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
   }
 
   return (
-    <section className="overflow-hidden rounded-[10px] bg-white px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+    <section className="overflow-hidden rounded-[10px] bg-card px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
-          <Link href={`/dashboard/products/${productId}`} className="mt-1 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600">
+          <Link href={`/dashboard/products/${productId}`} className="mt-1 flex h-10 w-10 items-center justify-center rounded-xl border border-border text-muted transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h2 className="text-2xl font-semibold text-slate-950">Planos</h2>
-            <p className="mt-2 text-sm text-slate-400">Configure precos e checkouts de {product.name}.</p>
+            <h2 className="text-2xl font-semibold text-foreground">Planos</h2>
+            <p className="mt-2 text-sm text-muted">Configure precos e checkouts de {product.name}.</p>
           </div>
         </div>
       </div>
@@ -109,7 +109,7 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
       <ProductTabs productId={productId} active="plans" />
 
       <div className="mt-10 max-w-6xl">
-        <div className="grid border-y border-slate-200 md:grid-cols-[240px_1fr]">
+        <div className="grid border-y border-border md:grid-cols-[240px_1fr]">
           <RowTitle title="Novo plano" description="Adicione uma oferta de pagamento." />
           <form action={createPlan} className="grid gap-5 py-6 md:pl-8 lg:grid-cols-[1fr_180px_220px_auto] lg:items-end">
             <Field label="Nome do plano">
@@ -131,22 +131,22 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
           </form>
         </div>
 
-        <div className="grid border-b border-slate-200 md:grid-cols-[240px_1fr]">
+        <div className="grid border-b border-border md:grid-cols-[240px_1fr]">
           <RowTitle title="Planos cadastrados" description="Edite valores e pixels por plano." />
           <div className="py-6 md:pl-8">
             {!plans || plans.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-slate-200 px-6 py-12 text-center">
-                <h3 className="font-semibold text-slate-950">Nenhum plano cadastrado</h3>
-                <p className="mt-1 text-sm text-slate-400">Crie seu primeiro plano para publicar um checkout.</p>
+              <div className="rounded-lg border border-dashed border-border px-6 py-12 text-center">
+                <h3 className="font-semibold text-foreground">Nenhum plano cadastrado</h3>
+                <p className="mt-1 text-sm text-muted">Crie seu primeiro plano para publicar um checkout.</p>
               </div>
             ) : (
-              <div className="overflow-hidden rounded-lg border border-slate-200">
+              <div className="overflow-hidden rounded-lg border border-border">
                 {plans.map(plan => {
                   const planPixels = ((allPlanPixels ?? []) as unknown as Array<{ id: string; plan_id: string; pixel: PixelRow | null }>)
                     .filter((pp): pp is { id: string; plan_id: string; pixel: PixelRow } => pp.plan_id === plan.id && pp.pixel != null)
                     .map((pp) => ({ id: pp.id, pixel: { ...pp.pixel, pixel_id: decryptApiKey(pp.pixel.pixel_id) } }))
                   return (
-                    <div key={plan.id} className="border-b border-slate-100 last:border-b-0">
+                    <div key={plan.id} className="border-b border-border last:border-b-0">
                       <EditablePlanCard plan={plan} productId={productId} />
                       <PlanPixelSection
                         planId={plan.id}
@@ -165,7 +165,7 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
   )
 }
 
-const inputClass = 'h-12 w-full rounded-xl border-0 bg-[#f4f4f6] px-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20'
+const inputClass = 'h-12 w-full rounded-xl border-0 bg-surface px-4 text-sm font-medium text-foreground outline-none transition placeholder:text-muted focus:bg-card focus:ring-2 focus:ring-orange-500/20'
 
 function ProductTabs({ productId, active }: { productId: string; active: string }) {
   const tabs = [
@@ -177,12 +177,12 @@ function ProductTabs({ productId, active }: { productId: string; active: string 
     { href: `/dashboard/products/${productId}/order-bumps`, label: 'Order Bumps', icon: ShoppingBag, key: 'order-bumps' },
   ]
   return (
-    <div className="mt-8 flex gap-2 overflow-x-auto border-b border-slate-200">
+    <div className="mt-8 flex gap-2 overflow-x-auto border-b border-border">
       {tabs.map(tab => {
         const Icon = tab.icon
         const isActive = tab.key === active
         return (
-          <Link key={tab.key} href={tab.href} className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${isActive ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-900'}`}>
+          <Link key={tab.key} href={tab.href} className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${isActive ? 'border-orange-500 text-orange-600' : 'border-transparent text-muted hover:text-foreground'}`}>
             <Icon className="h-4 w-4" />
             {tab.label}
           </Link>
@@ -195,8 +195,8 @@ function ProductTabs({ productId, active }: { productId: string; active: string 
 function RowTitle({ title, description }: { title: string; description: string }) {
   return (
     <div className="py-6 md:pr-8">
-      <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
-      <p className="mt-1 text-sm leading-6 text-slate-400">{description}</p>
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      <p className="mt-1 text-sm leading-6 text-muted">{description}</p>
     </div>
   )
 }
@@ -204,7 +204,7 @@ function RowTitle({ title, description }: { title: string; description: string }
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-slate-700">{label}</span>
+      <span className="mb-2 block text-sm font-medium text-foreground">{label}</span>
       {children}
     </label>
   )
