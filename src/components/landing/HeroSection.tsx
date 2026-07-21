@@ -52,7 +52,7 @@ export default function HeroSection() {
   }, [])
 
   return (
-    <section ref={sectionRef} className="h-screen relative hero-fade">
+    <section ref={sectionRef} className="h-screen relative">
       {/* Fixed Pill Navbar */}
       <nav
         className={`fixed top-0 left-1/2 z-50 -translate-x-1/2 transition-all duration-300 pt-3 md:pt-4 ${
@@ -129,6 +129,7 @@ export default function HeroSection() {
 
           <div className="noise-overlay absolute inset-0 z-10" />
           <div className="absolute inset-0 z-20 bg-gradient-to-b from-[#070908]/30 via-transparent to-[#070908]/70" />
+          <div className="absolute bottom-0 left-0 right-0 h-[200px] z-40 pointer-events-none" style={{ background: 'linear-gradient(to bottom, transparent, #070908)' }} />
 
           {/* Hero Content */}
           <div className="absolute left-0 right-0 z-30 p-6 md:p-10 lg:p-14 bottom-8 md:bottom-14">

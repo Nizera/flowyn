@@ -130,19 +130,6 @@ body {
   box-shadow: 0 0 40px rgba(249, 115, 22, 0.12);
 }
 
-/* ── Hero → Problem Section Transition ── */
-.hero-fade::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 180px;
-  background: linear-gradient(to bottom, transparent, #070908);
-  pointer-events: none;
-  z-index: 40;
-}
-
 .problem-section {
   position: relative;
   overflow: hidden;
