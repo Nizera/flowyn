@@ -55,7 +55,7 @@ function TiltCard({ children, className }: { children: React.ReactNode; classNam
 
 export default function RecursosSection() {
   return (
-    <section id="recursos" className="relative bg-[#070908] px-4 py-16 md:px-6 md:py-24 overflow-hidden">
+    <section id="recursos" className="relative bg-[#070908] px-4 py-16 md:px-6 md:py-24">
       <div className="bg-noise absolute inset-0 opacity-[0.03] pointer-events-none" />
 
       <div className="relative mx-auto max-w-7xl">
