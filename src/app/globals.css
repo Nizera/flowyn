@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @plugin "../../node_modules/tailwindcss-animate";
 
-@theme inline {
+@theme {
   --color-background: #ffffff;
   --color-foreground: #1a1a1a;
   --color-primary: #f97316;
