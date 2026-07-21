@@ -72,7 +72,7 @@ function SubscriptionBanner({ subscription }: { subscription: AppLayoutUIProps['
   return (
     <Link
       href="/dashboard/settings/subscription"
-      className="mx-4 mt-4 flex items-center justify-between gap-3 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800 transition hover:bg-orange-100 md:mx-8"
+      className="mx-4 mt-4 flex items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary transition hover:bg-primary/15 md:mx-8"
     >
       <span className="flex items-center gap-2">
         <CalendarClock className="h-4 w-4" />
@@ -102,9 +102,9 @@ function notifIcon(id: string) {
 }
 
 function notifBg(id: string) {
-  if (id.startsWith('sale-')) return 'bg-emerald-50'
-  if (id.startsWith('pending-')) return 'bg-amber-50'
-  return 'bg-orange-50'
+  if (id.startsWith('sale-')) return 'bg-emerald-500/15'
+  if (id.startsWith('pending-')) return 'bg-amber-500/15'
+  return 'bg-orange-500/15'
 }
 
 export function AppLayoutUI({ children, profile, subscription, notifications }: AppLayoutUIProps) {

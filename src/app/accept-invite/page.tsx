@@ -100,10 +100,10 @@ function AcceptInviteForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-surface p-4">
       <div className="w-full max-w-md rounded-3xl bg-card p-10 shadow-2xl">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-black">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-foreground">
             <Lock className="h-7 w-7 text-white" />
           </div>
           <h1 className="text-2xl font-extrabold text-foreground">Crie sua senha</h1>
@@ -138,7 +138,7 @@ function AcceptInviteForm() {
           <button
             type="submit"
             disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-black py-4 font-bold text-white transition hover:bg-slate-800 disabled:opacity-70"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-foreground py-4 font-bold text-white transition hover:bg-surface-elevated disabled:opacity-70"
           >
             {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle className="h-5 w-5" />}
             {loading ? 'Ativando...' : 'Ativar minha conta'}
@@ -170,7 +170,7 @@ function PasswordField({
           type={visible ? 'text' : 'password'}
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-12 text-foreground outline-none transition focus:border-black focus:bg-card"
+          className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-12 text-foreground outline-none transition focus:border-primary focus:bg-card"
           placeholder="Minimo 8 caracteres"
           required
         />

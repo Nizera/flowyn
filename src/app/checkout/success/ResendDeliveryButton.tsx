@@ -34,18 +34,18 @@ export function ResendDeliveryButton({ orderId }: { orderId: string }) {
         value={customerEmail}
         onChange={(event) => setCustomerEmail(event.target.value)}
         placeholder="E-mail usado na compra"
-        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-orange-300 focus:ring-2 focus:ring-orange-100"
+        className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground outline-none transition placeholder:text-muted focus:border-orange-300 focus:ring-2 focus:ring-orange-100"
       />
       <button
         type="button"
         onClick={handleResend}
         disabled={loading || !customerEmail}
-        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-sm font-bold text-foreground transition hover:bg-background disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
         {loading ? 'Reenviando...' : 'Reenviar e-mail'}
       </button>
-      {message && <p className="text-sm font-medium text-slate-600">{message}</p>}
+      {message && <p className="text-sm font-medium text-muted">{message}</p>}
     </div>
   )
 }

@@ -79,8 +79,8 @@ export async function POST(req: NextRequest) {
     // Check Meta rate limit from last response
     const budget = checkSyncBudget(parseMetaRateLimitHeader(syncResult.rateLimitHeader))
 
-    // Record usage
-    await trackAdAccountUsage(user.id, ad_account_id, syncResult.totalApiCalls, syncResult.rateLimitHeader)
+    // Record usage (endpoint explícito, vide correção W6/C6)
+    await trackAdAccountUsage(user.id, ad_account_id, syncResult.totalApiCalls, syncResult.rateLimitHeader, 'sync-expanded')
 
     // Update last sync timestamp
     await supabase

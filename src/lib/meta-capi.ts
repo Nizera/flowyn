@@ -1,8 +1,10 @@
 import { createAdminClient } from '@/utils/supabase/admin'
 import { decryptApiKey } from '@/lib/encryption'
 import crypto from 'crypto'
+// CORREÇÃO W5 (auditoria tracking): META_GRAPH_API era hardcoded aqui e em
+// meta-graph-api.ts. Agora importamos o GRAPH_API canonico (single source of truth).
+import { GRAPH_API } from '@/lib/meta-graph-api'
 
-const META_GRAPH_API = 'https://graph.facebook.com/v21.0'
 const ACCESS_TOKEN = process.env.META_CAPI_ACCESS_TOKEN || ''
 
 export interface CapiOrderData {
@@ -95,7 +97,7 @@ export async function sendCapiEvent(orderData: CapiOrderData) {
   }
 
   try {
-    const response = await fetch(`${META_GRAPH_API}/${pixelId}/events`, {
+    const response = await fetch(`${GRAPH_API}/${pixelId}/events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

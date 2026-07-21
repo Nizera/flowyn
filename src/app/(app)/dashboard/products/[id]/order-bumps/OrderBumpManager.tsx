@@ -149,7 +149,7 @@ export function OrderBumpManager({ bumps, plans, productId, userId, createOrderB
       </div>
 
       {bumps.length === 0 && !showForm && (
-        <div className="rounded-2xl border border-border bg-[#fafafa] px-8 py-12 text-center">
+        <div className="rounded-2xl border border-border bg-surface px-8 py-12 text-center">
           <p className="text-sm text-muted">Nenhum order bump cadastrado. Clique em &quot;Adicionar&quot; para criar o primeiro.</p>
         </div>
       )}

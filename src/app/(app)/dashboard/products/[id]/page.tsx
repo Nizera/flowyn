@@ -104,7 +104,7 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
       <ProductTabs productId={id} active="details" />
 
       <form id="product-details-form" action={updateProduct} className="mt-10 max-w-6xl">
-        <div className="flex items-center gap-4 rounded-xl border border-border bg-[#f8fafc] px-5 py-4 mb-6">
+        <div className="flex items-center gap-4 rounded-xl border border-border bg-surface px-5 py-4 mb-6">
           <label className="relative inline-flex cursor-pointer items-center">
             <input type="checkbox" name="is_public" defaultChecked={product.is_public} className="peer sr-only" />
             <div className="h-6 w-11 rounded-full bg-surface after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-card after:transition-all peer-checked:bg-orange-500 peer-checked:after:translate-x-full" />

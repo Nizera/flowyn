@@ -82,18 +82,22 @@ export function checkSyncBudget(rateLimitInfo: MetaRateLimitInfo | null): SyncBu
 }
 
 // Track usage per ad account (not per user) since Meta limits are per ad account
+// CORREÇÃO W6/C6 (auditoria tracking): o endpoint era hardcoded para 'sync-expanded',
+// inflando contagem de sync-expanded mesmo quando a chamada vinha de /sync. Agora
+// o caller passa o nome do endpoint explicitamente.
 export async function trackAdAccountUsage(
   userId: string,
   adAccountId: string,
   calls: number,
-  rateLimitHeader: string | null
+  rateLimitHeader: string | null,
+  endpoint: string = 'sync-expanded'
 ) {
   const supabase = createAdminClient()
   const rateLimitInfo = parseMetaRateLimitHeader(rateLimitHeader)
 
   await supabase.from('meta_api_usage').insert({
     user_id: userId,
-    endpoint: 'sync-expanded',
+    endpoint,
     calls_made: calls,
     window_start: new Date().toISOString(),
   })

@@ -9,8 +9,15 @@ import {
   trackAdAccountUsage,
   APP_LEVEL_CALLS_LIMIT_PER_HOUR,
 } from '@/lib/meta-rate-limit'
-import { GRAPH_API } from '@/lib/meta-graph-api'
+import { syncAccountFull } from '@/lib/meta-sync'
 
+// CORREÇÃO C3 (auditoria tracking): a rota básica /syncinskiows Insights sem insight_level,
+// ad_set_id, ad_id e usa onConflict obsoleto, gerando rows que violam o NOT NULL de
+// insight_level e nunca casam com queries downstream (.eq('insight_level','campaign')).
+// Agora /sync e /sync-expanded share a mesma implementação canonical (syncAccountFull),
+// que grava todos os níveis (campaign/adset/ad) com todos os action_types extras
+// (landing_page_view, initiate_checkout, add_to_cart, purchase). Erro C2 do auditor
+// (reduceInsights ler campos que basic sync nunca escrevia) fica resolvido por tabela.
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -71,73 +78,28 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // 1 API call: Fetch campaign-level insights
-    const now = new Date()
-    const since = new Date(now)
-    since.setDate(now.getDate() - 90)
-    const until = now.toISOString().slice(0, 10)
-    const sinceStr = since.toISOString().slice(0, 10)
+    // Delegate to the canonical sync implementation (same as /sync-expanded)
+    const admin = (await import('@/utils/supabase/admin')).createAdminClient()
+    const result = await syncAccountFull(admin, user.id, ad_account_id, accessToken)
 
-    const insightsRes = await fetch(
-      `${GRAPH_API}/act_${ad_account_id}/insights?fields=campaign_id,campaign_name,impressions,clicks,spend,ctr,cpc,cpm,reach,actions,action_values&level=campaign&time_increment=1&time_range={'since':'${sinceStr}','until':'${until}'}&access_token=${accessToken}`
-    )
-
-    // Read Meta's rate limit headers from response
-    const metaRateHeader = insightsRes.headers.get('x-business-use-case-usage')
-      || insightsRes.headers.get('x-ad-account-usage')
-      || insightsRes.headers.get('x-fb-ads-insights-throttle')
-    const metaRateLimitInfo = parseMetaRateLimitHeader(metaRateHeader)
-
-    // Check Meta's actual rate limit budget before proceeding
-    const budget = checkSyncBudget(metaRateLimitInfo)
-    if (!budget.allowed) {
-      return NextResponse.json({
-        error: 'Meta API rate limit exceeded',
-        tier: budget.tier,
-        throttle_percentage: budget.throttlePercentage,
-        retry_after_seconds: budget.retryAfterSeconds,
-        meta_limit: true,
-      }, { status: 429 })
-    }
-
-    const insightsData = await insightsRes.json()
-
-    if (insightsData.error) {
-      return NextResponse.json({ error: insightsData.error.message }, { status: 500 })
-    }
-
-    // Record this API call (1 call made) + Meta's actual rate limit info
-    await trackAdAccountUsage(user.id, ad_account_id, 1, metaRateHeader)
-
-    // Upsert each row into ad_insights_cache
-    let rowsSynced = 0
-    if (insightsData.data && insightsData.data.length > 0) {
-      for (const row of insightsData.data) {
-        const leads = row.actions
-          ? row.actions.find((a: any) => a.action_type === 'lead')?.value || 0
-          : 0
-
-        await supabase.from('ad_insights_cache').upsert(
-          {
-            ad_account_id: ad_account_id,
-            campaign_id: row.campaign_id,
-            campaign_name: row.campaign_name,
-            spend: parseFloat(row.spend || '0'),
-            clicks: parseInt(row.clicks || '0'),
-            impressions: parseInt(row.impressions || '0'),
-            reach: parseInt(row.reach || '0'),
-            leads: parseInt(leads),
-            cpc: parseFloat(row.cpc || '0'),
-            cpm: parseFloat(row.cpm || '0'),
-            ctr: parseFloat(row.ctr || '0'),
-            cost_per_lead: leads > 0 ? parseFloat(row.spend || '0') / parseInt(leads) : 0,
-            date: row.date_start,
-          },
-          { onConflict: 'ad_account_id,campaign_id,date' }
-        )
-        rowsSynced++
+    if (result.rateLimitHeader) {
+      const metaRateLimitInfo = parseMetaRateLimitHeader(result.rateLimitHeader)
+      const budget = checkSyncBudget(metaRateLimitInfo)
+      if (!budget.allowed) {
+        return NextResponse.json({
+          error: 'Meta API rate limit exceeded',
+          tier: budget.tier,
+          throttle_percentage: budget.throttlePercentage,
+          retry_after_seconds: budget.retryAfterSeconds,
+          meta_limit: true,
+          rows_synced: result.totalRowsSynced,
+        }, { status: 429 })
       }
     }
+
+    // CORREÇÃO W6-sync (auditoria tracking): trackAdAccountUsage agora aceita o nome do
+    // endpoint explicitamente para distinguish /sync de /sync-expanded no analytics.
+    await trackAdAccountUsage(user.id, ad_account_id, result.totalApiCalls, result.rateLimitHeader, 'sync')
 
     // Update last sync timestamp
     await supabase
@@ -151,20 +113,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       account_id: ad_account_id,
-      rows_synced: rowsSynced,
+      rows_synced: result.totalRowsSynced,
       synced_at: new Date().toISOString(),
+      errors: result.errors,
       api_usage: {
         app_current: updatedAppUsage,
         app_max: APP_LEVEL_CALLS_LIMIT_PER_HOUR,
         app_remaining: APP_LEVEL_CALLS_LIMIT_PER_HOUR - updatedAppUsage,
         reset_at: new Date(new Date().setHours(new Date().getHours() + 1, 0, 0, 0)).toISOString(),
       },
-      meta_rate_limit: metaRateLimitInfo ? {
-        tier: metaRateLimitInfo.ads_api_access_tier,
-        throttle_percentage: Math.max(metaRateLimitInfo.app_id_util_pct, metaRateLimitInfo.acc_id_util_pct),
-        app_util_pct: metaRateLimitInfo.app_id_util_pct,
-        account_util_pct: metaRateLimitInfo.acc_id_util_pct,
-      } : null,
     })
   } catch (err) {
     console.error('[Meta Sync] Error:', err)

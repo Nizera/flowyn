@@ -64,7 +64,7 @@ export function PaymentPolling({ orderId }: { orderId: string }) {
   }
 
   return (
-    <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-400">
+    <div className="mt-4 flex items-center justify-center gap-2 text-sm text-muted">
       <Loader2 className="h-4 w-4 animate-spin" />
       <span>Verificando pagamento...</span>
     </div>

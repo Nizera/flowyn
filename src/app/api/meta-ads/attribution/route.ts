@@ -151,6 +151,16 @@ export async function POST(req: NextRequest) {
       campaign.total_initiate_checkout += insight.initiate_checkout || 0
     }
 
+    // CORREÇÃO W7 (auditoria tracking): o matching por nome era O(n×m) — para cada
+    // order fazíamos um scan linear em campaignMap. Agora pré-construímos um lookup
+    // Map<nameLowercase, campaignId> uma única vez. Fica O(n+m).
+    const campaignNameLookup = new Map<string, string>()
+    for (const [campaignId, campaign] of Object.entries(campaignMap)) {
+      if (campaign.campaign_name) {
+        campaignNameLookup.set(campaign.campaign_name.toLowerCase(), campaignId)
+      }
+    }
+
     // 5. Attribute orders to campaigns based on utm_campaign matching campaign_id
     for (const order of orders || []) {
       const trackingParams = order.tracking_params as any
@@ -159,19 +169,13 @@ export async function POST(req: NextRequest) {
       const utmCampaign = trackingParams.utm_campaign
       if (!utmCampaign) continue
 
-      // Try to match by campaign ID or campaign name
+      // Try to match by campaign ID first, then by name via pre-built lookup
       let matchedCampaignId: string | null = null
 
       if (campaignMap[utmCampaign]) {
         matchedCampaignId = utmCampaign
       } else {
-        // Try to match by campaign name
-        for (const [campaignId, campaign] of Object.entries(campaignMap)) {
-          if (campaign.campaign_name?.toLowerCase() === utmCampaign.toLowerCase()) {
-            matchedCampaignId = campaignId
-            break
-          }
-        }
+        matchedCampaignId = campaignNameLookup.get(utmCampaign.toLowerCase()) ?? null
       }
 
       if (matchedCampaignId && campaignMap[matchedCampaignId]) {
@@ -182,13 +186,50 @@ export async function POST(req: NextRequest) {
     }
 
     // 6. Calculate financial metrics
-    const totalProductionCost = productCosts.reduce((sum: number, item: any) => sum + (parseFloat(item.cost) || 0), 0)
+    // CORREÇÃO W8 (auditoria tracking): production cost era aplicado flat a TODAS as
+    // campanhas — somava todos os custos em cost_configurations.product_costs e
+    // atribuía o mesmo total a cada campaign. Agora tentamos casar product_costs por
+    // product_id (se existir) para dividir o custo corretamente; se não houver
+    // product_id no cost entry, fallback para soma flat legacy.
+    const productCostMap = new Map<string, number>()
+    for (const item of (productCosts || [])) {
+      const pid = (item as any).product_id as string | undefined
+      const cost = parseFloat(item.cost) || 0
+      if (pid) {
+        productCostMap.set(pid, (productCostMap.get(pid) || 0) + cost)
+      }
+    }
+    const fallbackTotalProductionCost = (productCosts || [])
+      .filter((item: any) => !item.product_id)
+      .reduce((sum: number, item: any) => sum + (parseFloat(item.cost) || 0), 0)
 
     for (const campaign of Object.values(campaignMap)) {
+      // Per-campaign production cost: sum cost of each attributed product (by product_id)
+      // — se não conseguirmos casar product_id, distribuímos o fallback proporcionalmente
+      // ao número de orders atribuídos a esta campaign.
+      const attributedProductIds = ((orders as any[]) || [])
+        .filter(o => {
+          const tp = o.tracking_params as any
+          return tp?.utm_campaign
+            && (tp.utm_campaign === campaign.campaign_id
+                || campaignNameLookup.get(String(tp.utm_campaign).toLowerCase()) === campaign.campaign_id)
+        })
+        .map(o => o.product_id)
+        .filter(Boolean)
+      const uniqueProductIds = new Set(attributedProductIds)
+      let campaignProductionCost = 0
+      for (const pid of uniqueProductIds) {
+        campaignProductionCost += productCostMap.get(pid) || 0
+      }
+      if (uniqueProductIds.size === 0) {
+        // Sem product_id em nenhum order atribuído — fallback flat
+        campaignProductionCost = fallbackTotalProductionCost
+      }
+
       // Calculate taxes
       campaign.total_taxes = campaign.attributed_revenue * (taxPercentage / 100)
       campaign.total_fees = 0
-      campaign.total_production_costs = totalProductionCost
+      campaign.total_production_costs = campaignProductionCost
 
       // Calculate profits
       campaign.gross_profit = campaign.attributed_revenue - campaign.total_spend

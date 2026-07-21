@@ -1,7 +1,8 @@
 'use client'
 
 import Script from 'next/script'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
+import { isValidPixelId } from '@/lib/pixel-id-validation'
 
 interface PixelConfig {
   platform: 'meta' | 'google' | 'tiktok'
@@ -32,9 +33,29 @@ declare global {
 }
 
 export function PixelScripts({ pixels }: Props) {
-  const metaPixels   = pixels.filter(p => p.platform === 'meta')
-  const googlePixels = pixels.filter(p => p.platform === 'google')
-  const tiktokPixels = pixels.filter(p => p.platform === 'tiktok')
+  // CORREÇÃO W1 (auditoria tracking): valida cada pixel_id contra um regex estrito
+  // antes de injetar em strings de JS. IDs inválidos são descartados silenciosamente
+  // para não quebrar o carregamento de pixels válidos na mesma página.
+  // CORREÇÃO W2 (auditoria tracking): useMemo para estabilizar as referências de
+  // array e evitar que o useEffect re-rode a cada render do parent.
+  const metaPixels = useMemo(
+    () => pixels.filter(p => p.platform === 'meta' && isValidPixelId('meta', p.pixel_id)),
+    [pixels]
+  )
+  const googlePixels = useMemo(
+    () => pixels.filter(p => p.platform === 'google' && isValidPixelId('google', p.pixel_id)),
+    [pixels]
+  )
+  const tiktokPixels = useMemo(
+    () => pixels.filter(p => p.platform === 'tiktok' && isValidPixelId('tiktok', p.pixel_id)),
+    [pixels]
+  )
+
+  // Memoize a string signature to detect actual changes (arrays come from props
+  // with new refs every render even when contents are identical).
+  const metaSig = useMemo(() => metaPixels.map(p => p.pixel_id).join(','), [metaPixels])
+  const googleSig = useMemo(() => googlePixels.map(p => p.pixel_id).join(','), [googlePixels])
+  const tiktokSig = useMemo(() => tiktokPixels.map(p => p.pixel_id).join(','), [tiktokPixels])
 
   // Fire PageView on mount and register global purchase handler
   useEffect(() => {
@@ -84,7 +105,8 @@ export function PixelScripts({ pixels }: Props) {
     }
 
     return () => { delete window.firePixelPurchase }
-  }, [metaPixels, googlePixels, tiktokPixels])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metaSig, googleSig, tiktokSig])
 
   return (
     <>

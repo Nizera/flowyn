@@ -48,17 +48,56 @@ export async function syncAccountFull(
   const timeRange = getDateRange()
   const timeRangeObj = JSON.parse(timeRange)
 
-  // Clear stale insights before re-syncing to prevent zero-rows from overwriting real data
-  const { error: deleteError } = await supabase
-    .from('ad_insights_cache')
-    .delete()
+  // CORREÇÃO W9 (auditoria tracking): advisory lock defensivo via sync_lock_until.
+  // Tenta atomically atualizar a row com uma condition (lock expirado); se a coluna
+  // não existe no banco ainda, capturamos o erro e seguimos sem lock.
+  // Janela de lock: 5 min (sync típico leva <2 min).
+  const lockUntil = new Date(Date.now() + 5 * 60_000).toISOString()
+  const { error: lockError } = await supabase
+    .from('ad_accounts')
+    .update({ sync_lock_until: lockUntil })
     .eq('ad_account_id', adAccountId)
-    .gte('date', timeRangeObj.since)
-    .lte('date', timeRangeObj.until)
-
-  if (deleteError) {
-    errors.push(`Clear old insights: ${deleteError.message}`)
+    .eq('user_id', userId)
+    .or(`sync_lock_until.is.null,sync_lock_until.lt.${new Date().toISOString()}`)
+  if (lockError) {
+    // Se a coluna não existir (migration ainda não aplicada), segue sem lock
+    if (!/column .* does not exist|Could not find the column/i.test(lockError.message)) {
+      console.warn('[Meta Sync] Lock check failed (continuing):', lockError.message)
+    } else {
+      console.warn('[Meta Sync] sync_lock_until column not applied yet — running without advisory lock. Apply migration 20260721001.')
+    }
+  } else {
+    // Check how many rows were affected (only 1 should be updated if we got the lock)
+    // Se 0 rows afetadas, alguém já está com o lock ativo — aborted avoid duplicate work
+    const { data: lockAccount } = await supabase
+      .from('ad_accounts')
+      .select('sync_lock_until')
+      .eq('ad_account_id', adAccountId)
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (lockAccount && lockAccount.sync_lock_until !== lockUntil) {
+      // Outro call já possui o lock — abort
+      return {
+        totalApiCalls: 0,
+        totalRowsSynced: 0,
+        errors: ['Sync já em andamento para esta conta (advisory lock ativo). Tente novamente em alguns minutos.'],
+        rateLimitHeader: null,
+      }
+    }
   }
+
+  try {
+    // Clear stale insights before re-syncing to prevent zero-rows from overwriting real data
+    const { error: deleteError } = await supabase
+      .from('ad_insights_cache')
+      .delete()
+      .eq('ad_account_id', adAccountId)
+      .gte('date', timeRangeObj.since)
+      .lte('date', timeRangeObj.until)
+
+    if (deleteError) {
+      errors.push(`Clear old insights: ${deleteError.message}`)
+    }
 
   function metaApiCall(url: string): Promise<{ data: any; header: string | null }> {
     return fetch(url).then(async res => {
@@ -260,8 +299,20 @@ export async function syncAccountFull(
     }
 
     for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+      // CORREÇÃO W3 (auditoria tracking): o filtro original descartava rows com
+      // spend/impressions/clicks/conversions = 0, perdendo dias que só tinham eventos
+      // de funil orgânico (landing_page_views, initiate_checkout, add_to_cart).
+      // Agora preservamos rows com qualquer活动 relevante.
       const batch = rows.slice(i, i + BATCH_SIZE).map(mapRow)
-        .filter(row => row.spend > 0 || row.impressions > 0 || row.clicks > 0 || row.conversions > 0)
+        .filter(row =>
+          row.spend > 0
+          || row.impressions > 0
+          || row.clicks > 0
+          || row.conversions > 0
+          || row.landing_page_views > 0
+          || row.initiate_checkout > 0
+          || row.add_to_cart > 0
+        )
 
       if (batch.length === 0) continue
 

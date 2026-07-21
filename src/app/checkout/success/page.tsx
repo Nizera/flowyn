@@ -32,13 +32,13 @@ function productTypeLabel(productType?: string | null) {
 
 function UnavailableState({ title, message }: { title: string; message: string }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-white to-orange-50 p-4">
-      <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl">
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-card to-orange-50 p-4">
+      <section className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center shadow-xl">
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-amber-100">
           <ShieldCheck className="h-10 w-10 text-amber-600" />
         </div>
-        <h1 className="text-2xl font-black text-slate-950">{title}</h1>
-        <p className="mt-3 leading-7 text-slate-500">{message}</p>
+        <h1 className="text-2xl font-black text-foreground">{title}</h1>
+        <p className="mt-3 leading-7 text-muted">{message}</p>
       </section>
     </main>
   )
@@ -67,13 +67,13 @@ export default async function CheckoutSuccessPage(props: {
 
   if (!order || order.status !== 'paid') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-white to-orange-50 p-4">
-        <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl">
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-card to-orange-50 p-4">
+        <section className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center shadow-xl">
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-amber-100">
             <ShieldCheck className="h-10 w-10 text-amber-600" />
           </div>
-          <h1 className="text-2xl font-black text-slate-950">Pagamento em processamento</h1>
-          <p className="mt-3 leading-7 text-slate-500">A confirmacao ainda nao chegou. Verificando automaticamente...</p>
+          <h1 className="text-2xl font-black text-foreground">Pagamento em processamento</h1>
+          <p className="mt-3 leading-7 text-muted">A confirmacao ainda nao chegou. Verificando automaticamente...</p>
           <PaymentPolling orderId={orderId} />
         </section>
       </main>
@@ -113,16 +113,16 @@ export default async function CheckoutSuccessPage(props: {
   const loginUrl = `/login?redirect=${encodeURIComponent(accessPath)}`
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-orange-50 p-4">
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 via-card to-orange-50 p-4">
       {activePixels.length > 0 && <PixelFireBackup pixels={activePixels} amount={Number(order.amount)} orderId={orderId} />}
-      <section className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl sm:p-10">
+      <section className="w-full max-w-lg rounded-3xl border border-border bg-card p-8 text-center shadow-xl sm:p-10">
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
           <CheckCircle2 className="h-10 w-10 text-emerald-600" />
         </div>
 
         <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">Pagamento aprovado</p>
-        <h1 className="mt-2 text-3xl font-black text-slate-950">Compra confirmada!</h1>
-        <p className="mt-3 text-lg font-bold text-slate-800">{product.name}</p>
+        <h1 className="mt-2 text-3xl font-black text-foreground">Compra confirmada!</h1>
+        <p className="mt-3 text-lg font-bold text-foreground">{product.name}</p>
 
         {isPlatformProduct ? (
           <>
@@ -140,7 +140,7 @@ export default async function CheckoutSuccessPage(props: {
 
             <Link
               href={loginUrl}
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-slate-800"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-foreground px-6 py-3.5 text-sm font-bold text-white transition hover:bg-surface-elevated"
             >
               Acessar área do aluno
               <ArrowRight className="h-4 w-4" />
@@ -164,7 +164,7 @@ export default async function CheckoutSuccessPage(props: {
           <ResendDeliveryButton orderId={orderId} />
         </div>
 
-        <p className="mt-7 text-xs text-slate-400">
+        <p className="mt-7 text-xs text-muted">
           Pedido <span className="font-mono">{orderId.slice(0, 8)}...</span>
         </p>
       </section>

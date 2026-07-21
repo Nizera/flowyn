@@ -133,6 +133,24 @@ export async function GET(req: NextRequest) {
   let totalAttributedRevenue = 0
   let totalAttributedOrders = 0
 
+  // CORREÇÃO W7 (auditoria tracking): pré-build do name → campaignId Map para evitar
+  // scan O(n×m) a cada order.
+  const campaignNameLookup = new Map<string, string>()
+  for (const camp of Object.values(campaignSpendMap)) {
+    if (camp.campaign_name) campaignNameLookup.set(camp.campaign_name.toLowerCase(), camp.campaign_id)
+  }
+
+  // CORREÇÃO W8 (auditoria tracking): per-product production cost lookup.
+  const productCostMap = new Map<string, number>()
+  for (const item of (productCosts || [])) {
+    const pid = (item as { product_id?: string }).product_id
+    const cost = parseFloat(String(item.cost)) || 0
+    if (pid) productCostMap.set(pid, (productCostMap.get(pid) || 0) + cost)
+  }
+  const fallbackTotalProductionCost = (productCosts || [])
+    .filter((item: { product_id?: string }) => !item.product_id)
+    .reduce((sum: number, item: { cost?: string | number }) => sum + (parseFloat(String(item.cost)) || 0), 0)
+
   for (const order of orders || []) {
     if (order.status !== 'paid') continue
     const trackingParams = order.tracking_params as Record<string, string> | null
@@ -141,17 +159,10 @@ export async function GET(req: NextRequest) {
     const utmCampaign = trackingParams.utm_campaign
     let matched = false
 
-    // Try matching by campaign ID
     if (campaignSpendMap[utmCampaign]) {
       matched = true
-    } else {
-      // Try matching by campaign name
-      for (const camp of Object.values(campaignSpendMap)) {
-        if (camp.campaign_name?.toLowerCase() === utmCampaign.toLowerCase()) {
-          matched = true
-          break
-        }
-      }
+    } else if (campaignNameLookup.has(utmCampaign.toLowerCase())) {
+      matched = true
     }
 
     if (matched) {
@@ -163,7 +174,24 @@ export async function GET(req: NextRequest) {
   // 7. Calculate total spend across all campaigns
   const totalSpend = Object.values(campaignSpendMap).reduce((sum, c) => sum + c.spend, 0)
 
-  // 8. Calculate financial metrics
+  // CORREÇÃO W8 (auditoria tracking): production cost agregado por product_id quando
+  // possível. Se cost_configurations não tiver product_id, fallback flat legacy.
+  const attributedProductIds = new Set<string>()
+  for (const order of orders || []) {
+    if (order.status !== 'paid') continue
+    const trackingParams = order.tracking_params as Record<string, string> | null
+    if (!trackingParams?.utm_campaign) continue
+    if (
+      campaignSpendMap[trackingParams.utm_campaign]
+      || campaignNameLookup.has(trackingParams.utm_campaign.toLowerCase())
+    ) {
+      if (order.product_id) attributedProductIds.add(order.product_id)
+    }
+  }
+  let totalProductionCost = 0
+  for (const pid of attributedProductIds) totalProductionCost += productCostMap.get(pid) || 0
+  if (attributedProductIds.size === 0) totalProductionCost = fallbackTotalProductionCost
+  // Calculate financial metrics (recoverados após W8 refactor)
   const totalTaxes = totalAttributedRevenue * (taxPercentage / 100)
   const netProfit = totalAttributedRevenue - totalSpend - totalTaxes - totalProductionCost
   const roas = totalSpend > 0 ? totalAttributedRevenue / totalSpend : 0
@@ -194,18 +222,9 @@ export async function GET(req: NextRequest) {
     if (!trackingParams?.utm_campaign) continue
 
     const utmCampaign = trackingParams.utm_campaign
-    let matched = false
-
-    if (campaignSpendMap[utmCampaign]) {
-      matched = true
-    } else {
-      for (const camp of Object.values(campaignSpendMap)) {
-        if (camp.campaign_name?.toLowerCase() === utmCampaign.toLowerCase()) {
-          matched = true
-          break
-        }
-      }
-    }
+    // CORREÇÃO W7 (auditoria tracking): reusar o campaignNameLookup pré-construído
+    // em vez de O(n×m) scan linear.
+    const matched = Boolean(campaignSpendMap[utmCampaign] || campaignNameLookup.has(utmCampaign.toLowerCase()))
 
     if (!matched) continue
 
@@ -254,7 +273,11 @@ export async function GET(req: NextRequest) {
       count: data.count,
       total: data.total,
     })),
+    // CORREÇÃO W10 (auditoria tracking): recent_sales retornava TODOS os pedidos,
+    // incluindo reembolsados. Agora filtramos refunded/refused/cancelled para exibir
+    // apenas vendas válidas no feed "vendas recentes" do dashboard.
     recent_sales: (orders || [])
+      .filter(o => !['refunded', 'refused', 'cancelled', 'chargeback'].includes(o.status || ''))
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 5)
       .map(o => ({

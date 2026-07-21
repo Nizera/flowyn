@@ -12,7 +12,14 @@ const OPTIONAL_VARS = [
   'META_CAPI_ACCESS_TOKEN',
   'META_APP_SECRET',
   'WHATSAPP_VERIFY_TOKEN',
-  'GOOGLE_ADS_PIXEL_ID',
+  // CORREÇÃO W6 (auditoria tracking): env-validation checava 'GOOGLE_ADS_PIXEL_ID'
+  // mas o código usa 'NEXT_PUBLIC_GOOGLE_ADS_PIXEL_ID' (GlobalPixels.tsx). Lista
+  // alinhada com os nomes reais consumidos pelo app.
+  'NEXT_PUBLIC_GOOGLE_ADS_PIXEL_ID',
+  'NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL',
+  'META_CAPI_PIXEL_ID',
+  'META_APP_ID',
+  'SUPABASE_ACCESS_TOKEN',
 ] as const
 
 let validated = false

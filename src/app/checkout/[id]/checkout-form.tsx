@@ -120,12 +120,20 @@ export function CheckoutForm({
   const fireInitiateCheckout = useCallback(() => {
     if (initiateCheckoutFired.current || previewMode) return
     initiateCheckoutFired.current = true
+    // CORREÇÃO C5 (auditoria tracking): initiate_checkout não enviava tracking_params,
+    // impossibilitando atribuir este evento a campanhas no funil. Agora reusa o
+    // trackingParams do escopo do componente (já inclui UTMs da URL/sessionStorage
+    // + _fbp/_fbc do cookie). O guard já impede disparo duplicado.
     fetch('/api/checkout/funnel', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan_id: planId, event_name: 'initiate_checkout' }),
+      body: JSON.stringify({
+        plan_id: planId,
+        event_name: 'initiate_checkout',
+        tracking_params: trackingParams,
+      }),
     }).catch(() => {})
-  }, [planId, previewMode])
+  }, [planId, previewMode, trackingParams])
 
   async function searchPostalCode() {
     if (digits(postalCode).length !== 8) {
@@ -179,6 +187,9 @@ export function CheckoutForm({
       if (data.paid) {
         setPaymentStatusMessage('Pagamento confirmado! Redirecionando...')
         window.firePixelPurchase?.(totalAmount, `order_${pixPaymentId}`)
+        // CORREÇÃO C4 (auditoria tracking): marca que já disparamos o pixel Purchase
+        // neste tab — PixelFireBackup na success page vai ver a flag e não disparar de novo.
+        try { sessionStorage.setItem(`flowyn_pixel_fired_${pixPaymentId}`, '1') } catch {}
         await new Promise(r => setTimeout(r, 500))
         window.location.href = `/checkout/success?order_id=${pixPaymentId}`
         return
@@ -282,6 +293,9 @@ export function CheckoutForm({
       }
 
       window.firePixelPurchase?.(totalAmount, `order_${data.order_id}`)
+      // CORREGÃO C4 (auditoria tracking): marca disparo do pixel para o backup não
+      // disparar de novo na success page (CC path).
+      try { sessionStorage.setItem(`flowyn_pixel_fired_${data.order_id}`, '1') } catch {}
       await new Promise(r => setTimeout(r, 500))
       window.location.href = `/checkout/success?order_id=${data.order_id}`
     } catch {

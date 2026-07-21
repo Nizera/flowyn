@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import Script from 'next/script'
+import { isValidPixelId } from '@/lib/pixel-id-validation'
 
 interface PixelConfig {
   platform: 'meta' | 'google' | 'tiktok'
@@ -15,12 +16,43 @@ interface Props {
 }
 
 export function PixelFireBackup({ pixels, amount, orderId }: Props) {
-  const metaPixels = pixels.filter(p => p.platform === 'meta')
-  const googlePixels = pixels.filter(p => p.platform === 'google')
-  const tiktokPixels = pixels.filter(p => p.platform === 'tiktok')
+  // CORREÇÃO W1 (auditoria tracking): valida pixel IDs antes de injetar em JS.
+  // CORREÇÃO W2 (auditoria tracking): useMemo + signature para evitar re-runs do useEffect.
+  const metaPixels = useMemo(
+    () => pixels.filter(p => p.platform === 'meta' && isValidPixelId('meta', p.pixel_id)),
+    [pixels]
+  )
+  const googlePixels = useMemo(
+    () => pixels.filter(p => p.platform === 'google' && isValidPixelId('google', p.pixel_id)),
+    [pixels]
+  )
+  const tiktokPixels = useMemo(
+    () => pixels.filter(p => p.platform === 'tiktok' && isValidPixelId('tiktok', p.pixel_id)),
+    [pixels]
+  )
+  const metaSig = useMemo(() => metaPixels.map(p => p.pixel_id).join(','), [metaPixels])
+  const googleSig = useMemo(() => googlePixels.map(p => p.pixel_id).join(','), [googlePixels])
+  const tiktokSig = useMemo(() => tiktokPixels.map(p => p.pixel_id).join(','), [tiktokPixels])
 
   useEffect(() => {
     const eventId = `order_${orderId}`
+
+    // CORREÇÃO C4 (auditoria tracking): o backup de pixel disparava Purchase novamente
+    // na success page mesmo quando o checkout-form já havia disparado (para cartão,
+    // a chamada em checkout-form.tsx:284; para PIX, polling em checkout-form.tsx:181).
+    // Isso resultava em 2x client + 1x CAPI, inflando Purchase no Meta Ads Manager.
+    // Agora usamos sessionStorage como "já disparou" (1-time guard) — PixelFireBackup
+    // só dispara se o checkout-form não tiver disparado (e.g., redirect direto sem
+    // passar pelo form).
+    const guardKey = `flowyn_pixel_fired_${orderId}`
+    try {
+      if (sessionStorage.getItem(guardKey) === '1') {
+        return
+      }
+      sessionStorage.setItem(guardKey, '1')
+    } catch {
+      // sessionStorage indisponível (modo privado) — prossegue sem o guard
+    }
 
     if (window.fbq) {
       metaPixels.forEach(p => {
@@ -46,7 +78,8 @@ export function PixelFireBackup({ pixels, amount, orderId }: Props) {
         window.ttq!.track('CompletePayment', { value: amount, currency: 'BRL' })
       })
     }
-  }, [amount, orderId, metaPixels, googlePixels, tiktokPixels])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [amount, orderId, metaSig, googleSig, tiktokSig])
 
   return (
     <>

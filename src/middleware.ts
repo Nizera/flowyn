@@ -39,7 +39,11 @@ export async function middleware(req: NextRequest) {
   if (!user) {
     const url = req.nextUrl.clone()
     url.pathname = '/login'
-    url.searchParams.set('redirect', pathname)
+    // CORREÇÃO W4 (auditoria tracking): o redirect de auth só propagava o pathname,
+    // descartando os query strings (UTMs, gclid, fbclid...). Agora propagamos pathname
+    // + search para preservar attribution. Após login bem-sucedido, o redirectTo deve
+    // reconstruir a URL completa com esses parâmetros.
+    url.searchParams.set('redirect', pathname + req.nextUrl.search)
     return NextResponse.redirect(url)
   }
 

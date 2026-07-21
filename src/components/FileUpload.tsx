@@ -40,12 +40,11 @@ export function FileUpload({
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
-  
+
   const initialUrls = currentUrls || (currentUrl ? [currentUrl] : [])
-  // States to keep track of uploaded files
   const [previews, setPreviews] = useState<string[]>(initialUrls)
   const [fileNames, setFileNames] = useState<string[]>(initialUrls.map(url => url.split('/').pop() || 'Arquivo anexado'))
-  
+
   const [isDragging, setIsDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -56,44 +55,43 @@ export function FileUpload({
   const handleFiles = useCallback(async (files: FileList | File[]) => {
     setError(null)
     const fileArray = Array.from(files)
-    
-    // Check sizes
+
     for (const file of fileArray) {
       if (file.size > maxSize) {
-        setError(`Arquivo '${file.name}' é muito grande. Máximo: ${maxSizeLabel}`)
+        setError(`Arquivo '${file.name}' e muito grande. Maximo: ${maxSizeLabel}`)
         return
       }
     }
 
     setUploading(true)
     setProgress(10)
-    
+
     const newPreviews = [...previews]
     const newFileNames = [...fileNames]
-    const newPaths = [...previews] // We'll keep existing ones and append new ones
+    const newPaths = [...previews]
 
     try {
       const supabase = createClient()
       const subfolder = folder ? `${userId}/${folder}` : userId
-      
+
       const step = 80 / fileArray.length
-      
+
       for (let i = 0; i < fileArray.length; i++) {
         const file = fileArray[i]
         const ext = file.name.split('.').pop()
         const path = `${subfolder}/${Date.now()}_${i}.${ext}`
 
         if (mode === 'image') {
-           const reader = new FileReader()
-           const previewPromise = new Promise<string>((resolve) => {
-             reader.onload = (e) => resolve(e.target?.result as string)
-           })
-           reader.readAsDataURL(file)
-           newPreviews.push(await previewPromise)
+          const reader = new FileReader()
+          const previewPromise = new Promise<string>((resolve) => {
+            reader.onload = (e) => resolve(e.target?.result as string)
+          })
+          reader.readAsDataURL(file)
+          newPreviews.push(await previewPromise)
         } else {
-           newPreviews.push(path) // using path as a dummy preview for non-images
+          newPreviews.push(path)
         }
-        
+
         newFileNames.push(file.name)
 
         const { error: uploadError } = await supabase.storage
@@ -106,16 +104,15 @@ export function FileUpload({
           const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path)
           newPaths.push(urlData.publicUrl)
         } else {
-          // For private files: return the storage path
           newPaths.push(path)
         }
-        
+
         setProgress(10 + step * (i + 1))
       }
 
       setPreviews(newPreviews)
       setFileNames(newFileNames)
-      
+
       if (multiple) {
         onUpload(newPaths)
       } else {
@@ -126,7 +123,6 @@ export function FileUpload({
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err ?? 'Erro ao fazer upload')
       setError(message)
-      // revert preview if failed?
     } finally {
       setUploading(false)
       setTimeout(() => setProgress(0), 1000)
@@ -151,19 +147,17 @@ export function FileUpload({
       ? 'video/mp4,video/webm,video/quicktime'
       : '.pdf,.zip,.epub,application/pdf,application/zip')
 
-  const primary = '#f97316'
-
   const handleRemoveItem = (index: number) => {
     const p = [...previews]
     p.splice(index, 1)
     setPreviews(p)
-    
+
     const f = [...fileNames]
     f.splice(index, 1)
     setFileNames(f)
-    
+
     if (inputRef.current) inputRef.current.value = ''
-    
+
     if (multiple) {
       onRemove?.(index)
       onUpload(p)
@@ -173,53 +167,44 @@ export function FileUpload({
     }
   }
 
-  // If not multiple and already has 1 file, hide the drop zone
   const hideDropZone = !multiple && previews.length >= 1
 
   return (
     <div>
-      <label style={{ display: 'block', fontSize: 12, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8 }}>
+      <label className="block text-xs font-black uppercase tracking-wider text-muted mb-2">
         {label}
       </label>
 
       {/* File List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: previews.length > 0 && !hideDropZone ? 12 : 0 }}>
+      <div className="flex flex-col gap-2 mb-3">
         {previews.map((prev, index) => (
-          <div key={index} style={{ position: 'relative' }}>
+          <div key={index} className="relative">
             {mode === 'image' ? (
-              <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-                <img src={prev} alt="Preview" style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }} />
+              <div className="relative rounded-xl overflow-hidden border border-border">
+                <img src={prev} alt="Preview" className="w-full h-36 object-cover block" />
                 <button
                   type="button"
                   onClick={() => handleRemoveItem(index)}
-                  style={{
-                    position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.7)',
-                    border: 'none', borderRadius: 8, padding: '4px 8px', cursor: 'pointer',
-                    color: '#fff', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12
-                  }}
+                  className="absolute top-2 right-2 bg-black/70 border-none rounded-lg px-2 py-1 cursor-pointer text-white flex items-center gap-1 text-xs"
                 >
-                  <X style={{ width: 12, height: 12 }} /> Remover
+                  <X className="w-3 h-3" /> Remover
                 </button>
               </div>
             ) : (
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                background: '#eff6ff', border: '1px solid #bfdbfe',
-                borderRadius: 14, padding: '12px 16px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <CheckCircle style={{ width: 20, height: 20, color: primary, flexShrink: 0 }} />
+              <div className="flex items-center justify-between bg-surface border border-border rounded-xl px-4 py-3">
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0" />
                   <div>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: '#1e3a8a', margin: 0, wordBreak: 'break-all' }}>{fileNames[index]}</p>
-                    <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>Arquivo anexado</p>
+                    <p className="text-sm font-bold text-foreground m-0 break-all">{fileNames[index]}</p>
+                    <p className="text-xs text-muted m-0">Arquivo anexado</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleRemoveItem(index)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4 }}
+                  className="bg-transparent border-none cursor-pointer text-muted p-1"
                 >
-                  <X style={{ width: 16, height: 16 }} />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             )}
@@ -234,40 +219,38 @@ export function FileUpload({
           onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
           onDragLeave={() => setIsDragging(false)}
           onDrop={onDrop}
-          style={{
-            border: `2px dashed ${isDragging ? primary : uploading ? '#bfdbfe' : '#cbd5e1'}`,
-            borderRadius: 16,
-            padding: '28px 20px',
-            textAlign: 'center',
-            cursor: uploading ? 'default' : 'pointer',
-            background: isDragging ? '#eff6ff' : '#f8fafc',
-            transition: 'all 0.2s',
-          }}
+          className={`rounded-2xl p-7 text-center cursor-pointer transition-all ${
+            isDragging
+              ? 'border-2 border-dashed border-primary bg-primary/10'
+              : uploading
+                ? 'border-2 border-dashed border-border bg-surface'
+                : 'border-2 border-dashed border-border bg-surface hover:bg-surface-elevated'
+          }`}
         >
           {uploading ? (
             <>
-              <Loader2 style={{ width: 28, height: 28, color: primary, margin: '0 auto 10px', animation: 'spin 1s linear infinite' }} />
-              <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 10px' }}>
+              <Loader2 className="w-7 h-7 text-primary mx-auto mb-2.5 animate-spin" />
+              <p className="text-sm text-muted m-0 mb-2.5">
                 Enviando arquivos...
               </p>
-              <div style={{ background: '#e2e8f0', borderRadius: 99, height: 6, overflow: 'hidden' }}>
-                <div style={{ height: '100%', borderRadius: 99, background: primary, width: `${progress}%`, transition: 'width 0.3s' }} />
+              <div className="bg-surface-elevated rounded-full h-1.5 overflow-hidden">
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progress}%` }} />
               </div>
             </>
           ) : (
             <>
               {mode === 'image'
-                ? <ImageIcon style={{ width: 28, height: 28, color: '#94a3b8', margin: '0 auto 10px' }} />
+                ? <ImageIcon className="w-7 h-7 text-muted mx-auto mb-2.5" />
                 : mode === 'video'
-                  ? <Video style={{ width: 28, height: 28, color: '#94a3b8', margin: '0 auto 10px' }} />
-                  : <FileText style={{ width: 28, height: 28, color: '#94a3b8', margin: '0 auto 10px' }} />
+                  ? <Video className="w-7 h-7 text-muted mx-auto mb-2.5" />
+                  : <FileText className="w-7 h-7 text-muted mx-auto mb-2.5" />
               }
-              <p style={{ fontSize: 13, fontWeight: 700, color: '#475569', margin: '0 0 4px' }}>
+              <p className="text-sm font-bold text-foreground m-0 mb-1">
                 Clique ou arraste {multiple ? 'seus arquivos' : 'o arquivo'} aqui
               </p>
-              <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>
-                {hint || (mode === 'image' ? 'JPG, PNG ou WebP — máx. 5MB' : mode === 'video' ? 'MP4, WebM ou MOV — máx. 500MB' : 'PDF, ZIP ou EPUB — máx. 100MB')}
-                {dimensionsHint && <span style={{ display: 'block', marginTop: 4, color: '#ea580c' }}>{dimensionsHint}</span>}
+              <p className="text-xs text-muted m-0">
+                {hint || (mode === 'image' ? 'JPG, PNG ou WebP — max. 5MB' : mode === 'video' ? 'MP4, WebM ou MOV — max. 500MB' : 'PDF, ZIP ou EPUB — max. 100MB')}
+                {dimensionsHint && <span className="block mt-1 text-primary">{dimensionsHint}</span>}
               </p>
             </>
           )}
@@ -275,7 +258,7 @@ export function FileUpload({
       )}
 
       {error && (
-        <p style={{ fontSize: 12, color: '#ef4444', marginTop: 6 }}>⚠️ {error}</p>
+        <p className="text-xs text-red-500 mt-1.5">⚠️ {error}</p>
       )}
 
       <input
@@ -283,7 +266,7 @@ export function FileUpload({
         type="file"
         multiple={multiple}
         accept={inputAccept}
-        style={{ display: 'none' }}
+        className="hidden"
         onChange={(e) => {
           if (e.target.files && e.target.files.length > 0) {
             if (multiple) {
