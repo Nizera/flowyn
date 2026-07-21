@@ -137,8 +137,8 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 200px;
-  background: linear-gradient(to bottom, transparent, #070908);
+  height: 250px;
+  background: linear-gradient(to bottom, transparent 0%, #0a0a0d 40%, #070908 100%);
   pointer-events: none;
   z-index: 40;
 }

@@ -131,7 +131,7 @@ export default function HeroSection() {
           <div className="absolute inset-0 z-20 bg-gradient-to-b from-[#070908]/30 via-transparent to-[#070908]/70" />
 
           {/* Hero Content */}
-          <div className="absolute bottom-0 left-0 right-0 z-30 p-6 md:p-10 lg:p-14">
+          <div className="absolute bottom-0 left-0 right-0 z-30 p-6 md:p-10 lg:p-14 pb-20 md:pb-28 lg:pb-32">
             <div className="mx-auto max-w-7xl grid grid-cols-12 gap-6 md:gap-10">
               <div className="col-span-12 md:col-span-7 lg:col-span-8 flex items-end" ref={headingRef}>
                 <motion.img
