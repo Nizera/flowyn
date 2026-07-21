@@ -151,14 +151,14 @@ body {
 .problem-section::before {
   content: '';
   position: absolute;
-  top: 0;
-  right: 0;
-  width: 60%;
-  height: 300px;
+  top: -50px;
+  right: -50px;
+  width: 50%;
+  height: 250px;
   background: radial-gradient(
-    circle at top right,
-    rgba(255, 122, 26, 0.06),
-    transparent 70%
+    ellipse at top right,
+    rgba(255, 122, 26, 0.025),
+    transparent 60%
   );
   pointer-events: none;
   z-index: 0;
