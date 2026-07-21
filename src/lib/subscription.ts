@@ -41,7 +41,7 @@ export async function checkPlanLimit(
       const { count } = await admin
         .from('checkout_customizations')
         .select('id', { count: 'exact', head: true })
-        .not('published_config', 'is', null)
+        .not('published_at', 'is', null)
         .in('product_id', productIds.map(p => p.id))
       current = count ?? 0
     }
@@ -64,7 +64,7 @@ export async function checkSubscription(userId: string): Promise<SubscriptionChe
 
   const { data: subscription } = await admin
     .from('platform_subscriptions')
-    .select('status, trial_ends_at, current_period_ends_at')
+    .select('status, trial_ends_at, current_period_ends_at, grace_period_ends_at')
     .eq('user_id', userId)
     .maybeSingle()
 
@@ -74,10 +74,13 @@ export async function checkSubscription(userId: string): Promise<SubscriptionChe
     subscription.trial_ends_at &&
     new Date(subscription.trial_ends_at).getTime() > now.getTime()
 
-  const isGracePeriod = subscription?.status === 'grace_period'
+  const isGracePeriod =
+    subscription?.status === 'grace_period' &&
+    subscription.grace_period_ends_at &&
+    new Date(subscription.grace_period_ends_at).getTime() > now.getTime()
 
   const periodNotExpired =
-    !subscription?.current_period_ends_at ||
+    subscription?.current_period_ends_at != null &&
     new Date(subscription.current_period_ends_at).getTime() > now.getTime()
 
   const hasActiveRow =
@@ -86,7 +89,7 @@ export async function checkSubscription(userId: string): Promise<SubscriptionChe
     isTrialing ||
     isGracePeriod
 
-  const effectivePlan: UserPlan = hasActiveRow && plan === 'free' ? 'pro' : plan
+  const effectivePlan: UserPlan = hasActiveRow ? (plan === 'free' ? 'pro' : plan) : 'free'
   const isActive = hasActiveRow && effectivePlan !== 'free'
 
   return {

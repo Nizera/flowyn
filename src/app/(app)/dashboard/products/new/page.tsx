@@ -168,11 +168,14 @@ export default async function NewProductPage() {
 
   return (
     <>
-      {limit.plan === 'free' && limit.current >= 0 && (
+      {limit.plan === 'free' && (
         <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <p>
-            Plano gratuito: <strong>{limit.current + 1} de {limit.max}</strong> produto(s). Após criar este produto, sera necessario atualizar para o plano Pro para criar mais.
+            {limit.current === 0
+              ? `Este sera seu ${limit.max}o produto(s) permitido(s) no plano gratuito. Apos criar, sera necessario atualizar para o plano Pro para criar mais.`
+              : `Voce esta usando ${limit.current} de ${limit.max} produto(s) do plano gratuito. Apos criar este produto, sera necessario atualizar para o plano Pro para criar mais.`
+            }
           </p>
         </div>
       )}

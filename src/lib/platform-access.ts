@@ -24,7 +24,7 @@ export async function getPlatformAccess(userId: string): Promise<PlatformAccess>
   const admin = createAdminClient()
   const { data: subscription } = await admin
     .from('platform_subscriptions')
-    .select('status, trial_ends_at, grace_period_ends_at')
+    .select('status, trial_ends_at, current_period_ends_at, grace_period_ends_at')
     .eq('user_id', userId)
     .maybeSingle()
 
@@ -35,6 +35,7 @@ export async function getPlatformAccess(userId: string): Promise<PlatformAccess>
   const status = subscription.status as PlatformSubscriptionStatus
   const allowed =
     status === 'active'
+    || (status === 'cancelled' && subscription.current_period_ends_at && isFuture(subscription.current_period_ends_at))
     || ((status === 'trialing' || status === 'scheduled') && isFuture(subscription.trial_ends_at))
     || (status === 'grace_period' && isFuture(subscription.grace_period_ends_at))
 

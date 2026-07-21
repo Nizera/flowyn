@@ -58,7 +58,7 @@ export default async function ProductsPage() {
 
   const productLimit = await checkPlanLimit(user.id, 'products')
   const atLimit = !productLimit.allowed
-  const nearLimit = productLimit.plan === 'free' && productLimit.current >= productLimit.max
+  const nearLimit = productLimit.plan === 'free' && productLimit.current >= productLimit.max - 1
 
   return (
     <section className="overflow-hidden rounded-[10px] bg-white px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
@@ -73,11 +73,21 @@ export default async function ProductsPage() {
         </Link>
       </div>
 
-      {nearLimit && (
+      {nearLimit && !atLimit && (
         <div className="mt-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <p>
             Voce esta usando <strong>{productLimit.current} de {productLimit.max}</strong> produto(s) do plano gratuito.
+            <Link href="/dashboard/settings/subscription" className="ml-1 font-bold underline">Atualize para Pro</Link> para criar mais.
+          </p>
+        </div>
+      )}
+
+      {atLimit && (
+        <div className="mt-4 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <p>
+            Voce atingiu o limite de <strong>{productLimit.max}</strong> produto(s) do plano gratuito.
             <Link href="/dashboard/settings/subscription" className="ml-1 font-bold underline">Atualize para Pro</Link> para criar mais.
           </p>
         </div>

@@ -42,11 +42,11 @@ export async function publishCheckout(productId: string, rawConfig: unknown): Pr
 
   const { data: existing } = await supabase
     .from('checkout_customizations')
-    .select('published_config')
+    .select('published_at')
     .eq('product_id', productId)
     .maybeSingle()
 
-  const alreadyPublished = existing?.published_config != null
+  const alreadyPublished = existing?.published_at != null
 
   if (!alreadyPublished) {
     const limit = await checkPlanLimit(user.id, 'checkouts')

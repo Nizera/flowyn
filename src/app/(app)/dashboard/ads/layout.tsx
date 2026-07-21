@@ -15,7 +15,7 @@ export default async function AdsLayout({
 
   const subscription = await checkSubscription(user.id)
 
-  if (!subscription.isActive && subscription.plan === 'free') {
+  if (!subscription.isActive) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
         <div className="max-w-md text-center">

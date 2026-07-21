@@ -12,7 +12,6 @@ export function Logo({ className = "h-10 w-auto" }: { className?: string }) {
   }, [])
 
   if (!mounted) {
-    // Retorna um placeholder ou uma logo padrão para evitar flash de conteúdo errado
     return <img src="/brand/logo-black-transparent.png" alt="Flowyn" className={className} />
   }
 

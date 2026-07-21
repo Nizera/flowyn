@@ -20,6 +20,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { ThemeToggle } from './ThemeToggle'
+import { Logo } from './Logo'
 
 type NavItem = {
   href: string

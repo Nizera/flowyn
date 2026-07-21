@@ -366,7 +366,11 @@ export async function POST(req: NextRequest) {
       if (platformSub) {
         await supabase
           .from('platform_subscriptions')
-          .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+          .update({
+            status: 'cancelled',
+            current_period_ends_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
           .eq('id', platformSub.id)
 
         // Don't downgrade plan immediately — let grace-period cron handle it when current_period_ends_at passes
