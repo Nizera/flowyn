@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { BadgeCheck, Lock } from 'lucide-react'
+import { BadgeCheck, Lock, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { getPlatformAccess } from '@/lib/platform-access'
+import { checkPlanLimit } from '@/lib/subscription'
 import { ProductWizard } from './ProductWizard'
 
 type CreateProductPlan = {
@@ -46,6 +47,11 @@ async function createProductAction(data: CreateProductActionInput): Promise<{ pr
     const access = await getPlatformAccess(user.id)
     if (!access.allowed) {
       return { error: 'Sua assinatura Flowyn Pro precisa estar ativa para criar produtos.' }
+    }
+
+    const limit = await checkPlanLimit(user.id, 'products')
+    if (!limit.allowed) {
+      return { error: `Voce atingiu o limite de ${limit.max} produto(s) do plano gratuito. Atualize para o plano Pro para criar mais.` }
     }
 
     const deliverablePaths = data.deliverable_file_paths ?? []
@@ -118,24 +124,59 @@ export default async function NewProductPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
   const access = await getPlatformAccess(user.id)
+  const limit = await checkPlanLimit(user.id, 'products')
 
-  return access.allowed ? (
-    <ProductWizard createProductAction={createProductAction} userId={user.id} />
-  ) : (
-    <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm md:p-12">
-      <div className="max-w-2xl">
-        <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-orange-600">
-          <Lock className="h-6 w-6" />
+  if (!access.allowed) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm md:p-12">
+        <div className="max-w-2xl">
+          <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-orange-600">
+            <Lock className="h-6 w-6" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-950">Assinatura necessaria</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            Para manter a Flowyn sem taxa por venda, a criacao de produtos fica liberada para contas em teste gratis, ativas ou em regularizacao.
+          </p>
+          <Link href="/dashboard/settings/subscription" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-3 text-sm font-black text-white transition hover:from-orange-600 hover:to-amber-600">
+            <BadgeCheck className="h-4 w-4" />
+            Ativar Flowyn Pro
+          </Link>
         </div>
-        <h2 className="text-2xl font-black text-slate-950">Assinatura necessaria</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-500">
-          Para manter a Flowyn sem taxa por venda, a criacao de produtos fica liberada para contas em teste gratis, ativas ou em regularizacao.
-        </p>
-        <Link href="/dashboard/settings/subscription" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-3 text-sm font-black text-white transition hover:from-orange-600 hover:to-amber-600">
-          <BadgeCheck className="h-4 w-4" />
-          Ativar Flowyn Pro
-        </Link>
       </div>
-    </div>
+    )
+  }
+
+  if (!limit.allowed) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm md:p-12">
+        <div className="max-w-2xl">
+          <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+            <AlertTriangle className="h-6 w-6" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-950">Limite atingido</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            Voce ja criou <strong>{limit.max} produto(s)</strong> no plano gratuito. Atualize para o plano Pro para criar quantos produtos precisar.
+          </p>
+          <Link href="/dashboard/settings/subscription" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-3 text-sm font-black text-white transition hover:from-orange-600 hover:to-amber-600">
+            <BadgeCheck className="h-4 w-4" />
+            Atualizar para Pro
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      {limit.plan === 'free' && limit.current >= 0 && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <p>
+            Plano gratuito: <strong>{limit.current + 1} de {limit.max}</strong> produto(s). Após criar este produto, sera necessario atualizar para o plano Pro para criar mais.
+          </p>
+        </div>
+      )}
+      <ProductWizard createProductAction={createProductAction} userId={user.id} />
+    </>
   )
 }

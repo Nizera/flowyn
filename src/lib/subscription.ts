@@ -10,6 +10,47 @@ export type SubscriptionCheck = {
   currentPeriodEndsAt: string | null
 }
 
+export const PLAN_LIMITS = {
+  free: { maxProducts: 1, maxPublishedCheckouts: 1 },
+  pro: { maxProducts: Infinity, maxPublishedCheckouts: Infinity },
+  scale: { maxProducts: Infinity, maxPublishedCheckouts: Infinity },
+} as const
+
+export async function checkPlanLimit(
+  userId: string,
+  resource: 'products' | 'checkouts'
+): Promise<{ allowed: boolean; current: number; max: number; plan: UserPlan }> {
+  const check = await checkSubscription(userId)
+  const limits = PLAN_LIMITS[check.plan]
+  const admin = createAdminClient()
+
+  let current = 0
+  if (resource === 'products') {
+    const { count } = await admin
+      .from('products')
+      .select('id', { count: 'exact', head: true })
+      .eq('owner_id', userId)
+    current = count ?? 0
+  } else {
+    const { data: productIds } = await admin
+      .from('products')
+      .select('id')
+      .eq('owner_id', userId)
+
+    if (productIds && productIds.length > 0) {
+      const { count } = await admin
+        .from('checkout_customizations')
+        .select('id', { count: 'exact', head: true })
+        .not('published_config', 'is', null)
+        .in('product_id', productIds.map(p => p.id))
+      current = count ?? 0
+    }
+  }
+
+  const max = resource === 'products' ? limits.maxProducts : limits.maxPublishedCheckouts
+  return { allowed: current < max, current, max, plan: check.plan }
+}
+
 export async function checkSubscription(userId: string): Promise<SubscriptionCheck> {
   const admin = createAdminClient()
 

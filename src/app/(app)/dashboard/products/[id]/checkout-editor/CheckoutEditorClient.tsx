@@ -138,7 +138,11 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
     }
     setBannerWarning(null)
     startTransition(async () => {
-      await publishCheckout(productId, config)
+      const result = await publishCheckout(productId, config)
+      if (result?.error) {
+        setBannerWarning(result.error)
+        return
+      }
       setPreviewKey(current => current + 1)
     })
   }

@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import type { LucideIcon } from 'lucide-react'
-import { BookOpen, Box, ExternalLink, FileText, Layers, Plus, Search, Users } from 'lucide-react'
+import { BookOpen, Box, ExternalLink, FileText, Layers, Plus, Search, Users, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { CopyUtmButton } from '@/components/CopyUtmButton'
 import { currency } from '@/lib/format'
+import { checkPlanLimit } from '@/lib/subscription'
 
 type ProductPlanRow = {
   price: string | number | null
@@ -55,6 +56,10 @@ export default async function ProductsPage() {
     return acc
   }, {})
 
+  const productLimit = await checkPlanLimit(user.id, 'products')
+  const atLimit = !productLimit.allowed
+  const nearLimit = productLimit.plan === 'free' && productLimit.current >= productLimit.max
+
   return (
     <section className="overflow-hidden rounded-[10px] bg-white px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
@@ -62,11 +67,21 @@ export default async function ProductsPage() {
           <h2 className="text-2xl font-semibold text-slate-950">Produtos</h2>
           <p className="mt-2 text-sm text-slate-400">Lista de produtos cadastrados no sistema.</p>
         </div>
-        <Link href="/dashboard/products/new" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-7 text-sm font-semibold text-white transition hover:from-orange-600 hover:to-amber-600">
+        <Link href="/dashboard/products/new" className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-7 text-sm font-semibold text-white transition ${atLimit ? 'cursor-not-allowed bg-slate-300' : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600'}`}>
           <Plus className="h-4 w-4" />
           Criar
         </Link>
       </div>
+
+      {nearLimit && (
+        <div className="mt-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <p>
+            Voce esta usando <strong>{productLimit.current} de {productLimit.max}</strong> produto(s) do plano gratuito.
+            <Link href="/dashboard/settings/subscription" className="ml-1 font-bold underline">Atualize para Pro</Link> para criar mais.
+          </p>
+        </div>
+      )}
 
       <div className="mt-12">
         <div className="flex flex-col gap-4 pb-4 lg:flex-row lg:items-center lg:justify-between">

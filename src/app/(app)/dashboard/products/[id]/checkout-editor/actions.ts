@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { normalizeCheckoutConfig } from '@/lib/checkout-customization'
+import { checkPlanLimit } from '@/lib/subscription'
 
 async function assertOwner(productId: string) {
   const supabase = await createClient()
@@ -34,10 +35,25 @@ export async function saveCheckoutDraft(productId: string, rawConfig: unknown) {
   revalidatePath(`/dashboard/products/${productId}/checkout-editor`)
 }
 
-export async function publishCheckout(productId: string, rawConfig: unknown) {
-  const { supabase, product } = await assertOwner(productId)
+export async function publishCheckout(productId: string, rawConfig: unknown): Promise<{ success?: boolean; error?: string }> {
+  const { supabase, user, product } = await assertOwner(productId)
   const config = normalizeCheckoutConfig(rawConfig, product)
   const now = new Date().toISOString()
+
+  const { data: existing } = await supabase
+    .from('checkout_customizations')
+    .select('published_config')
+    .eq('product_id', productId)
+    .maybeSingle()
+
+  const alreadyPublished = existing?.published_config != null
+
+  if (!alreadyPublished) {
+    const limit = await checkPlanLimit(user.id, 'checkouts')
+    if (!limit.allowed) {
+      return { error: `Voce atingiu o limite de ${limit.max} checkout(s) publicado(s) do plano gratuito. Atualize para o plano Pro para publicar mais.` }
+    }
+  }
 
   await supabase.from('checkout_customizations').upsert({
     product_id: productId,
@@ -49,4 +65,6 @@ export async function publishCheckout(productId: string, rawConfig: unknown) {
 
   revalidatePath(`/dashboard/products/${productId}/checkout-editor`)
   revalidatePath('/checkout/[id]', 'page')
+
+  return { success: true }
 }
