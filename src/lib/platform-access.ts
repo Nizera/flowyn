@@ -33,9 +33,13 @@ export async function getPlatformAccess(userId: string): Promise<PlatformAccess>
   }
 
   const status = subscription.status as PlatformSubscriptionStatus
+  const periodNotExpired =
+    subscription.current_period_ends_at != null &&
+    isFuture(subscription.current_period_ends_at)
+
   const allowed =
-    status === 'active'
-    || (status === 'cancelled' && subscription.current_period_ends_at && isFuture(subscription.current_period_ends_at))
+    (status === 'active' && periodNotExpired)
+    || (status === 'cancelled' && periodNotExpired)
     || ((status === 'trialing' || status === 'scheduled') && isFuture(subscription.trial_ends_at))
     || (status === 'grace_period' && isFuture(subscription.grace_period_ends_at))
 

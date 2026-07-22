@@ -364,11 +364,14 @@ export async function POST(req: NextRequest) {
         .maybeSingle()
 
       if (platformSub) {
+        // NÃO setar current_period_ends_at = now. O usuário mantém acesso até
+        // o fim do período que já pagou. Apenas mudamos o status para 'cancelled'.
+        // O effectivePlan continua 'pro' enquanto current_period_ends_at > now (subscription.ts:88).
+        // Quando o período expirar, o cron de grace-period faz o downgrade.
         await supabase
           .from('platform_subscriptions')
           .update({
             status: 'cancelled',
-            current_period_ends_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
           .eq('id', platformSub.id)
@@ -382,22 +385,23 @@ export async function POST(req: NextRequest) {
         })
       }
 
-      // Handle product subscription cancellation
+      // Handle product subscription cancellation — revoga TODAS as orders paid
+      // (antes: limit(1) só revogava a primeira, deixando as subsequentes ativas)
       const { data: subscriptionOrders } = await supabase
         .from('orders')
         .select('id, product_id')
         .eq('asaas_subscription_id', subscriptionId)
         .eq('status', 'paid')
-        .limit(1)
 
       if (subscriptionOrders && subscriptionOrders.length > 0) {
-        const subOrder = subscriptionOrders[0]
-        await revokePaidOrder(supabase, subOrder.id, eventType)
+        for (const subOrder of subscriptionOrders) {
+          await revokePaidOrder(supabase, subOrder.id, eventType)
+        }
         await supabase.from('security_audit_log').insert({
           action: eventType,
           entity_type: 'subscription',
           entity_id: subscriptionId,
-          metadata: { order_id: subOrder.id, product_id: subOrder.product_id },
+          metadata: { order_ids: subscriptionOrders.map(o => o.id), product_ids: subscriptionOrders.map(o => o.product_id) },
         })
       }
     }

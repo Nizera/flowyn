@@ -173,7 +173,7 @@ export default async function NewProductPage() {
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <p>
             {limit.current === 0
-              ? `Este sera seu ${limit.max}o produto(s) permitido(s) no plano gratuito. Apos criar, sera necessario atualizar para o plano Pro para criar mais.`
+              ? `Este sera seu ${limit.max}o${limit.max > 1 ? '' : ''} produto${limit.max > 1 ? 's' : ''} permitido${limit.max > 1 ? 's' : ''} no plano gratuito. Apos criar, sera necessario atualizar para o plano Pro para criar mais.`
               : `Voce esta usando ${limit.current} de ${limit.max} produto(s) do plano gratuito. Apos criar este produto, sera necessario atualizar para o plano Pro para criar mais.`
             }
           </p>

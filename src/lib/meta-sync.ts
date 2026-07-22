@@ -1,3 +1,4 @@
+import 'server-only'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { GRAPH_API } from '@/lib/meta-graph-api'
 

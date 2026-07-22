@@ -93,8 +93,10 @@ export async function GET(req: NextRequest) {
   }
 
   // 4. Get funnel_events counts (page_view, initiate_checkout)
-  // CORREÇÃO (tracking cross-domain): page_views externos (landing do produtor,
-  // rastreados via tracker.js) entram também em tracking_external_events. Somamos.
+  // CORREÇÃO (tracking cross-domain + bug #28/#29):
+  // - tracking_external_events agora filtra por product_id (antes filtrava por user_id, inflando métrica)
+  // - tracking_external_events filtra session_id NOT IN (sessions que já tiveram funnel_events.page_view
+  //   no mesmo período) para evitar dupla contagem (landing externa + checkout Flowyn = mesmo visitor)
   const startDateTs = `${startDate}T00:00:00`
   const endDateTs = `${endDate}T23:59:59`
 
@@ -106,14 +108,49 @@ export async function GET(req: NextRequest) {
     .gte('created_at', startDateTs)
     .lte('created_at', endDateTs)
 
-  // PageView externos (landing do produtor via tracker.js)
+  // PageView externos (landing do produtor via tracker.js) — filtrados por product_id
+  // para não inflar com eventos de outros produtos do mesmo produtor.
+  // Para evitar dupla contagem: contamos todos os externos e subtraímos os que
+  // já têm page_view correspondente em funnel_events (mesmo session_id).
   const { count: externalPageViewsCount } = await supabase
     .from('tracking_external_events')
     .select('*', { count: 'exact', head: true })
     .eq('event_name', 'page_view')
     .eq('user_id', user.id)
+    .in('product_id', productIds)
     .gte('created_at', startDateTs)
     .lte('created_at', endDateTs)
+
+  // Sessions que já dispararam page_view em funnel_events (checkout Flowyn)
+  const { data: checkoutSessions } = await supabase
+    .from('funnel_events')
+    .select('session_id')
+    .eq('event_name', 'page_view')
+    .in('product_id', productIds)
+    .gte('created_at', startDateTs)
+    .lte('created_at', endDateTs)
+    .not('session_id', 'is', null)
+
+  const checkoutSessionIds = new Set(
+    (checkoutSessions || []).map((s: { session_id: string }) => s.session_id).filter(Boolean)
+  )
+
+  // Conta externos sem session_id duplicado no checkout
+  let externalUniqueCount = 0
+  if (externalPageViewsCount && externalPageViewsCount > 0) {
+    const { data: externalEvents } = await supabase
+      .from('tracking_external_events')
+      .select('session_id')
+      .eq('event_name', 'page_view')
+      .eq('user_id', user.id)
+      .in('product_id', productIds)
+      .gte('created_at', startDateTs)
+      .lte('created_at', endDateTs)
+
+    externalUniqueCount = (externalEvents || []).filter(
+      (e: { session_id: string }) => !e.session_id || !checkoutSessionIds.has(e.session_id)
+    ).length
+  }
 
   const { count: initiateCheckoutsCount } = await supabase
     .from('funnel_events')
@@ -123,7 +160,7 @@ export async function GET(req: NextRequest) {
     .gte('created_at', startDateTs)
     .lte('created_at', endDateTs)
 
-  const pageViews = (pageViewsCount || 0) + (externalPageViewsCount || 0)
+  const pageViews = (pageViewsCount || 0) + externalUniqueCount
   const initiateCheckouts = initiateCheckoutsCount || 0
 
   // 5. Get orders count (pending + paid = sales_initiated, only paid = sales_approved)
