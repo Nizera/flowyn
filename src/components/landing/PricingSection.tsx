@@ -2,7 +2,7 @@
 
 import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
-import { Check, Sparkles } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { useTilt } from './useTilt'
 
 const FEATURES = [
@@ -37,9 +37,8 @@ export default function PricingSection() {
         >
           {/* Badge */}
           <div className="inline-flex items-center gap-1.5 bg-[#f97316]/10 border border-[#f97316]/20 rounded-full px-3 py-1 mb-6">
-            <Sparkles size={12} className="text-[#f97316]" />
             <span className="text-[10px] font-semibold text-[#f97316] uppercase tracking-wider">
-              7 dias grátis
+              7 dias gratis
             </span>
           </div>
 

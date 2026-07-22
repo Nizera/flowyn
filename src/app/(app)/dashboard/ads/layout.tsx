@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { checkSubscription } from '@/lib/subscription'
-import { Lock, Sparkles } from 'lucide-react'
+import { Lock } from 'lucide-react'
 
 export default async function AdsLayout({
   children,
@@ -36,7 +36,6 @@ export default async function AdsLayout({
             href="/dashboard/settings/subscription"
             className="mt-8 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-3 text-sm font-bold text-white shadow-lg transition hover:from-orange-600 hover:to-amber-600"
           >
-            <Sparkles className="h-4 w-4" />
             Assinar Plano Pro
           </Link>
         </div>

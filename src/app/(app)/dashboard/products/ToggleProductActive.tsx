@@ -51,11 +51,11 @@ export function ToggleProductActive({
         {loading ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin text-muted" />
         ) : active ? (
-          <ToggleRight className="h-4 w-4 text-emerald-600" />
+          <ToggleRight className="h-4 w-4 text-emerald-500" />
         ) : (
-          <ToggleLeft className="h-4 w-4 text-muted" />
+          <ToggleLeft className="h-4 w-4 text-zinc-400 dark:text-zinc-500" />
         )}
-        <span className={`text-[11px] font-medium ${active ? 'text-emerald-700' : 'text-muted'}`}>
+        <span className={`text-[11px] font-medium ${active ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-500 dark:text-zinc-400'}`}>
           {active ? 'Ativo' : 'Inativo'}
         </span>
       </button>
