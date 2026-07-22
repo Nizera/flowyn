@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       to: ['nizeragg@gmail.com'],
       subject: `[FWD] ${subject}`,
       html: email.html || `<pre>${email.text || ''}</pre>`,
-      text: email.text,
+      text: email.text ?? undefined,
       replyTo: from,
     })
 
