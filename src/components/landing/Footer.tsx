@@ -6,9 +6,7 @@ export default function Footer() {
       <div className="mx-auto max-w-6xl px-6 py-12">
         <div className="grid gap-8 md:grid-cols-3">
           <div>
-            <span className="text-lg font-black text-white">
-              Flo<span className="text-[#f97316]">wyn</span>
-            </span>
+            <img src="/brand/logo-white-transparent.png" alt="Flowyn" className="h-8 w-auto" />
             <p className="mt-3 text-sm text-white/40 leading-relaxed">
               Checkout para infoprodutores com custo previsível. Sem taxa por venda.
             </p>
