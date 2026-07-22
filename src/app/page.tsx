@@ -7,6 +7,7 @@ import PricingSection from '@/components/landing/PricingSection'
 import FaqSection from '@/components/landing/FaqSection'
 import CtaSection from '@/components/landing/CtaSection'
 import Footer from '@/components/landing/Footer'
+import ChatWidget from '@/components/landing/ChatWidget'
 
 export default function Home() {
   return (
@@ -20,6 +21,7 @@ export default function Home() {
       <FaqSection />
       <CtaSection />
       <Footer />
+      <ChatWidget />
     </main>
   )
 }
