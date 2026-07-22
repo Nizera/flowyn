@@ -76,6 +76,10 @@ export function CheckoutForm({
     const knownParams = [
       'utm_source', 'utm_campaign', 'utm_medium', 'utm_content', 'utm_term',
       'src', 'sck', 'gclid', 'fbclid', 'ttclid',
+      // fl_sid: session ID gerado pelo tracker.js na landing externa (v1 API)
+      // e injetado no redirect via query string. Permite correlacionar page_view
+      // externo com o checkout iniciado na Flowyn. Ver /t/[token]/route.ts.
+      'fl_sid',
     ]
 
     let hasUrlParams = false
@@ -93,6 +97,25 @@ export function CheckoutForm({
       try {
         const stored = sessionStorage.getItem('flowyn_tracking')
         if (stored) Object.assign(result, JSON.parse(stored))
+      } catch {}
+    }
+
+    // Lê também cookie first-party _fl_utm (tracker.js grava UTMs na landing externa)
+    // que sobrevivem cross-domain. Se a URL não trouxe UTMs, usa essas como fallback.
+    if (!hasUrlParams) {
+      try {
+        const all = document.cookie.split('; ')
+        for (const c of all) {
+          const [k, v] = c.split('=', 2) as [string, string | undefined]
+          if (k === '_fl_utm' && v) {
+            try {
+              const parsed = JSON.parse(decodeURIComponent(v)) as Record<string, string>
+              Object.keys(parsed).forEach((pk) => {
+                if (knownParams.includes(pk) && !result[pk]) result[pk] = parsed[pk]
+              })
+            } catch {}
+          }
+        }
       } catch {}
     }
 

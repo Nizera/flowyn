@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Loader2, Plus, Trash2, ToggleLeft, ToggleRight, X, KeyRound } from 'lucide-react'
+import { Loader2, Plus, Trash2, ToggleLeft, ToggleRight, X, KeyRound, Code2, Globe } from 'lucide-react'
 import { createPixel, deletePixel, togglePixel, updatePixelCapiToken } from './actions'
 
 const PLATFORMS = [
@@ -22,9 +22,10 @@ interface Pixel {
   is_active: boolean
   created_at: string
   capi_access_token?: string | null  // encriptado no DB — frontend só vê null | não-null
+  public_token?: string | null
 }
 
-export function PixelManager({ initialPixels }: { initialPixels: Pixel[] }) {
+export function PixelManager({ initialPixels, appUrl }: { initialPixels: Pixel[]; appUrl: string }) {
   const [showModal, setShowModal] = useState(false)
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -32,6 +33,7 @@ export function PixelManager({ initialPixels }: { initialPixels: Pixel[] }) {
   const [capiEditingId, setCapiEditingId] = useState<string | null>(null)
   const [capiDraft, setCapiDraft] = useState('')
   const [capiStatus, setCapiStatus] = useState<string | null>(null)
+  const [snippetCopiedId, setSnippetCopiedId] = useState<string | null>(null)
 
   function handleCreate(formData: FormData) {
     setError(null)
@@ -115,7 +117,7 @@ export function PixelManager({ initialPixels }: { initialPixels: Pixel[] }) {
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full min-w-[760px] text-left text-sm">
+              <table className="w-full min-w-[860px] text-left text-sm">
                 <thead className="border-b border-border text-sm font-medium text-foreground">
                   <tr>
                     <th className="px-5 py-4">Nome</th>
@@ -123,6 +125,7 @@ export function PixelManager({ initialPixels }: { initialPixels: Pixel[] }) {
                     <th className="px-5 py-4">ID do pixel</th>
                     <th className="px-5 py-4 text-center">Status</th>
                     <th className="px-5 py-4 text-center">CAPI Token</th>
+                    <th className="px-5 py-4 text-center">Snippet</th>
                     <th className="px-5 py-4 text-right">Acoes</th>
                   </tr>
                 </thead>
@@ -186,6 +189,27 @@ export function PixelManager({ initialPixels }: { initialPixels: Pixel[] }) {
                             <span className="text-xs text-muted opacity-60">N/A</span>
                           )}
                         </td>
+                        <td className="px-5 py-4 text-center">
+                          {pixel.platform === 'meta' && pixel.public_token ? (
+                            <button
+                              onClick={() => {
+                                const snippet = `<script src="${appUrl}/t/${pixel.public_token}.js" async></script>`
+                                navigator.clipboard.writeText(snippet).then(() => {
+                                  setSnippetCopiedId(pixel.id)
+                                  setTimeout(() => setSnippetCopiedId(null), 2000)
+                                })
+                              }}
+                              className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs transition hover:bg-surface"
+                            >
+                              <Code2 className="h-4 w-4 text-blue-600" />
+                              <span className={snippetCopiedId === pixel.id ? 'font-medium text-blue-700' : 'text-muted'}>
+                                {snippetCopiedId === pixel.id ? 'Copiado!' : 'Copiar'}
+                              </span>
+                            </button>
+                          ) : (
+                            <span className="text-xs text-muted opacity-60">N/A</span>
+                          )}
+                        </td>
                         <td className="px-5 py-4 text-right">
                           <button onClick={() => handleDelete(pixel.id)} className="rounded-lg p-2 text-muted transition hover:bg-red-50 hover:text-red-600">
                             <Trash2 className="h-4 w-4" />
@@ -200,6 +224,55 @@ export function PixelManager({ initialPixels }: { initialPixels: Pixel[] }) {
           )}
         </div>
       </div>
+
+      {initialPixels.length > 0 && initialPixels.some(p => p.platform === 'meta' && p.public_token) && (
+        <div className="grid border-b border-border md:grid-cols-[240px_1fr]">
+          <RowTitle
+            title="Tracking Cross-Domain"
+            description="Rastrear page views na sua landing page externa."
+          />
+          <div className="py-6 md:pl-8">
+            <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-5">
+              <div className="mb-3 flex items-center gap-2">
+                <Globe className="h-4 w-4 text-blue-600" />
+                <h4 className="text-sm font-semibold text-blue-900">Rastrear visitas na sua landing page</h4>
+              </div>
+              <p className="mb-3 text-xs leading-6 text-blue-800/80">
+                Cole o snippet abaixo no <strong>{'<head>'}</strong> da sua landing page externa para rastrear visitantes
+                antes deles chegarem no checkout. Isso alimenta a aba <strong>Funil de Conversão</strong> do dashboard.
+              </p>
+              <div className="mb-3 rounded-lg bg-slate-900 p-3 font-mono text-xs text-slate-300">
+                {(() => {
+                  const meta = initialPixels.find(p => p.platform === 'meta' && p.public_token)
+                  if (!meta) return null
+                  return (
+                    <>
+                      <span className="text-slate-500">&lt;!-- FlowynPay tracker — cola no {'<head>'} da sua landing --&gt;</span>
+                      <br />
+                      &lt;script src=&quot;{appUrl}/t/<span className="text-emerald-400">{meta.public_token}</span>.js&quot; async&gt;&lt;/script&gt;
+                      <br />
+                      <span className="text-slate-500">
+                        {'<!-- Opcional: para rastrear clique em botão "Comprar" -->'}
+                      </span>
+                      <br />
+                      <span className="text-slate-500">&lt;script&gt;</span>
+                      <br />
+                      &nbsp;&nbsp;<span className="text-blue-400">window</span>.<span className="text-amber-300">__fl_product_id</span> = <span className="text-emerald-400">&quot;ID_DO_SEU_PRODUTO&quot;</span>;
+                      <br />
+                      <span className="text-slate-500">&lt;/script&gt;</span>
+                    </>
+                  )
+                })()}
+              </div>
+              <p className="text-xs text-blue-800/70">
+                <strong>Como funciona:</strong> O tracker grava UTMs em cookie first-party, dispara{' '}
+                <code className="rounded bg-blue-100 px-1 py-0.5">page_view</code> via beacon, e injeta UTMs no link do
+                checkout quando o visitante clica em "Comprar". Não bloqueia ad blockers.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">

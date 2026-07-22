@@ -93,6 +93,8 @@ export async function GET(req: NextRequest) {
   }
 
   // 4. Get funnel_events counts (page_view, initiate_checkout)
+  // CORREÇÃO (tracking cross-domain): page_views externos (landing do produtor,
+  // rastreados via tracker.js) entram também em tracking_external_events. Somamos.
   const startDateTs = `${startDate}T00:00:00`
   const endDateTs = `${endDate}T23:59:59`
 
@@ -104,6 +106,15 @@ export async function GET(req: NextRequest) {
     .gte('created_at', startDateTs)
     .lte('created_at', endDateTs)
 
+  // PageView externos (landing do produtor via tracker.js)
+  const { count: externalPageViewsCount } = await supabase
+    .from('tracking_external_events')
+    .select('*', { count: 'exact', head: true })
+    .eq('event_name', 'page_view')
+    .eq('user_id', user.id)
+    .gte('created_at', startDateTs)
+    .lte('created_at', endDateTs)
+
   const { count: initiateCheckoutsCount } = await supabase
     .from('funnel_events')
     .select('*', { count: 'exact', head: true })
@@ -112,7 +123,7 @@ export async function GET(req: NextRequest) {
     .gte('created_at', startDateTs)
     .lte('created_at', endDateTs)
 
-  const pageViews = pageViewsCount || 0
+  const pageViews = (pageViewsCount || 0) + (externalPageViewsCount || 0)
   const initiateCheckouts = initiateCheckoutsCount || 0
 
   // 5. Get orders count (pending + paid = sales_initiated, only paid = sales_approved)
