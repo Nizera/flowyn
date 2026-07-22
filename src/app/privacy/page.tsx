@@ -118,7 +118,8 @@ export default function PrivacyPage() {
               Em caso de dúvidas sobre esta Política de Privacidade ou sobre o tratamento de seus dados, entre em contato com nosso Encarregado de Proteção de Dados:
             </p>
             <div className="mt-3 text-muted">
-              <p><strong>E-mail:</strong> contato@flowyn.com.br</p>
+              <p><strong>E-mail:</strong> suporte@flowyn.com.br</p>
+              <p><strong>CNPJ:</strong> 67.559.501/0001-83</p>
               <p><strong>Encarregado:</strong> Daniel Mariano</p>
             </div>
           </section>

@@ -113,7 +113,8 @@ export default function TermsPage() {
               Em caso de dúvidas sobre estes Termos de Serviço:
             </p>
             <div className="mt-3 text-muted">
-              <p><strong>E-mail:</strong> contato@flowyn.com.br</p>
+              <p><strong>E-mail:</strong> suporte@flowyn.com.br</p>
+              <p><strong>CNPJ:</strong> 67.559.501/0001-83</p>
               <p><strong>Site:</strong> https://flowyn.com.br</p>
             </div>
           </section>
