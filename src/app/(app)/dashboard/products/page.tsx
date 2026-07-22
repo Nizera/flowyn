@@ -1,11 +1,12 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import type { LucideIcon } from 'lucide-react'
-import { BookOpen, Box, ExternalLink, FileText, Layers, Plus, Search, Users, AlertTriangle } from 'lucide-react'
+import { BookOpen, Box, ExternalLink, FileText, Layers, Plus, Search, Users, AlertTriangle, ToggleLeft, ToggleRight } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { CopyUtmButton } from '@/components/CopyUtmButton'
 import { currency } from '@/lib/format'
 import { checkPlanLimit } from '@/lib/subscription'
+import { ToggleProductActive } from './ToggleProductActive'
 
 type ProductPlanRow = {
   price: string | number | null
@@ -36,7 +37,7 @@ export default async function ProductsPage() {
   const { data: products } = await supabase
     .from('products')
     .select(`
-      id, name, logo_url, cover_url, product_type, category, created_at, is_public,
+      id, name, logo_url, cover_url, product_type, category, created_at, is_public, is_active,
       plans(id, price)
     `)
     .eq('owner_id', user.id)
@@ -167,9 +168,12 @@ export default async function ProductsPage() {
                         <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-black ring-1 ${cfg.badge}`}>{cfg.label}</span>
                       </td>
                       <td className="px-5 py-4">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-black ring-1 ${product.is_public ? 'bg-emerald-50 text-emerald-700 ring-emerald-100' : 'bg-surface text-muted ring-border'}`}>
-                          {product.is_public ? 'Publicado' : 'Rascunho'}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-black ring-1 ${product.is_public ? 'bg-emerald-50 text-emerald-700 ring-emerald-100' : 'bg-surface text-muted ring-border'}`}>
+                            {product.is_public ? 'Publicado' : 'Rascunho'}
+                          </span>
+                          <ToggleProductActive productId={product.id} isActive={product.is_active ?? true} atLimit={atLimit} />
+                        </div>
                       </td>
                       <td className="px-5 py-4 font-bold text-foreground">{minPrice !== null ? currency(minPrice) : '-'}</td>
                       <td className="px-5 py-4 font-bold text-foreground">{currency(total)}</td>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fulfillPaidOrder, revokePaidOrder } from '@/lib/order-fulfillment'
 import { processPlatformSubscriptionPayment } from '@/lib/platform-subscription'
+import { enforcePlanLimits } from '@/lib/subscription'
 import { retrievePayment } from '@/lib/asaas'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { safeTokenEqual } from '@/lib/safe-bearer-compare'
@@ -383,6 +384,13 @@ export async function POST(req: NextRequest) {
           entity_id: platformSub.id,
           metadata: { subscription_id: subscriptionId, user_id: platformSub.user_id, deferred_revocation: true },
         })
+
+        // Enforcement: desabilita produtos excedentes do plano free
+        // (caso o profiles.plan já tenha sido alterado pra 'free' por outro path)
+        const { disabled } = await enforcePlanLimits(platformSub.user_id)
+        if (disabled > 0) {
+          console.log(`[Asaas Webhook] Disabled ${disabled} excess products for user ${platformSub.user_id}`)
+        }
       }
 
       // Handle product subscription cancellation — revoga TODAS as orders paid

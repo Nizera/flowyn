@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { safeBearerCompare } from '@/lib/safe-bearer-compare'
+import { enforcePlanLimits } from '@/lib/subscription'
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('Authorization') || ''
@@ -14,6 +15,7 @@ export async function GET(req: NextRequest) {
 
   let suspendedCount = 0
   let downgradeCount = 0
+  let productsDisabled = 0
 
   // 1. Suspend subscriptions past grace period
   const { data: expiredGrace } = await supabase
@@ -34,6 +36,10 @@ export async function GET(req: NextRequest) {
         .from('profiles')
         .update({ plan: 'free', updated_at: new Date().toISOString() })
         .eq('id', sub.user_id)
+
+      // Enforcement: desabilita produtos excedentes do plano free
+      const { disabled } = await enforcePlanLimits(sub.user_id)
+      productsDisabled += disabled
 
       suspendedCount++
     } catch {
@@ -61,6 +67,10 @@ export async function GET(req: NextRequest) {
         .update({ plan: 'free', updated_at: new Date().toISOString() })
         .eq('id', sub.user_id)
 
+      // Enforcement: desabilita produtos excedentes do plano free
+      const { disabled } = await enforcePlanLimits(sub.user_id)
+      productsDisabled += disabled
+
       downgradeCount++
     } catch {
       continue
@@ -71,6 +81,7 @@ export async function GET(req: NextRequest) {
     success: true,
     suspended: suspendedCount,
     downgraded: downgradeCount,
+    products_disabled: productsDisabled,
     timestamp: new Date().toISOString(),
   })
 }

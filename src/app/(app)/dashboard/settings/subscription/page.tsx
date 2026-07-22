@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { Check, ReceiptText } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { checkSubscription } from '@/lib/subscription'
 import { SubscriptionForm } from './SubscriptionForm'
 
 function formatDate(value: string | null | undefined) {
@@ -52,11 +53,16 @@ export default async function SubscriptionPage() {
         .limit(6)
     : { data: [] }
 
-  const hasActiveSubscription =
-    subscription?.status === 'active'
-    || subscription?.status === 'grace_period'
-    || (subscription?.status === 'scheduled' && isFuture(subscription.trial_ends_at))
-    || (subscription?.status === 'trialing' && isFuture(subscription.trial_ends_at))
+  // Usa checkSubscription centralizado em vez de lógica manual.
+  // Isso garante consistência: cancelled + período expirado = inactive.
+  const subCheck = await checkSubscription(user.id)
+  const hasActiveSubscription = subCheck.isActive
+
+  // Status visual baseado no subscription row (raw) + check (effective)
+  const rawStatus = subscription?.status || null
+  const displayStatus = subCheck.isActive
+    ? statusLabel(rawStatus)
+    : (rawStatus === 'cancelled' ? 'Cancelada' : rawStatus === 'suspended' ? 'Suspensa' : rawStatus === 'grace_period' ? 'Periodo de regularizacao' : 'Inativa')
 
   let metricLabel = 'Teste gratis'
   let metricValue = '7 dias'
@@ -67,15 +73,13 @@ export default async function SubscriptionPage() {
     const trialEnds = subscription.trial_ends_at ? new Date(subscription.trial_ends_at).getTime() : 0
     const periodEnds = subscription.current_period_ends_at ? new Date(subscription.current_period_ends_at).getTime() : 0
 
-    if (subscription.status === 'active' || subscription.status === 'grace_period') {
+    if (subCheck.isActive && (subscription.status === 'active' || subscription.status === 'grace_period')) {
       metricLabel = 'Proxima cobranca'
       
       let nextBillingDate = subscription.current_period_ends_at ? new Date(subscription.current_period_ends_at) : null
       
-      // Inteligência de recuperação se current_period_ends_at for nulo
       if (!nextBillingDate && subscription.trial_ends_at) {
         const trialDate = new Date(subscription.trial_ends_at)
-        // Adiciona meses iterativamente até que a data de vencimento seja no futuro
         while (trialDate.getTime() <= now) {
           trialDate.setMonth(trialDate.getMonth() + 1)
         }
@@ -90,20 +94,41 @@ export default async function SubscriptionPage() {
         metricValue = 'Mensal'
         metricDescription = 'Renovacao automatica.'
       }
-    } else if (trialEnds > now) {
-      metricLabel = 'Teste gratis'
-      const days = Math.ceil((trialEnds - now) / (1000 * 60 * 60 * 24))
-      metricValue = `${days} ${days === 1 ? 'dia' : 'dias'}`
-      metricDescription = `Termina em ${formatDate(subscription.trial_ends_at)}.`
+    } else if (subscription.status === 'trialing' || subscription.status === 'scheduled') {
+      if (trialEnds > now) {
+        metricLabel = 'Teste gratis'
+        const days = Math.ceil((trialEnds - now) / (1000 * 60 * 60 * 24))
+        metricValue = `${days} ${days === 1 ? 'dia' : 'dias'}`
+        metricDescription = `Termina em ${formatDate(subscription.trial_ends_at)}.`
+      } else {
+        metricLabel = 'Expirado'
+        metricValue = 'Expirado'
+        metricDescription = 'Teste gratis encerrado. Assine o plano Pro para continuar.'
+      }
     } else if (subscription.status === 'cancelled') {
       metricLabel = 'Acesso'
-      if (periodEnds && periodEnds > now) {
+      if (periodEnds > now) {
         const days = Math.ceil((periodEnds - now) / (1000 * 60 * 60 * 24))
         metricValue = `${days} ${days === 1 ? 'dia' : 'dias'}`
         metricDescription = `Expira em ${formatDate(subscription.current_period_ends_at)}.`
       } else {
         metricValue = 'Expirado'
-        metricDescription = 'Assinatura cancelada.'
+        metricDescription = 'Assinatura cancelada. Reative para acessar recursos Pro.'
+      }
+    } else if (subscription.status === 'suspended') {
+      metricLabel = 'Status'
+      metricValue = 'Suspensa'
+      metricDescription = 'Assinatura suspensa. Reative para acessar recursos Pro.'
+    } else if (subscription.status === 'grace_period') {
+      metricLabel = 'Regularizacao'
+      if (isFuture(subscription.grace_period_ends_at)) {
+        const graceEnds = new Date(subscription.grace_period_ends_at!).getTime()
+        const days = Math.ceil((graceEnds - now) / (1000 * 60 * 60 * 24))
+        metricValue = `${days} ${days === 1 ? 'dia' : 'dias'}`
+        metricDescription = `Regularize ate ${formatDate(subscription.grace_period_ends_at)}.`
+      } else {
+        metricValue = 'Expirado'
+        metricDescription = 'Periodo de regularizacao encerrado.'
       }
     }
   }
@@ -119,7 +144,7 @@ export default async function SubscriptionPage() {
         </div>
         <div className="text-left sm:text-right">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">Status</p>
-          <p className="mt-1 text-lg font-semibold text-foreground">{statusLabel(subscription?.status)}</p>
+          <p className="mt-1 text-lg font-semibold text-foreground">{displayStatus}</p>
         </div>
       </div>
 
@@ -147,17 +172,22 @@ export default async function SubscriptionPage() {
         <RowTitle title="Acesso" description="Recursos liberados." />
         <div className="grid gap-3 py-6 md:grid-cols-2">
           {[
-            'Criar produtos e planos',
-            'Checkout transparente no ar',
-            'Checkout e area do aluno inclusos',
-            'Carteira CPF/CNPJ sem taxa Flowyn por venda',
+            { text: 'Criar produtos e planos', active: hasActiveSubscription },
+            { text: 'Checkout transparente no ar', active: hasActiveSubscription },
+            { text: 'Checkout e area do aluno inclusos', active: hasActiveSubscription },
+            { text: 'Carteira CPF/CNPJ sem taxa Flowyn por venda', active: hasActiveSubscription },
           ].map(item => (
-            <div key={item} className="flex items-center gap-2 text-sm text-muted">
-              <Check className="h-4 w-4 text-emerald-600" />
-              {item}
+            <div key={item.text} className="flex items-center gap-2 text-sm">
+              <Check className={`h-4 w-4 ${item.active ? 'text-emerald-600' : 'text-muted opacity-40'}`} />
+              <span className={item.active ? 'text-muted' : 'text-muted opacity-50 line-through'}>{item.text}</span>
             </div>
           ))}
         </div>
+        {!hasActiveSubscription && (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            Seu plano esta inativo. Assine o plano Pro para desbloquear todos os recursos.
+          </div>
+        )}
       </div>
 
       <div className="border-b border-border">
