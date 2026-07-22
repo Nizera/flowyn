@@ -3,7 +3,7 @@ function escapeHtml(str: string) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#039;')
 }
 
-const LOGO_URL = 'https://flowyn.com/brand/logobranca%20transparente.png'
+const LOGO_URL = 'https://flowyn.com/brand/logo-white-transparent.png'
 const G = '#f97316'
 const DARK_BG = '#0a0a0a'
 const CARD_STYLE = `background:${DARK_BG};border-radius:20px;overflow:hidden;max-width:560px;width:100%;`
