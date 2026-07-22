@@ -100,8 +100,11 @@ export function CheckoutForm({
       } catch {}
     }
 
-    // Lê também cookie first-party _fl_utm (tracker.js grava UTMs na landing externa)
-    // que sobrevivem cross-domain. Se a URL não trouxe UTMs, usa essas como fallback.
+    // Lê cookie first-party _fl_utm como último fallback.
+    // IMPORTANTE: este cookie é setado no domínio da landing externa (tracker.js).
+    // Se a landing é em domínio diferente de flowyn.com, o cookie NÃO é acessível
+    // aqui por restrição same-origin do browser. Funciona apenas se o cookie foi
+    // setado em visitas anteriores ao próprio domínio flowyn.com.
     if (!hasUrlParams) {
       try {
         const all = document.cookie.split('; ')
@@ -135,6 +138,7 @@ export function CheckoutForm({
           plan_id: planId,
           event_name: 'page_view',
           tracking_params: result,
+          session_id: result.fl_sid || null,
         }),
       }).catch(() => {})
     }
@@ -154,6 +158,7 @@ export function CheckoutForm({
         plan_id: planId,
         event_name: 'initiate_checkout',
         tracking_params: trackingParams,
+        session_id: trackingParams?.fl_sid || null,
       }),
     }).catch(() => {})
   }, [planId, previewMode, trackingParams])

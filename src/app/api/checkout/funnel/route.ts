@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Request too large' }, { status: 413 })
     }
     const body = JSON.parse(rawBody)
-    const { plan_id, event_name, tracking_params } = body
+    const { plan_id, event_name, tracking_params, session_id } = body
 
     if (!plan_id || !event_name) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 })
@@ -49,6 +49,14 @@ export async function POST(req: NextRequest) {
     const utm_campaign = tracking_params?.utm_campaign || null
     const utm_content = tracking_params?.utm_content || null
     const utm_term = tracking_params?.utm_term || null
+    const fbclid = tracking_params?.fbclid || null
+    const gclid = tracking_params?.gclid || null
+    const ttclid = tracking_params?.ttclid || null
+    const src = tracking_params?.src || null
+    const sck = tracking_params?.sck || null
+    const fbp = tracking_params?._fbp || null
+    const fbc = tracking_params?._fbc || null
+    const finalSessionId = session_id || tracking_params?.fl_sid || null
 
     // Insert funnel event
     const { error: insertError } = await supabase
@@ -57,11 +65,19 @@ export async function POST(req: NextRequest) {
         product_id: plan.product_id,
         plan_id,
         event_name,
+        session_id: finalSessionId,
         utm_source,
         utm_medium,
         utm_campaign,
         utm_content,
         utm_term,
+        fbclid,
+        gclid,
+        ttclid,
+        src,
+        sck,
+        _fbp: fbp,
+        _fbc: fbc,
       })
 
     if (insertError) {

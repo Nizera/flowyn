@@ -7,6 +7,52 @@ type AttributionResult = {
   adAccountId?: string
 }
 
+/**
+ * Tenta matchar uma order com uma campanha usando múltiplos campos.
+ * Retorna o campaign matchado e o campo utilizado no match (para auditoria).
+ */
+function matchOrderToCampaign(
+  trackingParams: Record<string, string> | null,
+  campaignById: Record<string, { campaign_id: string; ad_account_id: string; name: string }>,
+  campaignByName: Record<string, { campaign_id: string; ad_account_id: string; name: string }>,
+): { campaign: { campaign_id: string; ad_account_id: string } | null; matchField: string; matchValue: string } {
+  if (!trackingParams) return { campaign: null, matchField: '', matchValue: '' }
+
+  const utmCampaign = trackingParams.utm_campaign
+  const utmSource = trackingParams.utm_source
+  const src = trackingParams.src
+
+  // 1. Match por utm_campaign → campaign_id direto
+  if (utmCampaign && campaignById[utmCampaign]) {
+    return { campaign: campaignById[utmCampaign], matchField: 'campaign_id', matchValue: utmCampaign }
+  }
+
+  // 2. Match por utm_campaign → campaign name (case-insensitive)
+  if (utmCampaign && campaignByName[utmCampaign.toLowerCase()]) {
+    return { campaign: campaignByName[utmCampaign.toLowerCase()], matchField: 'campaign_name', matchValue: utmCampaign }
+  }
+
+  // 3. Match por fbclid (Meta click ID) — requer dados de attribution do Meta
+  //    Por enquanto, não temos acesso local. Se futuramente integrarmos a API de
+  //    Attribution do Meta, este é o ponto de inserção.
+  if (trackingParams.fbclid) {
+    return { campaign: null, matchField: 'fbclid', matchValue: trackingParams.fbclid }
+  }
+
+  // 4. Match por gclid (Google Ads click ID) — idem
+  if (trackingParams.gclid) {
+    return { campaign: null, matchField: 'gclid', matchValue: trackingParams.gclid }
+  }
+
+  // 5. Match por src (custom param do produtor — ex: src=campanha_xyz)
+  //    Usa como último fallback: tenta matchar como campaign name
+  if (src && campaignByName[src.toLowerCase()]) {
+    return { campaign: campaignByName[src.toLowerCase()], matchField: 'src', matchValue: src }
+  }
+
+  return { campaign: null, matchField: '', matchValue: '' }
+}
+
 export async function materializeOrderAttributions(
   userId: string,
   startDate?: string,
@@ -74,13 +120,12 @@ export async function materializeOrderAttributions(
 
   // 4. Match orders to campaigns and insert attributions
   for (const order of orders) {
-    const trackingParams = order.tracking_params as any
+    const trackingParams = order.tracking_params as Record<string, string> | null
     if (!trackingParams) {
       skipped++
       continue
     }
 
-    const utmCampaign = trackingParams.utm_campaign
     const utmSource = trackingParams.utm_source || null
     const utmMedium = trackingParams.utm_medium || null
     const utmContent = trackingParams.utm_content || null
@@ -100,30 +145,10 @@ export async function materializeOrderAttributions(
       clickIdValue = trackingParams.ttclid
     }
 
-    // Try to match campaign
-    let matchedCampaign: { campaign_id: string; ad_account_id: string } | null = null
-    let matchField = ''
-    let matchValue = ''
-
-    if (utmCampaign) {
-      if (campaignById[utmCampaign]) {
-        matchedCampaign = campaignById[utmCampaign]
-        matchField = 'campaign_id'
-        matchValue = utmCampaign
-      } else if (campaignByName[utmCampaign.toLowerCase()]) {
-        matchedCampaign = campaignByName[utmCampaign.toLowerCase()]
-        matchField = 'campaign_name'
-        matchValue = utmCampaign
-      }
-    }
-
-    // If no campaign matched via utm_campaign, try click ID
-    if (!matchedCampaign && clickIdType) {
-      matchField = clickIdType
-      matchValue = clickIdValue || ''
-      // Click ID matching requires Meta attribution data (not available locally)
-      // For now, we still need a campaign match - skip if no campaign found
-    }
+    // Multi-field matching
+    const { campaign: matchedCampaign, matchField, matchValue } = matchOrderToCampaign(
+      trackingParams, campaignById, campaignByName
+    )
 
     if (!matchedCampaign) {
       skipped++

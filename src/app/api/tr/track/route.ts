@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       return new NextResponse('bad json', { status: 400, headers: CORS_HEADERS })
     }
 
-    const { t, event_name, product_id, url, referrer, utm, fbclid, ttclid, gclid, session_id } = body
+    const { t, event_name, product_id, url, referrer, utm, fbclid, ttclid, gclid, session_id, fbp, fbc } = body
     if (!t || !event_name) {
       return new NextResponse('missing params', { status: 400, headers: CORS_HEADERS })
     }
@@ -67,6 +67,8 @@ export async function POST(req: NextRequest) {
       fbclid: fbclid || null,
       ttclid: ttclid || null,
       gclid: gclid || null,
+      _fbp: fbp || null,
+      _fbc: fbc || null,
       client_ip: ip,
       user_agent: userAgent.slice(0, 500),
       session_id: finalSessionId,
@@ -100,6 +102,8 @@ interface TrackBody {
   fbclid?: string | null
   ttclid?: string | null
   gclid?: string | null
+  fbp?: string | null
+  fbc?: string | null
   session_id?: string | null
 }
 

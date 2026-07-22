@@ -141,6 +141,8 @@ function buildTrackerJs(publicToken: string): string {
   var fbclid = trackingParams.fbclid || null;
   var ttclid = trackingParams.ttclid || null;
   var gclid = trackingParams.gclid || null;
+  var fbp = getCookie("_fbp") || null;
+  var fbc = getCookie("_fbc") || null;
 
   // Lockup do productId é opcional no snippet (produtor pode setar
   // <script>window.__fl_product_id = "UUID"</script> ANTES deste script)
@@ -159,6 +161,8 @@ function buildTrackerJs(publicToken: string): string {
         fbclid: fbclid,
         ttclid: ttclid,
         gclid: gclid,
+        fbp: fbp,
+        fbc: fbc,
         session_id: SID
       };
       if (navigator.sendBeacon) {

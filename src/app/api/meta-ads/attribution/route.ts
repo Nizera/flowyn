@@ -161,21 +161,38 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 5. Attribute orders to campaigns based on utm_campaign matching campaign_id
+    // 5. Attribute orders to campaigns based on multi-field matching
     for (const order of orders || []) {
-      const trackingParams = order.tracking_params as any
+      const trackingParams = order.tracking_params as Record<string, string> | null
       if (!trackingParams) continue
 
       const utmCampaign = trackingParams.utm_campaign
-      if (!utmCampaign) continue
+      const utmSource = trackingParams.utm_source
+      const utmMedium = trackingParams.utm_medium
+      const src = trackingParams.src
+      const fbclid = trackingParams.fbclid
 
       // Try to match by campaign ID first, then by name via pre-built lookup
       let matchedCampaignId: string | null = null
 
-      if (campaignMap[utmCampaign]) {
-        matchedCampaignId = utmCampaign
-      } else {
-        matchedCampaignId = campaignNameLookup.get(utmCampaign.toLowerCase()) ?? null
+      if (utmCampaign) {
+        if (campaignMap[utmCampaign]) {
+          matchedCampaignId = utmCampaign
+        } else {
+          matchedCampaignId = campaignNameLookup.get(utmCampaign.toLowerCase()) ?? null
+        }
+      }
+
+      // Fallback: match por src (custom param do produtor)
+      if (!matchedCampaignId && src) {
+        matchedCampaignId = campaignNameLookup.get(src.toLowerCase()) ?? null
+      }
+
+      // Fallback: match por utm_source + utm_medium como composite key
+      // (ex: "facebook" + "cpc" pode indicar uma campanha orgânica/paga)
+      if (!matchedCampaignId && utmSource && utmMedium) {
+        const compositeKey = `${utmSource}_${utmMedium}`
+        matchedCampaignId = campaignNameLookup.get(compositeKey.toLowerCase()) ?? null
       }
 
       if (matchedCampaignId && campaignMap[matchedCampaignId]) {
@@ -209,10 +226,16 @@ export async function POST(req: NextRequest) {
       // ao número de orders atribuídos a esta campaign.
       const attributedProductIds = ((orders as any[]) || [])
         .filter(o => {
-          const tp = o.tracking_params as any
-          return tp?.utm_campaign
-            && (tp.utm_campaign === campaign.campaign_id
-                || campaignNameLookup.get(String(tp.utm_campaign).toLowerCase()) === campaign.campaign_id)
+          const tp = o.tracking_params as Record<string, string> | null
+          if (!tp) return false
+          // Match por utm_campaign
+          if (tp.utm_campaign) {
+            if (tp.utm_campaign === campaign.campaign_id) return true
+            if (campaignNameLookup.get(String(tp.utm_campaign).toLowerCase()) === campaign.campaign_id) return true
+          }
+          // Match por src
+          if (tp.src && campaignNameLookup.get(tp.src.toLowerCase()) === campaign.campaign_id) return true
+          return false
         })
         .map(o => o.product_id)
         .filter(Boolean)

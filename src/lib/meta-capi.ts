@@ -153,6 +153,25 @@ export async function sendCapiEvent(orderData: CapiOrderData) {
     userData.fbc = `fb.1.${ts}.${orderData.trackingParams.fbclid}`
   }
 
+  const customData: Record<string, unknown> = {
+    value: orderData.amount,
+    currency: 'BRL',
+    order_id: orderData.orderId,
+    content_type: 'product',
+  }
+
+  // Enviar UTMs no custom_data para matching avançado no Meta
+  // (Meta usa click IDs como matching primário, mas UTMs ajudam em
+  // cenários onde click IDs não estão disponíveis)
+  if (orderData.trackingParams) {
+    const tp = orderData.trackingParams
+    if (tp.utm_source) customData.utm_source = tp.utm_source
+    if (tp.utm_medium) customData.utm_medium = tp.utm_medium
+    if (tp.utm_campaign) customData.utm_campaign = tp.utm_campaign
+    if (tp.utm_content) customData.utm_content = tp.utm_content
+    if (tp.utm_term) customData.utm_term = tp.utm_term
+  }
+
   const payload = {
     data: [
       {
@@ -162,12 +181,7 @@ export async function sendCapiEvent(orderData: CapiOrderData) {
         action_source: 'website',
         event_source_url: orderData.eventSourceUrl,
         user_data: userData,
-        custom_data: {
-          value: orderData.amount,
-          currency: 'BRL',
-          order_id: orderData.orderId,
-          content_type: 'product',
-        },
+        custom_data: customData,
       },
     ],
     access_token: accessToken,

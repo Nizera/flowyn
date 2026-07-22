@@ -132,7 +132,7 @@ export async function GET(req: NextRequest) {
     paymentBreakdown[status].total += parseFloat(order.amount) || 0
   }
 
-  // 6. Attribute orders to campaigns via utm_campaign
+  // 6. Attribute orders to campaigns via multi-field matching
   let totalAttributedRevenue = 0
   let totalAttributedOrders = 0
 
@@ -154,21 +154,33 @@ export async function GET(req: NextRequest) {
     .filter((item: { product_id?: string }) => !item.product_id)
     .reduce((sum: number, item: { cost?: string | number }) => sum + (parseFloat(String(item.cost)) || 0), 0)
 
+  /** Tenta matchar uma order a uma campanha usando múltiplos campos */
+  function matchOrder(params: Record<string, string> | null): boolean {
+    if (!params) return false
+    const utmCampaign = params.utm_campaign
+    const utmSource = params.utm_source
+    const src = params.src
+
+    if (utmCampaign) {
+      if (campaignSpendMap[utmCampaign]) return true
+      if (campaignNameLookup.has(utmCampaign.toLowerCase())) return true
+    }
+    // Fallback: src como campaign name
+    if (src && campaignNameLookup.has(src.toLowerCase())) return true
+    // Fallback: utm_source + utm_medium como composite
+    if (utmSource && params.utm_medium) {
+      const compositeKey = `${utmSource}_${params.utm_medium}`
+      if (campaignNameLookup.has(compositeKey.toLowerCase())) return true
+    }
+    return false
+  }
+
   for (const order of orders || []) {
     if (order.status !== 'paid') continue
     const trackingParams = order.tracking_params as Record<string, string> | null
-    if (!trackingParams?.utm_campaign) continue
+    if (!trackingParams) continue
 
-    const utmCampaign = trackingParams.utm_campaign
-    let matched = false
-
-    if (campaignSpendMap[utmCampaign]) {
-      matched = true
-    } else if (campaignNameLookup.has(utmCampaign.toLowerCase())) {
-      matched = true
-    }
-
-    if (matched) {
+    if (matchOrder(trackingParams)) {
       totalAttributedRevenue += parseFloat(order.net_value ?? order.amount) || 0
       totalAttributedOrders++
     }
@@ -183,13 +195,8 @@ export async function GET(req: NextRequest) {
   for (const order of orders || []) {
     if (order.status !== 'paid') continue
     const trackingParams = order.tracking_params as Record<string, string> | null
-    if (!trackingParams?.utm_campaign) continue
-    if (
-      campaignSpendMap[trackingParams.utm_campaign]
-      || campaignNameLookup.has(trackingParams.utm_campaign.toLowerCase())
-    ) {
-      if (order.product_id) attributedProductIds.add(order.product_id)
-    }
+    if (!matchOrder(trackingParams)) continue
+    if (order.product_id) attributedProductIds.add(order.product_id)
   }
   let totalProductionCost = 0
   for (const pid of attributedProductIds) totalProductionCost += productCostMap.get(pid) || 0
@@ -222,14 +229,7 @@ export async function GET(req: NextRequest) {
   for (const order of orders || []) {
     if (order.status !== 'paid') continue
     const trackingParams = order.tracking_params as Record<string, string> | null
-    if (!trackingParams?.utm_campaign) continue
-
-    const utmCampaign = trackingParams.utm_campaign
-    // CORREÇÃO W7 (auditoria tracking): reusar o campaignNameLookup pré-construído
-    // em vez de O(n×m) scan linear.
-    const matched = Boolean(campaignSpendMap[utmCampaign] || campaignNameLookup.has(utmCampaign.toLowerCase()))
-
-    if (!matched) continue
+    if (!matchOrder(trackingParams)) continue
 
     const day = (order.created_at as string).slice(0, 10)
     revenueByDay[day] = (revenueByDay[day] || 0) + (parseFloat(order.net_value ?? order.amount) || 0)
