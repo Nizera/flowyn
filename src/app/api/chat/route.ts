@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'nvidia/glm-5.2',
+        model: 'z-ai/glm-5.2',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: message },
