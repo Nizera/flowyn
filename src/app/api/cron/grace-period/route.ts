@@ -42,7 +42,8 @@ export async function GET(req: NextRequest) {
       productsDisabled += disabled
 
       suspendedCount++
-    } catch {
+    } catch (err) {
+      console.error(`[grace-period] Failed to suspend sub ${sub.id}:`, err)
       continue
     }
   }
@@ -72,7 +73,39 @@ export async function GET(req: NextRequest) {
       productsDisabled += disabled
 
       downgradeCount++
-    } catch {
+    } catch (err) {
+      console.error(`[grace-period] Failed to downgrade sub ${sub.id}:`, err)
+      continue
+    }
+  }
+
+  // 3. Cancelled subscriptions with current_period_ends_at = NULL
+  // Estado inconsistente: subscription cancelada mas sem data de fim de período.
+  // Trata como expirado imediatamente (não há período restante para conceder).
+  const { data: cancelledNoPeriod } = await supabase
+    .from('platform_subscriptions')
+    .select('id, user_id')
+    .eq('status', 'cancelled')
+    .is('current_period_ends_at', null)
+
+  for (const sub of cancelledNoPeriod || []) {
+    try {
+      await supabase
+        .from('platform_subscriptions')
+        .update({ status: 'suspended', updated_at: new Date().toISOString() })
+        .eq('id', sub.id)
+
+      await supabase
+        .from('profiles')
+        .update({ plan: 'free', updated_at: new Date().toISOString() })
+        .eq('id', sub.user_id)
+
+      const { disabled } = await enforcePlanLimits(sub.user_id)
+      productsDisabled += disabled
+
+      downgradeCount++
+    } catch (err) {
+      console.error(`[grace-period] Failed to downgrade cancelled-no-period sub ${sub.id}:`, err)
       continue
     }
   }
