@@ -3,7 +3,6 @@ function escapeHtml(str: string) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#039;')
 }
 
-const LOGO_URL = 'https://flowyn.com/brand/logo-white-transparent.png'
 const G = '#f97316'
 const DARK_BG = '#0a0a0a'
 const CARD_STYLE = `background:${DARK_BG};border-radius:20px;overflow:hidden;max-width:560px;width:100%;`
@@ -25,9 +24,9 @@ function emailShell(content: string, title: string) {
           <!-- Logo -->
           <tr>
             <td style="padding:32px 40px 24px;border-bottom:1px solid rgba(255,255,255,0.08);">
-              <a href="https://flowyn.com" target="_blank" style="text-decoration:none;">
-                <img src="${LOGO_URL}" alt="Flowyn" height="32" style="display:block;height:32px;width:auto;" />
-              </a>
+              <span style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.04em;font-family:'Segoe UI',Arial,sans-serif;">
+                Flo<span style="color:${G}">wyn</span>
+              </span>
             </td>
           </tr>
 
@@ -76,9 +75,11 @@ export function deliveryEmail(opts: {
           <!-- Success Icon -->
           <tr>
             <td align="center" style="padding:40px 40px 0;">
-              <div style="width:72px;height:72px;border-radius:50%;background:rgba(249,115,22,0.12);border:2px solid rgba(249,115,22,0.3);display:inline-flex;align-items:center;justify-content:center;font-size:32px;line-height:72px;text-align:center;">
-                &#10003;
-              </div>
+              <table cellpadding="0" cellspacing="0" border="0"><tr>
+                <td align="center" valign="middle" style="width:72px;height:72px;border-radius:50%;background:rgba(249,115,22,0.12);border:2px solid rgba(249,115,22,0.3);font-size:28px;color:#22c55e;text-align:center;line-height:1;">
+                  &#10003;
+                </td>
+              </tr></table>
             </td>
           </tr>
 
@@ -193,8 +194,6 @@ export function learningNotificationEmail(opts: {
 
 // ── Supabase Auth Email Templates ──
 
-const APP_URL = 'https://flowyn.com'
-
 export function supabaseConfirmSignup() {
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -212,18 +211,20 @@ export function supabaseConfirmSignup() {
           <!-- Logo -->
           <tr>
             <td style="padding:32px 40px 24px;border-bottom:1px solid rgba(255,255,255,0.08);">
-              <a href="${APP_URL}" target="_blank" style="text-decoration:none;">
-                <img src="${LOGO_URL}" alt="Flowyn" height="32" style="display:block;height:32px;width:auto;" />
-              </a>
+              <span style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.04em;font-family:'Segoe UI',Arial,sans-serif;">
+                Flo<span style="color:${G}">wyn</span>
+              </span>
             </td>
           </tr>
 
           <!-- Icon -->
           <tr>
             <td align="center" style="padding:40px 40px 0;">
-              <div style="width:72px;height:72px;border-radius:50%;background:rgba(249,115,22,0.12);border:2px solid rgba(249,115,22,0.3);display:inline-flex;align-items:center;justify-content:center;font-size:32px;line-height:72px;text-align:center;">
-                &#9993;
-              </div>
+              <table cellpadding="0" cellspacing="0" border="0"><tr>
+                <td align="center" valign="middle" style="width:72px;height:72px;border-radius:50%;background:rgba(249,115,22,0.12);border:2px solid rgba(249,115,22,0.3);font-size:28px;color:#f97316;text-align:center;line-height:1;">
+                  &#9993;
+                </td>
+              </tr></table>
             </td>
           </tr>
 
@@ -277,18 +278,20 @@ export function supabaseResetPassword() {
           <!-- Logo -->
           <tr>
             <td style="padding:32px 40px 24px;border-bottom:1px solid rgba(255,255,255,0.08);">
-              <a href="${APP_URL}" target="_blank" style="text-decoration:none;">
-                <img src="${LOGO_URL}" alt="Flowyn" height="32" style="display:block;height:32px;width:auto;" />
-              </a>
+              <span style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.04em;font-family:'Segoe UI',Arial,sans-serif;">
+                Flo<span style="color:${G}">wyn</span>
+              </span>
             </td>
           </tr>
 
           <!-- Icon -->
           <tr>
             <td align="center" style="padding:40px 40px 0;">
-              <div style="width:72px;height:72px;border-radius:50%;background:rgba(249,115,22,0.12);border:2px solid rgba(249,115,22,0.3);display:inline-flex;align-items:center;justify-content:center;font-size:32px;line-height:72px;text-align:center;">
-                &#128274;
-              </div>
+              <table cellpadding="0" cellspacing="0" border="0"><tr>
+                <td align="center" valign="middle" style="width:72px;height:72px;border-radius:50%;background:rgba(249,115,22,0.12);border:2px solid rgba(249,115,22,0.3);font-size:28px;color:#f97316;text-align:center;line-height:1;">
+                  &#128274;
+                </td>
+              </tr></table>
             </td>
           </tr>
 
