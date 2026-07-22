@@ -67,7 +67,12 @@ export async function GET(req: NextRequest) {
   const ownedAccountIds = (ownedAccounts || []).map((a: { ad_account_id: string }) => a.ad_account_id)
   if (ownedAccountIds.length === 0) {
     return NextResponse.json({
-      summary: { total_spend: 0, total_revenue: 0, net_profit: 0, total_orders: 0, roas: 0 },
+      summary: {
+        total_spend: 0, total_revenue: 0, total_sales: 0, net_profit: 0,
+        total_orders: 0, roas: 0, roi: 0, profit_margin: 0,
+        arpu: 0, chargeback_rate: 0, pending_revenue: 0, refunded_revenue: 0,
+        total_taxes: 0, total_production_costs: 0,
+      },
       payment_breakdown: [],
       spend_over_time: [],
       campaigns: [],
