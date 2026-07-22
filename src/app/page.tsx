@@ -6,6 +6,7 @@ import RecursosSection from '@/components/landing/RecursosSection'
 import PricingSection from '@/components/landing/PricingSection'
 import FaqSection from '@/components/landing/FaqSection'
 import CtaSection from '@/components/landing/CtaSection'
+import Footer from '@/components/landing/Footer'
 
 export default function Home() {
   return (
@@ -18,6 +19,7 @@ export default function Home() {
       <PricingSection />
       <FaqSection />
       <CtaSection />
+      <Footer />
     </main>
   )
 }

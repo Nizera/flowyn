@@ -227,7 +227,7 @@ export function ClientAuthPanel({ initialError, initialType, initialSuccess, red
               <SubmitButton label={pending ? 'Criando conta...' : 'Criar conta grátis'} light disabled={pending} />
 
               <p className="text-center text-xs text-white/30">
-                Ao criar sua conta você concorda com os nossos <a href="#" className="underline hover:text-white/60">Termos de Uso</a>.
+                Ao criar sua conta você concorda com os nossos <Link href="/terms" className="underline hover:text-white/60">Termos de Uso</Link>.
               </p>
             </form>
           )}
