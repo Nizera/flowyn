@@ -157,7 +157,19 @@ export async function POST(req: NextRequest) {
   }, apiKey)
 
   const trialEndsAt = localSubscription.trial_ends_at as string | null
-  const nextDueDate = isoDate(isFuture(trialEndsAt) ? trialEndsAt : new Date().toISOString())
+
+  // Se o usuário JÁ teve um trial (trial_ends_at definido), não oferece trial novamente.
+  // Isso evita trial infinito: usuário assina → trial expira → reassina → ganha 7 dias de novo.
+  // O Asaas usa nextDueDate como base do primeiro vencimento — se trial ainda está ativo,
+  // mantém; senão, cobra hoje (primeiro vencimento = hoje).
+  const alreadyHadTrial = Boolean(trialEndsAt)
+  const nextDueDate = isoDate(
+    alreadyHadTrial
+      ? new Date().toISOString()  // Sem trial: primeiro vencimento é hoje
+      : isFuture(trialEndsAt)
+        ? trialEndsAt             // Trial ainda ativo: mantém
+        : new Date().toISOString() // Sem trial: primeiro vencimento é hoje
+  )
 
   // ── Referral split: 20% to referrer's Asaas wallet (fail-closed) ──
   let split: Array<{ walletId: string; percentualValue: number }> | undefined

@@ -130,6 +130,11 @@ export default async function SubscriptionPage() {
         metricValue = 'Expirado'
         metricDescription = 'Periodo de regularizacao encerrado.'
       }
+    } else if (subscription.status === 'active' && !subCheck.isActive) {
+      // Status 'active' no DB mas período expirado (pagamento pendente/atrasado)
+      metricLabel = 'Acesso'
+      metricValue = 'Expirado'
+      metricDescription = 'Mensalidade pendente. Assine novamente para manter o acesso.'
     }
   }
 
