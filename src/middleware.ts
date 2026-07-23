@@ -5,7 +5,7 @@ import type { NextRequest } from 'next/server'
 const publicRoutes = new Set([
   '/', '/login', '/register', '/forgot-password', '/reset-password',
   '/auth/callback', '/checkout/success', '/accept-invite',
-  '/terms', '/privacy', '/contato',
+  '/terms', '/privacy', '/contato', '/sitemap.xml',
 ])
 
 export async function middleware(req: NextRequest) {
