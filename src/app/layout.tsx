@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { GlobalPixels } from "@/components/GlobalPixels";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { Analytics } from "@/components/Analytics";
 import CookieConsent from "@/components/CookieConsent";
 import "./globals.css";
 
@@ -54,9 +55,11 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${inter.variable} ${playfair.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          <GlobalPixels />
-          {children}
-          <CookieConsent />
+          <Analytics>
+            <GlobalPixels />
+            {children}
+            <CookieConsent />
+          </Analytics>
         </ThemeProvider>
       </body>
     </html>

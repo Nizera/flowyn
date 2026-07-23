@@ -16,7 +16,7 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith('/brand/')) return NextResponse.next()
   if (pathname.startsWith('/checkout/')) return NextResponse.next()
   if (pathname.startsWith('/webhook/')) return NextResponse.next()
-  if (pathname.startsWith('/api/checkout/') || pathname.startsWith('/api/webhooks/') || pathname.startsWith('/api/cron/') || pathname.startsWith('/api/meta-ads/webhook') || pathname.startsWith('/api/meta-ads/data-deletion') || pathname === '/api/contact' || pathname === '/api/chat') return NextResponse.next()
+  if (pathname.startsWith('/api/checkout/') || pathname.startsWith('/api/webhooks/') || pathname.startsWith('/api/cron/') || pathname.startsWith('/api/meta-ads/webhook') || pathname.startsWith('/api/meta-ads/data-deletion') || pathname === '/api/contact' || pathname === '/api/chat' || pathname === '/api/sentry') return NextResponse.next()
   // Cross-domain tracker: /t/[token].js (serve tracker.js) e /api/tr/track (beacon endpoint)
   // São públicos por natureza — o tracker.js roda no browser de visitantes anônimos.
   if (pathname.startsWith('/t/') && pathname.endsWith('.js')) return NextResponse.next()
