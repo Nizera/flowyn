@@ -5,10 +5,10 @@ import { PostHogProvider } from '@/components/PostHogProvider'
 
 export function Analytics({ children }: { children: React.ReactNode }) {
   return (
-    <PostHogProvider>
-      <Suspense fallback={null}>
+    <Suspense fallback={null}>
+      <PostHogProvider>
         {children}
-      </Suspense>
-    </PostHogProvider>
+      </PostHogProvider>
+    </Suspense>
   )
 }
