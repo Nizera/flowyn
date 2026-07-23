@@ -91,7 +91,7 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold text-foreground mb-3">8. Exclusão de Dados</h2>
             <p className="text-muted leading-relaxed">
               Para solicitar a exclusão dos seus dados, acesse nossa{' '}
-              <a href="https://flowyn.com.br/api/meta-ads/data-deletion" className="text-orange-600 hover:underline">
+                <a href="/api/meta-ads/data-deletion" className="text-orange-600 hover:underline">
                 página de instruções de exclusão
               </a>{' '}
               ou entre em contato com nosso Encarregado de Proteção de Dados. A exclusão será processada em até 15 dias úteis.

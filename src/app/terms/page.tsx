@@ -30,7 +30,7 @@ export default function TermsPage() {
             <ul className="list-disc list-inside text-muted space-y-2 ml-4">
               <li>Você deve ser maior de 18 anos para criar uma conta</li>
               <li>As informações fornecidas devem ser verdadeiras e atualizadas</li>
-              <li>Vous é responsável por manter a segurança de sua senha</li>
+              <li>Você é responsável por manter a segurança de sua senha</li>
               <li>Uma pessoa física pode possuir apenas uma conta</li>
               <li>Notificaremos por e-mail sobre alterações importantes na conta</li>
             </ul>
@@ -51,7 +51,7 @@ export default function TermsPage() {
             <h2 className="text-xl font-semibold text-foreground mb-3">5. Responsabilidades do Usuário</h2>
             <ul className="list-disc list-inside text-muted space-y-2 ml-4">
               <li>Utilizar a plataforma em conformidade com a legislação vigente</li>
-              <li>Não utilizá para atividades ilegais, fraudulentas ou abusivas</li>
+              <li>Não utilizar para atividades ilegais, fraudulentas ou abusivas</li>
               <li>Manter suas credenciais de acesso em segurança</li>
               <li>Fornecer informações verdadeiras ao cadastrar produtos e afiliados</li>
               <li>Responder por eventuais reclamações de consumidores</li>

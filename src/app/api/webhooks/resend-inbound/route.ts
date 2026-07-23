@@ -3,6 +3,15 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+function stripHtml(html: string) {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.text()
@@ -46,13 +55,15 @@ export async function POST(req: NextRequest) {
 
     const from = email.from || 'desconhecido'
     const subject = email.subject || '(sem assunto)'
+    const safeText = email.text || (email.html ? stripHtml(email.html) : '(vazio)')
+
+    const recipient = process.env.CONTACT_RECIPIENT_EMAIL || 'nizeragg@gmail.com'
 
     const { error: sendError } = await resend.emails.send({
       from: 'Flowyn <suporte@flowyn.com.br>',
-      to: ['nizeragg@gmail.com'],
+      to: [recipient],
       subject: `[FWD] ${subject}`,
-      html: email.html || `<pre>${email.text || ''}</pre>`,
-      text: email.text ?? undefined,
+      text: `De: ${from}\nAssunto: ${subject}\n\n${safeText}`,
       replyTo: from,
     })
 
