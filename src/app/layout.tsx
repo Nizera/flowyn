@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { GlobalPixels } from "@/components/GlobalPixels";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import CookieConsent from "@/components/CookieConsent";
 import "./globals.css";
 
 const inter = Inter({
@@ -19,7 +20,21 @@ const playfair = Playfair_Display({
 
 export const metadata: Metadata = {
   title: "Flowyn — Checkout para infoprodutores com custo previsivel",
-  description: "Venda infoprodutos com checkout transparente, entrega automatica, recebimento via Asaas e taxa Flowyn zero por venda. R$ 49/mes fixo.",
+  description: "Venda infoprodutos com checkout transparente, entrega automatica, recebimento via Asaas e taxa Flowyn zero por venda. R$ 97/mes fixo.",
+  metadataBase: new URL('https://flowyn.com.br'),
+  openGraph: {
+    title: "Flowyn — Checkout para infoprodutores",
+    description: "Checkout transparente, entrega automatica, sem taxa por venda. R$ 97/mes.",
+    url: 'https://flowyn.com.br',
+    siteName: 'Flowyn',
+    locale: 'pt_BR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "Flowyn — Checkout para infoprodutores",
+    description: "Checkout transparente, entrega automatica, sem taxa por venda. R$ 97/mes.",
+  },
   icons: {
     icon: [
       { url: "/brand/favicon-16.png", sizes: "16x16", type: "image/png" },
@@ -41,6 +56,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <GlobalPixels />
           {children}
+          <CookieConsent />
         </ThemeProvider>
       </body>
     </html>
