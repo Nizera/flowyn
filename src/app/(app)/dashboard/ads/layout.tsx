@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import { Suspense } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { checkSubscription } from '@/lib/subscription'
@@ -44,5 +43,5 @@ export default async function AdsLayout({
     )
   }
 
-  return <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-200 border-t-orange-500" /></div>}>{children}</Suspense>
+  return <>{children}</>
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -108,7 +108,7 @@ const DATE_PRESETS = [
   { label: 'Mes passado', days: 'lastmonth' as const },
 ]
 
-export default function CampaignManagementPage() {
+function CampaignManagementPageInner() {
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -964,5 +964,21 @@ export default function CampaignManagementPage() {
         </div>
       )}
     </div>
+  )
+}
+
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-200 border-t-orange-500" />
+    </div>
+  )
+}
+
+export default function CampaignManagementPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <CampaignManagementPageInner />
+    </Suspense>
   )
 }
