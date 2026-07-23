@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import posthog from 'posthog-js'
 
 if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
@@ -19,17 +19,12 @@ if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
 
   useEffect(() => {
     if (pathname && posthog) {
-      let url = pathname
-      if (searchParams?.toString()) {
-        url += `?${searchParams.toString()}`
-      }
-      posthog.capture('$pageview', { $current_url: url })
+      posthog.capture('$pageview', { $current_url: window.location.href })
     }
-  }, [pathname, searchParams])
+  }, [pathname])
 
   return <>{children}</>
 }
