@@ -11,7 +11,7 @@ if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
     capture_pageview: false,
     capture_pageleave: true,
     autocapture: {
-      dom_event_allowlist: ['click', 'submit', 'change', 'input'],
+      dom_event_allowlist: ['click', 'submit', 'change'],
       url_allowlist: ['*flowyn.com.br*'],
     },
   })
