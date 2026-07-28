@@ -16,7 +16,10 @@ export async function POST(req: Request) {
     .from('pixels')
     .select('id, pixel_id')
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('[encrypt-pixels] error:', error.message)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 
   let encrypted = 0
   let skipped = 0

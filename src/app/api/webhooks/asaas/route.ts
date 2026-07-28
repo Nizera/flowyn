@@ -267,6 +267,9 @@ export async function POST(req: NextRequest) {
         verifiedValue = Number(asaasPayment.value)
         verifiedStatus = asaasPayment.status ? String(asaasPayment.status) : null
       } catch (verificationError) {
+        const currentAttempts = Number(claimedEvent.attempt_count || 0) + 1
+        const isMaxAttempts = currentAttempts >= 3
+
         await supabase.from('security_audit_log').insert({
           action: 'WEBHOOK_PAYMENT_VERIFICATION_FAILED',
           entity_type: 'order',
@@ -274,15 +277,17 @@ export async function POST(req: NextRequest) {
           metadata: {
             payment_id: paymentId,
             event_type: eventType,
+            attempt: currentAttempts,
             error: verificationError instanceof Error ? verificationError.message.slice(0, 500) : 'Unexpected verification error',
           },
         })
         await supabase
           .from('asaas_webhook_events')
           .update({
-            status: 'done',
+            status: isMaxAttempts ? 'done' : 'pending',
             processed_at: new Date().toISOString(),
-            attempt_count: Number(claimedEvent.attempt_count || 0) + 1,
+            attempt_count: currentAttempts,
+            last_error: verificationError instanceof Error ? verificationError.message.slice(0, 500) : 'Verification error',
           })
           .eq('event_id', eventId)
         return NextResponse.json({ received: true })

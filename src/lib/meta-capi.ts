@@ -30,10 +30,16 @@ function sha256(data: string): string {
   return crypto.createHash('sha256').update(data.toLowerCase().trim()).digest('hex')
 }
 
-function sanitize(value: string): string {
-  return value.toLowerCase().trim()
+function normalizePhone(phone?: string | null): string {
+  if (!phone) return ''
+  const digits = phone.replace(/\D/g, '')
+  return digits.length >= 8 ? digits : ''
 }
-void sanitize // mantido por compat, não usado atualmente
+
+function normalizeName(name?: string | null): string {
+  if (!name) return ''
+  return name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z\s]/g, '')
+}
 
 /**
  * Resolve qual access_token usar para enviar eventos CAPI deste pixel.
@@ -136,11 +142,15 @@ export async function sendCapiEvent(orderData: CapiOrderData) {
 
   const eventId = `order_${orderData.orderId}`
 
+  const cleanPhone = normalizePhone(orderData.customerPhone)
+  const cleanName = normalizeName(orderData.customerName)
+  const nameParts = cleanName.split(/\s+/)
+
   const userData: Record<string, unknown> = {
     em: [sha256(orderData.customerEmail)],
-    ph: [sha256(orderData.customerPhone)],
-    fn: [sha256(orderData.customerName.split(/\s+/)[0] || '')],
-    ln: [sha256(orderData.customerName.split(/\s+/).slice(1).join(' ') || '')],
+    ...(cleanPhone ? { ph: [sha256(cleanPhone)] } : {}),
+    ...(nameParts[0] ? { fn: [sha256(nameParts[0])] } : {}),
+    ...(nameParts.slice(1).join(' ') ? { ln: [sha256(nameParts.slice(1).join(' '))] } : {}),
     client_ip_address: orderData.clientIp,
     client_user_agent: orderData.userAgent,
   }

@@ -1,5 +1,6 @@
 import 'server-only'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { enforcePlanLimits } from '@/lib/subscription'
 
 const PAID_EVENTS = new Set(['PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED', 'PAYMENT_RECEIVED_IN_CASH'])
 const FAILED_EVENTS = new Set([
@@ -164,6 +165,12 @@ export async function processPlatformSubscriptionPayment(eventType: string, paym
       .from('profiles')
       .update({ plan: 'free', updated_at: now.toISOString() })
       .eq('id', subscription.user_id)
+
+    try {
+      await enforcePlanLimits(subscription.user_id)
+    } catch (err) {
+      console.error('[platform-subscription] Failed to enforce plan limits on refund:', err)
+    }
 
     // Cancel referral commission for this specific payment (any non-terminal status)
     if (paymentId) {
