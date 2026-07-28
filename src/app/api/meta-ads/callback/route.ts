@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
-import { exchangeCodeForToken, getLongLivedToken, getAdAccounts, saveAdAccount, verifyOAuthState } from '@/lib/meta-oauth'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { exchangeCodeForToken, getLongLivedToken, getAdAccounts, verifyOAuthState } from '@/lib/meta-oauth'
+import { encryptApiKey } from '@/lib/encryption'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -53,16 +55,52 @@ export async function GET(req: NextRequest) {
     )
   }
 
+  const admin = createAdminClient()
+  const encryptedToken = encryptApiKey(accessToken)
+
+  const insertErrors: string[] = []
   for (const account of accounts) {
-    await saveAdAccount(
-      userId,
-      account.account_id,
-      account.name,
-      accessToken,
-    )
+    const { data: existing } = await admin
+      .from('ad_accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('ad_account_id', account.account_id)
+      .single()
+
+    if (!existing) {
+      const { error } = await admin
+        .from('ad_accounts')
+        .insert({
+          user_id: userId,
+          platform: 'meta',
+          ad_account_id: account.account_id,
+          ad_account_name: account.name,
+          access_token: encryptedToken,
+          pixel_id: null,
+          is_active: false,
+          sync_enabled: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+      if (error) insertErrors.push(`insert ${account.account_id}: ${error.message}`)
+    } else {
+      const { error } = await admin
+        .from('ad_accounts')
+        .update({
+          access_token: encryptedToken,
+          ad_account_name: account.name,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id)
+      if (error) insertErrors.push(`update ${account.account_id}: ${error.message}`)
+    }
+  }
+
+  if (insertErrors.length > 0) {
+    console.error('[Meta Callback] Insert errors:', insertErrors)
   }
 
   return NextResponse.redirect(
-    new URL('/dashboard/ads?success=connected', req.url)
+    new URL('/dashboard/ads/setup', req.url)
   )
 }

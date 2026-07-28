@@ -49,17 +49,17 @@ export function SalesGoalCard({ totalSales }: SalesGoalCardProps) {
   const BadgeIcon = currentBadge.icon
 
   return (
-    <div className="bg-card rounded-2xl p-4 border border-border shadow-sm h-[140px]">
-      <div className="flex items-center justify-between mb-3">
+    <div className="bg-card rounded-2xl p-6 border border-border shadow-sm h-full flex flex-col justify-between relative overflow-hidden">
+      <div className="flex items-center justify-between mb-2 relative z-10">
         <span className="text-xs font-bold text-muted uppercase tracking-wider">Meta de Vendas</span>
-        <span className="flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-          <BadgeIcon className="h-3 w-3" />
+        <span className="flex items-center gap-1.5 text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+          <BadgeIcon className="h-3.5 w-3.5" />
           {currentBadge.label}
         </span>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative w-20 h-20" role="img" aria-label={`Progresso: ${progressPct.toFixed(0)}%`}>
+      <div className="flex items-center gap-5 my-auto relative z-10">
+        <div className="relative w-20 h-20 shrink-0" role="img" aria-label={`Progresso: ${progressPct.toFixed(0)}%`}>
           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
             <circle cx="50" cy="50" fill="none" r="40" stroke="currentColor" className="text-surface" strokeWidth="10" />
             <circle
@@ -78,11 +78,11 @@ export function SalesGoalCard({ totalSales }: SalesGoalCardProps) {
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-muted">Vendas</p>
-          <p className="text-base font-black text-foreground">{formatCompact(totalSales)}</p>
-          <p className="text-[10px] text-muted mt-1">Faltam {formatCompact(remaining)}</p>
+          <p className="text-xs font-bold text-muted">Vendas</p>
+          <p className="text-lg font-black text-foreground">{formatCompact(totalSales)}</p>
+          <p className="text-xs text-muted mt-1">Faltam {formatCompact(remaining)}</p>
           {nextBadge && (
-            <p className="text-[10px] text-primary font-bold mt-0.5">
+            <p className="text-xs text-primary font-bold mt-1">
               Próximo: {nextBadge.label}
             </p>
           )}

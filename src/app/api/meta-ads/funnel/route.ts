@@ -69,7 +69,40 @@ export async function GET(req: NextRequest) {
     .in('ad_account_id', ownedAccountIds)
 
   const { data: insights } = await insightsQuery
-  const totalClicks = (insights || []).reduce((sum: number, i: { clicks?: number }) => sum + (i.clicks || 0), 0)
+  let totalClicks = (insights || []).reduce((sum: number, i: { clicks?: number }) => sum + (i.clicks || 0), 0)
+
+  // Fallback: if cache is empty, fetch clicks from Meta API
+  if (totalClicks === 0 && ownedAccountIds.length > 0) {
+    try {
+      const { getDecryptedToken } = await import('@/lib/meta-oauth')
+      const { GRAPH_API } = await import('@/lib/meta-graph-api')
+      const firstAccountId = ownedAccountIds[0]
+      const accessToken = await getDecryptedToken(firstAccountId, user.id)
+      if (accessToken) {
+        const metaRes = await fetch(
+          `${GRAPH_API}/act_${firstAccountId}/insights?fields=clicks,impressions,spend&level=campaign&time_increment=1&time_range={'since':'${startDate}','until':'${endDate}'}&limit=500&access_token=${accessToken}`
+        )
+        const metaData = await metaRes.json()
+        if (metaData.data) {
+          const metaClicks = metaData.data.reduce((sum: number, r: any) => sum + (parseInt(r.clicks || '0') || 0), 0)
+          if (metaClicks > 0) {
+            totalClicks = metaClicks
+          } else {
+            // Try ad-level without time_increment
+            const adRes = await fetch(
+              `${GRAPH_API}/act_${firstAccountId}/insights?fields=clicks,impressions,spend&level=ad&time_range={'since':'${startDate}','until':'${endDate}'}&limit=500&access_token=${accessToken}`
+            )
+            const adData = await adRes.json()
+            if (adData.data) {
+              totalClicks = adData.data.reduce((sum: number, r: any) => sum + (parseInt(r.clicks || '0') || 0), 0)
+            }
+          }
+        }
+      }
+    } catch {
+      // Silently fall through
+    }
+  }
 
   // 3. Get user's products
   const { data: products } = await supabase

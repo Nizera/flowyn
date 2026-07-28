@@ -48,7 +48,7 @@ const inputClass = 'h-12 w-full rounded-xl border-0 bg-surface px-4 text-sm font
 
 function PaymentsContent() {
   const [status, setStatus] = useState<AsaasStatus | null>(null)
-  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('subaccount')
+  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('standalone')
   const [accountType, setAccountType] = useState<AccountType>('cpf')
   const [form, setForm] = useState(initialForm)
   const [apiKey, setApiKey] = useState('')
@@ -215,15 +215,16 @@ function PaymentsContent() {
               <div className="grid gap-4 md:grid-cols-2">
                 <button
                   type="button"
+                  data-tour="tour-standalone-asaas"
                   onClick={() => setConnectionMode('standalone')}
                   className={`flex items-start gap-4 rounded-xl border-2 p-5 text-left transition ${
                     connectionMode === 'standalone'
-                      ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-200'
+                      ? 'border-orange-500 bg-orange-500/10 ring-1 ring-orange-500/30'
                       : 'border-border bg-card hover:border-border'
                   }`}
                 >
                   <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                    connectionMode === 'standalone' ? 'bg-orange-100 text-orange-600' : 'bg-surface text-muted'
+                    connectionMode === 'standalone' ? 'bg-orange-500/20 text-orange-400' : 'bg-surface text-muted'
                   }`}>
                     <KeyRound className="h-5 w-5" />
                   </div>
@@ -240,12 +241,12 @@ function PaymentsContent() {
                   onClick={() => setConnectionMode('subaccount')}
                   className={`flex items-start gap-4 rounded-xl border-2 p-5 text-left transition ${
                     connectionMode === 'subaccount'
-                      ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-200'
+                      ? 'border-orange-500 bg-orange-500/10 ring-1 ring-orange-500/30'
                       : 'border-border bg-card hover:border-border'
                   }`}
                 >
                   <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                    connectionMode === 'subaccount' ? 'bg-orange-100 text-orange-600' : 'bg-surface text-muted'
+                    connectionMode === 'subaccount' ? 'bg-orange-500/20 text-orange-400' : 'bg-surface text-muted'
                   }`}>
                     <Building2 className="h-5 w-5" />
                   </div>
@@ -265,7 +266,7 @@ function PaymentsContent() {
           <form onSubmit={handleSubmitStandalone} className="border-b border-border">
             <RowTitle title="Conta Asaas" description="Sua API key esta vinculada." />
             <div className="py-6">
-              <div className="flex items-center gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-100">
+              <div data-tour="tour-asaas-connected" className="flex items-center gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-100">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
                 <p>Sua conta Asaas esta conectada. Pagamentos vao direto pra sua conta.</p>
               </div>
@@ -306,6 +307,7 @@ function PaymentsContent() {
                     value={apiKey}
                     onChange={e => setApiKey(e.target.value)}
                     className={inputClass}
+                    data-tour="tour-asaas-api-key"
                   />
                 </Field>
               </div>
@@ -322,6 +324,7 @@ function PaymentsContent() {
               <button
                 type="submit"
                 disabled={saving || !apiKey.trim()}
+                data-tour="tour-asaas-vincular"
                 className="inline-flex h-11 min-w-64 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-6 text-sm font-semibold text-white transition hover:from-orange-600 hover:to-amber-600 disabled:opacity-50"
               >
                 {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <KeyRound className="h-4 w-4" />}
@@ -369,14 +372,14 @@ function SubaccountForm({
             <button
               type="button"
               onClick={() => selectAccountType('cpf')}
-              className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${isCpf ? 'bg-card text-orange-600 shadow-sm' : 'text-muted hover:text-foreground'}`}
+              className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${isCpf ? 'bg-card text-orange-400 shadow-sm' : 'text-muted hover:text-foreground'}`}
             >
               CPF
             </button>
             <button
               type="button"
               onClick={() => selectAccountType('cnpj')}
-              className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${!isCpf ? 'bg-card text-orange-600 shadow-sm' : 'text-muted hover:text-foreground'}`}
+              className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${!isCpf ? 'bg-card text-orange-400 shadow-sm' : 'text-muted hover:text-foreground'}`}
             >
               CNPJ
             </button>

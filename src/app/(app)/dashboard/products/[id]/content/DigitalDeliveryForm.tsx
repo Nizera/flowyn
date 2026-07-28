@@ -19,7 +19,7 @@ type DigitalDeliveryFormProps = {
 
 export function DigitalDeliveryForm({ userId, product, updateDigitalDelivery }: DigitalDeliveryFormProps) {
   const formRef = useRef<HTMLFormElement>(null)
-  const [deliveryType, setDeliveryType] = useState(product.delivery_type || 'external')
+  const [deliveryType, setDeliveryType] = useState(product.delivery_type || 'platform')
   const [filePaths, setFilePaths] = useState<string[]>(Array.isArray(product.deliverable_file_paths) ? product.deliverable_file_paths : [])
   const [state, action, pending] = useActionState(updateDigitalDelivery, initialCourseContentFormState)
 
@@ -44,7 +44,7 @@ export function DigitalDeliveryForm({ userId, product, updateDigitalDelivery }: 
               Link externo
             </button>
             <button type="button" onClick={() => setDeliveryType('platform')} className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${deliveryType === 'platform' ? 'bg-card text-orange-600 shadow-sm' : 'text-muted hover:text-foreground'}`}>
-              Arquivos Flowyn
+              Arquivos
             </button>
           </div>
         </div>
@@ -65,7 +65,10 @@ export function DigitalDeliveryForm({ userId, product, updateDigitalDelivery }: 
             folder="product-files"
             multiple
             currentUrls={filePaths}
-            onUpload={(paths) => setFilePaths(Array.isArray(paths) ? paths : [paths])}
+            onUpload={(paths) => {
+              setFilePaths(Array.isArray(paths) ? paths : [paths])
+              if (deliveryType === 'external') setDeliveryType('platform')
+            }}
             onRemove={(index) => {
               if (index === undefined) return
               setFilePaths(paths => paths.filter((_, idx) => idx !== index))
@@ -86,7 +89,7 @@ export function DigitalDeliveryForm({ userId, product, updateDigitalDelivery }: 
       <FormMessage state={state} />
 
       <div className="mt-8 flex justify-end">
-        <button disabled={pending || !hasContent} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-7 text-sm font-semibold text-white transition hover:from-orange-600 hover:to-amber-600 disabled:cursor-not-allowed disabled:opacity-60">
+        <button data-tour="tour-save-delivery" disabled={pending || !hasContent} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-7 text-sm font-semibold text-white transition hover:from-orange-600 hover:to-amber-600 disabled:cursor-not-allowed disabled:opacity-60">
           {pending ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <Save className="h-4 w-4" />}
           {pending ? 'Salvando...' : 'Salvar entrega'}
         </button>
@@ -119,7 +122,7 @@ function Field({ label, required, hint, children }: { label: string; required?: 
 function FormMessage({ state }: { state: CourseContentFormState }) {
   if (!state.message) return null
   return (
-    <div className={`mt-6 flex items-start gap-2 rounded-xl px-3 py-2 text-sm ring-1 ${state.ok ? 'bg-emerald-50 text-emerald-700 ring-emerald-100' : 'bg-red-50 text-red-700 ring-red-100'}`}>
+    <div data-tour={state.ok ? 'tour-delivery-success' : undefined} className={`mt-6 flex items-start gap-2 rounded-xl px-3 py-2 text-sm ring-1 ${state.ok ? 'bg-emerald-50 text-emerald-700 ring-emerald-100' : 'bg-red-50 text-red-700 ring-red-100'}`}>
       {state.ok ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />}
       {state.message}
     </div>

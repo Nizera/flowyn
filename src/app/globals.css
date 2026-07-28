@@ -147,3 +147,132 @@ body {
 }
 
 /* ── Hero → Problem Section Transition ── */
+
+/* ── Shepherd.js Tour Theme ── */
+.shepherd-modal-overlay-container {
+  background: rgba(0, 0, 0, 0.7) !important;
+}
+.shepherd-element.shepherd-theme-custom {
+  background: #1a1c20 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(249, 115, 22, 0.2) !important;
+  color: #fff !important;
+  max-width: 380px !important;
+  z-index: 9999 !important;
+}
+.shepherd-theme-custom .shepherd-header {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  padding: 16px 20px 12px !important;
+}
+.shepherd-theme-custom .shepherd-title {
+  color: #fff !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  margin: 0 !important;
+}
+.shepherd-theme-custom .shepherd-text {
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  padding: 12px 20px !important;
+}
+.shepherd-theme-custom .shepherd-footer {
+  background: transparent !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  padding: 12px 20px 16px !important;
+  display: flex !important;
+  gap: 8px !important;
+  justify-content: flex-end !important;
+}
+.shepherd-theme-custom .shepherd-button {
+  border-radius: 10px !important;
+  padding: 8px 18px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  border: none !important;
+}
+.shepherd-theme-custom .shepherd-button-primary {
+  background: linear-gradient(135deg, #f97316, #f59e0b) !important;
+  color: #070908 !important;
+}
+.shepherd-theme-custom .shepherd-button-primary:hover {
+  background: linear-gradient(135deg, #fb923c, #fbbf24) !important;
+  transform: translateY(-1px) !important;
+}
+.shepherd-theme-custom .shepherd-button-secondary {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+.shepherd-theme-custom .shepherd-button-secondary:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+.shepherd-theme-custom .shepherd-cancel-icon {
+  color: rgba(255, 255, 255, 0.4) !important;
+  font-size: 18px !important;
+}
+.shepherd-theme-custom .shepherd-cancel-icon:hover {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+.shepherd-element .shepherd-arrow::before {
+  background: #1a1c20 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ── Tour Highlight Pulse ── */
+[data-tour-highlight="true"] {
+  position: relative;
+  z-index: 9998 !important;
+  animation: tour-pulse 1.5s ease-in-out infinite;
+}
+[data-tour-highlight="true"]::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 12px;
+  border: 2px solid #f97316;
+  animation: tour-ring 1.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes tour-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+@keyframes tour-ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(249, 115, 22, 0); }
+}
+
+/* ── Tour Active Field ── */
+.tour-field-active {
+  position: relative;
+  z-index: 9999 !important;
+  border-color: #f97316 !important;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.3) !important;
+  animation: tour-field-glow 2s ease-in-out infinite !important;
+}
+@keyframes tour-field-glow {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(249, 115, 22, 0.15); }
+}
+
+/* ── Checkout Always Light ── */
+.force-light,
+.force-light * {
+  --color-background: #ffffff !important;
+  --color-foreground: #1a1a1a !important;
+  --color-card: #ffffff !important;
+  --color-card-foreground: #1a1a1a !important;
+  --color-border: rgba(0, 0, 0, 0.08) !important;
+  --color-surface: #f8f9fa !important;
+  --color-surface-elevated: #f1f3f5 !important;
+  --color-muted: rgba(0, 0, 0, 0.5) !important;
+  --color-subtle: rgba(0, 0, 0, 0.35) !important;
+  --color-secondary: #f1f5f9 !important;
+  --color-secondary-foreground: #1a1a1a !important;
+  color-scheme: light !important;
+}

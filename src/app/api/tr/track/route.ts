@@ -11,25 +11,26 @@ import { getClientIp } from '@/lib/client-ip'
 // inúteis no console do cliente).
 
 export async function POST(req: NextRequest) {
+  const corsHeaders = getCorsHeaders(req.headers.get('origin'))
   try {
     const rawBody = await req.text()
     if (rawBody.length > 8_192) {
-      return new NextResponse('too large', { status: 413, headers: CORS_HEADERS })
+      return new NextResponse('too large', { status: 413, headers: corsHeaders })
     }
 
     let body: TrackBody
     try {
       body = JSON.parse(rawBody)
     } catch {
-      return new NextResponse('bad json', { status: 400, headers: CORS_HEADERS })
+      return new NextResponse('bad json', { status: 400, headers: corsHeaders })
     }
 
     const { t, event_name, product_id, url, referrer, utm, fbclid, ttclid, gclid, session_id, fbp, fbc } = body
     if (!t || !event_name) {
-      return new NextResponse('missing params', { status: 400, headers: CORS_HEADERS })
+      return new NextResponse('missing params', { status: 400, headers: corsHeaders })
     }
     if (event_name !== 'page_view' && event_name !== 'view_content') {
-      return new NextResponse('invalid event', { status: 400, headers: CORS_HEADERS })
+      return new NextResponse('invalid event', { status: 400, headers: corsHeaders })
     }
 
     const supabase = createAdminClient()
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     if (!pixelRow || !pixelRow.is_active) {
       // Pixel não encontrado ou inativo. Retorna 200 silencioso para não poluir console.
-      return new NextResponse('ok', { status: 200, headers: CORS_HEADERS })
+      return new NextResponse('ok', { status: 200, headers: corsHeaders })
     }
 
     const ip = getClientIp(req)
@@ -80,16 +81,16 @@ export async function POST(req: NextRequest) {
 
     return new NextResponse(JSON.stringify({ sid: finalSessionId }), {
       status: 200,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err) {
     console.error('[tracker] error:', err)
-    return new NextResponse('ok', { status: 200, headers: CORS_HEADERS })
+    return new NextResponse('ok', { status: 200, headers: corsHeaders })
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS })
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(req.headers.get('origin')) })
 }
 
 interface TrackBody {
@@ -107,9 +108,18 @@ interface TrackBody {
   session_id?: string | null
 }
 
-const CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Vary': 'Origin',
+const ALLOWED_ORIGINS = [
+  'https://www.flowyn.com.br',
+  'https://flowyn.com.br',
+  'http://localhost:3000',
+]
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowed = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Vary': 'Origin',
+  }
 }

@@ -215,6 +215,7 @@ export function FileUpload({
       {/* Drop zone */}
       {!hideDropZone && (
         <div
+          data-tour="tour-upload-area"
           onClick={() => inputRef.current?.click()}
           onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
           onDragLeave={() => setIsDragging(false)}

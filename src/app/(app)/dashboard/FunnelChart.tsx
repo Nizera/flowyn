@@ -74,37 +74,73 @@ export function FunnelChart({ adAccountId }: { adAccountId?: string }) {
     )
   }
 
-  const maxValue = Math.max(...stages.map(s => s.value), 1)
+  const hasData = stages.some(s => s.value > 0)
+  const topValue = stages[0]?.value > 0 ? stages[0].value : Math.max(...stages.map(s => s.value), 1)
+  const placeholderWidths = [100, 80, 60, 40, 20]
 
   return (
     <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
-      <h4 className="text-lg font-bold text-foreground mb-6">Funil de Conversão</h4>
+      <div className="flex items-center justify-between mb-6">
+        <h4 className="text-lg font-bold text-foreground">Funil de Conversão</h4>
+        <span className="text-xs font-semibold text-muted bg-surface px-2.5 py-1 rounded-full border border-border/50">
+          Visualização Centralizada
+        </span>
+      </div>
+
       <div className="flex flex-col gap-3">
         {stages.map((stage, i) => {
-          const width = (stage.value / maxValue) * 100
-          const convRate = i > 0 && stages[i - 1].value > 0
-            ? ((stage.value / stages[i - 1].value) * 100)
-            : 100
+          let width = 0
+          if (hasData) {
+            const pct = (stage.value / topValue) * 100
+            width = stage.value > 0 ? Math.max(pct, 8) : 4
+          } else {
+            width = placeholderWidths[i] || 50
+          }
+
+          const prevVal = i > 0 ? stages[i - 1].value : 0
+          const convRate = i > 0 && prevVal > 0
+            ? ((stage.value / prevVal) * 100)
+            : 0
 
           return (
             <div key={stage.name} className="relative">
-              <div className="flex items-center">
-                <div className="w-full bg-surface rounded-lg h-12 overflow-hidden relative flex items-center px-4 justify-between group hover:bg-surface transition-colors">
+              <div className="w-full bg-surface/40 rounded-xl h-12 overflow-hidden relative flex items-center px-4 justify-between border border-border/40 group hover:border-border transition-all">
+                {/* Centered Filled Bar (expands outward from the center) */}
+                <div
+                  className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 rounded-lg transition-all duration-500 ease-out"
+                  style={{
+                    width: `${width}%`,
+                    backgroundColor: hasData ? `${stage.color}25` : 'rgba(148, 163, 184, 0.08)',
+                    borderLeft: hasData ? `3px solid ${stage.color}` : '2px solid rgba(148, 163, 184, 0.2)',
+                    borderRight: hasData ? `3px solid ${stage.color}` : '2px solid rgba(148, 163, 184, 0.2)',
+                  }}
+                />
+
+                {/* Stage Name + Icon */}
+                <div className="flex items-center gap-2.5 relative z-10 text-foreground">
                   <div
-                    className="absolute left-0 top-0 bottom-0 rounded-lg transition-all duration-500"
+                    className="p-1.5 rounded-lg flex items-center justify-center transition-transform group-hover:scale-110"
                     style={{
-                      width: `${Math.max(width, 3)}%`,
-                      backgroundColor: `${stage.color}20`,
+                      backgroundColor: `${stage.color}18`,
+                      color: stage.color,
                     }}
-                  />
-                  <span className="text-sm font-medium relative z-10 text-foreground">{stage.name}</span>
-                  <span className="text-base font-bold relative z-10 text-foreground">{stage.value.toLocaleString('pt-BR')}</span>
+                  >
+                    {stage.icon}
+                  </div>
+                  <span className="text-sm font-bold text-foreground">{stage.name}</span>
                 </div>
+
+                {/* Metric Value */}
+                <span className="text-base font-black relative z-10 text-foreground font-mono">
+                  {stage.value.toLocaleString('pt-BR')}
+                </span>
               </div>
+
+              {/* Conversion Rate Badge between stages */}
               {i < stages.length - 1 && (
                 <div className="flex justify-center -my-1.5 relative z-20">
-                  <div className="bg-card border border-border rounded-full px-2 py-0.5 text-[10px] font-bold text-muted shadow-sm">
-                    {convRate.toFixed(1).replace('.', ',')}%
+                  <div className="bg-card border border-border rounded-full px-2.5 py-0.5 text-[10px] font-bold text-muted shadow-xs">
+                    {hasData && stages[i].value > 0 ? `${convRate.toFixed(1).replace('.', ',')}%` : '0,0%'}
                   </div>
                 </div>
               )}

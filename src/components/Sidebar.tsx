@@ -90,6 +90,7 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
                     key={item.href}
                     href={item.href}
                     title={item.label}
+                    data-tour={item.href === '/dashboard/products/new' ? 'tour-create-product' : item.href === '/dashboard/products' ? 'tour-my-products' : item.href === '/dashboard/settings/payments' ? 'tour-payments' : item.href === '/dashboard/ads' ? 'tour-meta-ads' : undefined}
                     className={`group relative flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition ${
                       active
                         ? 'bg-primary/10 text-primary'

@@ -34,24 +34,27 @@ export function RevenueShaderBackground() {
     class Particle {
       x: number
       y: number
+      baseX: number
+      baseY: number
       vx: number
       vy: number
       size: number
-      maxLife: number
-      life: number
       color: string
-      opacity: number
+      alpha: number
+      angle: number
+      speed: number
 
-      constructor(x: number, y: number) {
-        this.x = x
-        this.y = y
-        // Drifts upwards and outwards slightly
-        this.vx = (Math.random() * 0.8 - 0.4)
-        this.vy = -(Math.random() * 0.6 + 0.3) // slowly float up (antigravity)
-        this.size = Math.random() * 2.5 + 1
-        this.maxLife = Math.random() * 80 + 40
-        this.life = this.maxLife
-        this.opacity = Math.random() * 0.7 + 0.3
+      constructor(w: number, h: number) {
+        this.x = Math.random() * w
+        this.y = Math.random() * h
+        this.baseX = this.x
+        this.baseY = this.y
+        this.vx = (Math.random() - 0.5) * 0.6
+        this.vy = -Math.random() * 0.8 - 0.2 // Drift upwards (antigravity)
+        this.size = Math.random() * 2 + 1
+        this.alpha = Math.random() * 0.5 + 0.3
+        this.angle = Math.random() * Math.PI * 2
+        this.speed = Math.random() * 0.02 + 0.01
 
         const colors = [
           'rgba(249, 115, 22, ',  // orange-500
@@ -61,86 +64,76 @@ export function RevenueShaderBackground() {
         this.color = colors[Math.floor(Math.random() * colors.length)]
       }
 
-      update() {
-        this.x += this.vx
-        this.y += this.vy
-        this.life--
-        
-        // Horizontal drift swing
-        this.vx += (Math.random() * 0.1 - 0.05)
+      update(w: number, h: number, mouseX: number | null, mouseY: number | null) {
+        this.angle += this.speed
+        this.y += this.vy + Math.sin(this.angle) * 0.3
+        this.x += this.vx + Math.cos(this.angle) * 0.3
+
+        // Wrap around edges
+        if (this.y < -10) {
+          this.y = h + 10
+          this.x = Math.random() * w
+        }
+        if (this.x < -10) this.x = w + 10
+        if (this.x > w + 10) this.x = -10
+
+        // Mouse interaction (Antigravity repulsion effect similar to antigravity.google)
+        if (mouseX !== null && mouseY !== null) {
+          const dx = mouseX - this.x
+          const dy = mouseY - this.y
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          const maxDist = 90
+
+          if (dist < maxDist && dist > 0) {
+            const force = (1 - dist / maxDist) * 3
+            const angle = Math.atan2(dy, dx)
+            this.x -= Math.cos(angle) * force
+            this.y -= Math.sin(angle) * force
+          }
+        }
       }
 
       draw(c: CanvasRenderingContext2D) {
-        const ratio = this.life / this.maxLife
-        const currentOpacity = this.opacity * ratio
-        const currentSize = this.size * (0.3 + 0.7 * ratio)
-
         c.beginPath()
-        c.arc(this.x, this.y, currentSize, 0, Math.PI * 2)
-        c.fillStyle = `${this.color}${currentOpacity})`
+        c.arc(this.x, this.y, this.size, 0, Math.PI * 2)
+        c.fillStyle = `${this.color}${this.alpha})`
         
-        // Add soft glow
-        c.shadowColor = 'rgba(249, 115, 22, 0.5)'
-        c.shadowBlur = 5
+        // Soft glow
+        c.shadowColor = 'rgba(249, 115, 22, 0.4)'
+        c.shadowBlur = 6
         c.fill()
         c.shadowBlur = 0
       }
     }
 
+    const particleCount = 45
     let particles: Particle[] = []
-    let mouseX: number | null = null
-    let mouseY: number | null = null
-    let isHovering = false
-
-    function onMouseMove(event: MouseEvent) {
-      if (!canvas) return
-      const rect = canvas.getBoundingClientRect()
-      const x = event.clientX - rect.left
-      const y = event.clientY - rect.top
-
-      // Verify bounds
-      if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
-        mouseX = x
-        mouseY = y
-        isHovering = true
-
-        // Spawn a cluster of particles at the cursor
-        if (Math.random() < 0.4) {
-          particles.push(new Particle(mouseX, mouseY))
-        }
-        if (Math.random() < 0.2) {
-          particles.push(new Particle(mouseX + (Math.random() * 10 - 5), mouseY + (Math.random() * 10 - 5)))
-        }
-      } else {
-        isHovering = false
-        mouseX = null
-        mouseY = null
-      }
+    for (let i = 0; i < particleCount; i++) {
+      particles.push(new Particle(width || 400, height || 200))
     }
 
-    function onMouseEnter() {
-      isHovering = true
+    let mouseX: number | null = null
+    let mouseY: number | null = null
+
+    function onMouseMove(e: MouseEvent) {
+      if (!canvas) return
+      const rect = canvas.getBoundingClientRect()
+      mouseX = e.clientX - rect.left
+      mouseY = e.clientY - rect.top
     }
 
     function onMouseLeave() {
-      isHovering = false
       mouseX = null
       mouseY = null
     }
 
-    // Attach to the parent container if possible to capture mouse early
     const parent = canvas.parentElement
     if (parent) {
       parent.addEventListener('mousemove', onMouseMove)
-      parent.addEventListener('mouseenter', onMouseEnter)
       parent.addEventListener('mouseleave', onMouseLeave)
-    } else {
-      window.addEventListener('mousemove', onMouseMove)
     }
 
-    let waveAngle = 0
     let raf = 0
-
     function animate() {
       if (!ctx || !canvas) return
 
@@ -148,55 +141,28 @@ export function RevenueShaderBackground() {
       ctx.save()
       ctx.scale(dpr, dpr)
 
-      // 1. Draw flowing fluid wave at the very bottom edge (lowered even more)
-      waveAngle += 0.006
-      ctx.beginPath()
-
-      // Wave 1 (Subtle, sit lower)
-      ctx.moveTo(0, height)
-      for (let x = 0; x <= width; x += 15) {
-        const y = height - 12 + Math.sin(x * 0.005 + waveAngle) * 4 + Math.cos(x * 0.01 - waveAngle) * 2
-        ctx.lineTo(x, y)
+      // Draw connecting lines between close particles (constellation effect)
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x
+          const dy = particles[i].y - particles[j].y
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          if (dist < 65) {
+            const alpha = (1 - dist / 65) * 0.15
+            ctx.beginPath()
+            ctx.moveTo(particles[i].x, particles[i].y)
+            ctx.lineTo(particles[j].x, particles[j].y)
+            ctx.strokeStyle = `rgba(249, 115, 22, ${alpha})`
+            ctx.lineWidth = 0.8
+            ctx.stroke()
+          }
+        }
       }
-      ctx.lineTo(width, height)
-      ctx.closePath()
-      const grad1 = ctx.createLinearGradient(0, height - 15, width, height)
-      grad1.addColorStop(0, 'rgba(249, 115, 22, 0.05)') 
-      grad1.addColorStop(1, 'rgba(245, 158, 11, 0.02)')
-      ctx.fillStyle = grad1
-      ctx.fill()
 
-      // Wave 2 (Lower layer)
-      ctx.beginPath()
-      ctx.moveTo(0, height)
-      for (let x = 0; x <= width; x += 15) {
-        const y = height - 10 + Math.sin(x * 0.007 - waveAngle * 1.1) * 3 + Math.cos(x * 0.003 + waveAngle) * 2
-        ctx.lineTo(x, y)
-      }
-      ctx.lineTo(width, height)
-      ctx.closePath()
-      const grad2 = ctx.createLinearGradient(0, height - 12, width, height)
-      grad2.addColorStop(0, 'rgba(245, 158, 11, 0.03)')
-      grad2.addColorStop(1, 'rgba(249, 115, 22, 0.04)')
-      ctx.fillStyle = grad2
-      ctx.fill()
-
-      // 2. Update and draw particles
-      particles = particles.filter(p => p.life > 0)
+      // Update and draw particles
       for (const p of particles) {
-        p.update()
+        p.update(width, height, mouseX, mouseY)
         p.draw(ctx)
-      }
-
-      // 3. Subtle ambient hover glow behind the particles
-      if (isHovering && mouseX !== null && mouseY !== null) {
-        ctx.beginPath()
-        const radial = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 80)
-        radial.addColorStop(0, 'rgba(249, 115, 22, 0.04)')
-        radial.addColorStop(1, 'rgba(249, 115, 22, 0)')
-        ctx.fillStyle = radial
-        ctx.arc(mouseX, mouseY, 80, 0, Math.PI * 2)
-        ctx.fill()
       }
 
       ctx.restore()
@@ -208,10 +174,7 @@ export function RevenueShaderBackground() {
       cancelAnimationFrame(raf)
       if (parent) {
         parent.removeEventListener('mousemove', onMouseMove)
-        parent.removeEventListener('mouseenter', onMouseEnter)
         parent.removeEventListener('mouseleave', onMouseLeave)
-      } else {
-        window.removeEventListener('mousemove', onMouseMove)
       }
       ro.disconnect()
     }
@@ -220,7 +183,7 @@ export function RevenueShaderBackground() {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 h-full w-full pointer-events-none"
+      className="absolute inset-0 h-full w-full pointer-events-none z-0"
       style={{ display: 'block' }}
     />
   )

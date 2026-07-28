@@ -181,7 +181,7 @@ export default async function ProductsPage() {
                       <td className="px-5 py-4">
                         <div className="flex justify-end gap-2">
                           <CopyUtmButton productId={product.id} />
-                          <Link href={`/dashboard/products/${product.id}`} className="rounded-lg border border-border px-3 py-2 text-xs font-black text-muted transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600">
+                          <Link href={`/dashboard/products/${product.id}`} data-tour="tour-edit-product" className="rounded-lg border border-border px-3 py-2 text-xs font-black text-muted transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600">
                             Editar
                           </Link>
                           <Link href={`/dashboard/products/${product.id}/checkout-editor`} title="Editar checkout" className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600">

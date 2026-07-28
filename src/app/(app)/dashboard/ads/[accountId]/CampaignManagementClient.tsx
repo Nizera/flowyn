@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -166,6 +166,46 @@ export default function CampaignManagementPageInner() {
     conversionValue: true,
     roas: true,
   })
+
+  const COL_MIN_WIDTH = 60
+  const COL_MAX_WIDTH = 300
+  const DEFAULT_COL_WIDTH = 130
+
+  const DEFAULT_COLUMN_ORDER: string[] = [
+    'spend', 'budget', 'reach', 'impressions', 'clicks', 'ctr', 'cpc', 'cpm',
+    'landingPageViews', 'cpv', 'initiateCheckout', 'cpi', 'conversions',
+    'cpa', 'conversionValue', 'roas'
+  ]
+
+  const COLUMN_LABELS: Record<string, string> = {
+    spend: 'Gasto',
+    budget: 'Orcamento',
+    reach: 'Alcance',
+    impressions: 'Impressoes',
+    clicks: 'Cliques',
+    ctr: 'CTR',
+    cpc: 'CPC',
+    cpm: 'CPM',
+    landingPageViews: 'Visitas LP',
+    cpv: 'CPV',
+    initiateCheckout: 'Init. Checkout',
+    cpi: 'CPI',
+    conversions: 'Conversoes',
+    cpa: 'CPA',
+    conversionValue: 'Valor Conv.',
+    roas: 'ROAS',
+  }
+
+  const [columnOrder, setColumnOrder] = useState<string[]>(DEFAULT_COLUMN_ORDER)
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+    const initial: Record<string, number> = {}
+    DEFAULT_COLUMN_ORDER.forEach(key => { initial[key] = DEFAULT_COL_WIDTH })
+    return initial
+  })
+
+  const [resizing, setResizing] = useState<{ key: string; startX: number; startWidth: number } | null>(null)
+  const [draggingCol, setDraggingCol] = useState<string | null>(null)
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -389,6 +429,62 @@ export default function CampaignManagementPageInner() {
   useEffect(() => { fetchData() }, [fetchData])
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  useEffect(() => {
+    if (!resizing) return
+    const onMouseMove = (e: MouseEvent) => {
+      const diff = e.clientX - resizing.startX
+      const newWidth = Math.max(COL_MIN_WIDTH, Math.min(COL_MAX_WIDTH, resizing.startWidth + diff))
+      setColumnWidths(prev => ({ ...prev, [resizing.key]: newWidth }))
+    }
+    const onMouseUp = () => setResizing(null)
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [resizing])
+
+  useEffect(() => {
+    try {
+      const savedOrder = localStorage.getItem('campaign-table-column-order')
+      if (savedOrder) {
+        const parsed = JSON.parse(savedOrder) as string[]
+        const unique: string[] = []
+        parsed.forEach(key => { if (!unique.includes(key) && DEFAULT_COLUMN_ORDER.includes(key)) unique.push(key) })
+        DEFAULT_COLUMN_ORDER.forEach(key => { if (!unique.includes(key)) unique.push(key) })
+        setColumnOrder(unique)
+      }
+      const savedWidths = localStorage.getItem('campaign-table-column-widths')
+      if (savedWidths) {
+        setColumnWidths(JSON.parse(savedWidths))
+      }
+    } catch {}
+  }, [])
+
+  const orderSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const widthsSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (orderSaveTimer.current) clearTimeout(orderSaveTimer.current)
+    orderSaveTimer.current = setTimeout(() => {
+      localStorage.setItem('campaign-table-column-order', JSON.stringify(columnOrder))
+    }, 300)
+    return () => { if (orderSaveTimer.current) clearTimeout(orderSaveTimer.current) }
+  }, [columnOrder])
+
+  useEffect(() => {
+    if (widthsSaveTimer.current) clearTimeout(widthsSaveTimer.current)
+    widthsSaveTimer.current = setTimeout(() => {
+      localStorage.setItem('campaign-table-column-widths', JSON.stringify(columnWidths))
+    }, 300)
+    return () => { if (widthsSaveTimer.current) clearTimeout(widthsSaveTimer.current) }
+  }, [columnWidths])
+
   const filterIds = tab !== 'campaigns' && selectedCampaignFilter.size > 0
     ? [...selectedCampaignFilter]
     : null
@@ -405,6 +501,152 @@ export default function CampaignManagementPageInner() {
 
   const items: (CampaignItem | AdSetItem | AdItem)[] = tab === 'campaigns' ? data.campaigns : tab === 'adsets' ? rawAdSets : rawAds
   const filtered = items.filter(i => !search || i.name?.toLowerCase().includes(search.toLowerCase()))
+
+  const subtotal = filtered.reduce((acc, item) => {
+    const ins = item.insights || { spend: 0, impressions: 0, clicks: 0, reach: 0, conversions: 0, conversion_value: 0, landing_page_views: 0, initiate_checkout: 0, cpc: null, cpm: null, ctr: null, cpv: null, cpi: null, cpa: null, roas: null }
+    acc.spend += ins.spend || 0
+    acc.reach += ins.reach || 0
+    acc.impressions += ins.impressions || 0
+    acc.clicks += ins.clicks || 0
+    acc.conversions += ins.conversions || 0
+    acc.conversion_value += ins.conversion_value || 0
+    acc.landing_page_views += ins.landing_page_views || 0
+    acc.initiate_checkout += ins.initiate_checkout || 0
+    return acc
+  }, { spend: 0, reach: 0, impressions: 0, clicks: 0, conversions: 0, conversion_value: 0, landing_page_views: 0, initiate_checkout: 0 })
+
+  const subCtr = subtotal.impressions > 0 ? (subtotal.clicks / subtotal.impressions) * 100 : 0
+  const subCpc = subtotal.clicks > 0 ? subtotal.spend / subtotal.clicks : 0
+  const subCpm = subtotal.impressions > 0 ? (subtotal.spend / subtotal.impressions) * 1000 : 0
+  const subCpv = subtotal.landing_page_views > 0 ? subtotal.spend / subtotal.landing_page_views : 0
+  const subCpi = subtotal.initiate_checkout > 0 ? subtotal.spend / subtotal.initiate_checkout : 0
+  const subCpa = subtotal.conversions > 0 ? subtotal.spend / subtotal.conversions : 0
+  const subRoas = subtotal.spend > 0 ? subtotal.conversion_value / subtotal.spend : 0
+
+  const isMetricVisible = (key: string) => {
+    if (key === 'spend') return true
+    if (key === 'budget') return !!visibleColumns.budget && (tab === 'campaigns' || tab === 'adsets')
+    return !!(visibleColumns as Record<string, boolean>)[key]
+  }
+
+  const handleResizeStart = (key: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setResizing({ key, startX: e.clientX, startWidth: columnWidths[key] || DEFAULT_COL_WIDTH })
+  }
+
+  const handleDragStart = (key: string) => setDraggingCol(key)
+  const handleDragOver = (e: React.DragEvent, key: string) => { e.preventDefault(); setDragOverCol(key) }
+  const handleDragEnd = () => { setDraggingCol(null); setDragOverCol(null) }
+  const handleDrop = (targetKey: string) => {
+    if (draggingCol && draggingCol !== targetKey) {
+      const newOrder = [...columnOrder]
+      const fromIdx = newOrder.indexOf(draggingCol)
+      const toIdx = newOrder.indexOf(targetKey)
+      if (fromIdx === -1 || toIdx === -1) return
+      newOrder.splice(fromIdx, 1)
+      const insertIdx = fromIdx < toIdx ? toIdx - 1 : toIdx
+      newOrder.splice(insertIdx, 0, draggingCol)
+      setColumnOrder(newOrder)
+    }
+    setDraggingCol(null)
+    setDragOverCol(null)
+  }
+
+  const resetColumns = () => {
+    setColumnOrder(DEFAULT_COLUMN_ORDER)
+    const initial: Record<string, number> = {}
+    DEFAULT_COLUMN_ORDER.forEach(key => { initial[key] = DEFAULT_COL_WIDTH })
+    setColumnWidths(initial)
+  }
+
+  const visibleMetricColumns = columnOrder.filter(key => isMetricVisible(key))
+
+  function renderMetricCell(key: string, _item: CampaignItem | AdSetItem | AdItem, ins: Insights, computed: { cpc: number; cpm: number; ctr: number; cpv: number; cpi: number; cpa: number; roas: number }): React.ReactNode {
+    switch (key) {
+      case 'spend':
+        return <span className="font-medium">{formatBRL(ins.spend)}</span>
+      case 'budget':
+        return <BudgetDisplay daily={(_item as CampaignItem | AdSetItem).daily_budget} lifetime={(_item as CampaignItem | AdSetItem).lifetime_budget} />
+      case 'reach':
+        return <MetricCell value={ins.reach} />
+      case 'impressions':
+        return <MetricCell value={ins.impressions} />
+      case 'clicks':
+        return <MetricCell value={ins.clicks} />
+      case 'ctr':
+        return <MetricCell value={computed.ctr} suffix="%" decimals={2} />
+      case 'cpc':
+        return <MetricCell value={computed.cpc} prefix="R$ " decimals={2} />
+      case 'cpm':
+        return <MetricCell value={computed.cpm} prefix="R$ " decimals={2} />
+      case 'landingPageViews':
+        return <MetricCell value={ins.landing_page_views || 0} />
+      case 'cpv':
+        return <MetricCell value={computed.cpv} prefix="R$ " decimals={2} />
+      case 'initiateCheckout':
+        return <MetricCell value={ins.initiate_checkout || 0} />
+      case 'cpi':
+        return <MetricCell value={computed.cpi} prefix="R$ " decimals={2} />
+      case 'conversions':
+        return <MetricCell value={ins.conversions} />
+      case 'cpa':
+        return <MetricCell value={computed.cpa} prefix="R$ " decimals={2} />
+      case 'conversionValue':
+        return <span className="font-medium text-emerald-600"><MetricCell value={ins.conversion_value} prefix="R$ " decimals={2} /></span>
+      case 'roas':
+        return (
+          <span className={`font-semibold ${computed.roas >= 1 ? 'text-emerald-600' : computed.roas > 0 ? 'text-amber-600' : 'text-muted'}`}>
+            <MetricCell value={computed.roas} suffix="x" decimals={2} />
+          </span>
+        )
+      default:
+        return null
+    }
+  }
+
+  function renderSubtotalCell(key: string): React.ReactNode {
+    switch (key) {
+      case 'spend':
+        return <span className="font-bold">{formatBRL(subtotal.spend)}</span>
+      case 'budget':
+        return null
+      case 'reach':
+        return <span className="font-semibold">{subtotal.reach.toLocaleString('pt-BR')}</span>
+      case 'impressions':
+        return <span className="font-semibold">{subtotal.impressions.toLocaleString('pt-BR')}</span>
+      case 'clicks':
+        return <span className="font-semibold">{subtotal.clicks.toLocaleString('pt-BR')}</span>
+      case 'ctr':
+        return <span className="font-semibold">{subCtr.toFixed(2)}%</span>
+      case 'cpc':
+        return <span className="font-semibold">R$ {subCpc.toFixed(2)}</span>
+      case 'cpm':
+        return <span className="font-semibold">R$ {subCpm.toFixed(2)}</span>
+      case 'landingPageViews':
+        return <span className="font-semibold">{subtotal.landing_page_views.toLocaleString('pt-BR')}</span>
+      case 'cpv':
+        return <span className="font-semibold">R$ {subCpv.toFixed(2)}</span>
+      case 'initiateCheckout':
+        return <span className="font-semibold">{subtotal.initiate_checkout.toLocaleString('pt-BR')}</span>
+      case 'cpi':
+        return <span className="font-semibold">R$ {subCpi.toFixed(2)}</span>
+      case 'conversions':
+        return <span className="font-semibold">{subtotal.conversions.toLocaleString('pt-BR')}</span>
+      case 'cpa':
+        return <span className="font-semibold">R$ {subCpa.toFixed(2)}</span>
+      case 'conversionValue':
+        return <span className="font-bold text-emerald-600">{formatBRL(subtotal.conversion_value)}</span>
+      case 'roas':
+        return (
+          <span className={`font-bold ${subRoas >= 1 ? 'text-emerald-600' : subRoas > 0 ? 'text-amber-600' : 'text-muted'}`}>
+            {subRoas.toFixed(2)}x
+          </span>
+        )
+      default:
+        return null
+    }
+  }
 
   const tabs = [
     { key: 'campaigns' as TabType, label: 'Campanhas', count: data.campaigns.length },
@@ -514,7 +756,7 @@ export default function CampaignManagementPageInner() {
                 Colunas
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
               </button>
-              {showColumnMenu && (
+                  {showColumnMenu && (
                 <div className="absolute top-full left-0 mt-1 w-56 bg-card border border-border rounded-xl shadow-lg z-50 py-1">
                   {[
                     { key: 'budget' as const, label: 'Orcamento' },
@@ -543,6 +785,13 @@ export default function CampaignManagementPageInner() {
                       {col.label}
                     </button>
                   ))}
+                  <div className="border-t border-border mt-1 pt-1">
+                    <button onClick={() => { resetColumns(); setShowColumnMenu(false) }}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-muted hover:bg-surface">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                      Restaurar colunas
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -684,32 +933,32 @@ export default function CampaignManagementPageInner() {
           </div>
         ) : (
           <div className="overflow-x-auto light-scrollbar">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
               <thead className="sticky top-0 bg-card z-10 border-b border-border">
                 <tr className="text-left text-muted text-xs uppercase">
-                  <th className="w-12 px-4 py-3">
+                  <th className="px-4 py-3 shrink-0" style={{ width: 48 }}>
                     <input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0}
                       onChange={toggleSelectAll} className="w-4 h-4 rounded border-border text-blue-600 focus:ring-blue-500" />
                   </th>
-                  <th className="px-4 py-3 min-w-[280px]">Nome</th>
-                  <th className="px-4 py-3 w-32">Status</th>
-                   {visibleColumns.budget && (tab === 'campaigns' || tab === 'adsets') && <th className="px-4 py-3 min-w-[160px]">Orcamento</th>}
-                  <th className="px-4 py-3 text-right min-w-[120px]">Gasto</th>
-                  {visibleColumns.reach && <th className="px-4 py-3 text-right min-w-[100px]">Alcance</th>}
-                  {visibleColumns.impressions && <th className="px-4 py-3 text-right min-w-[110px]">Impressoes</th>}
-                  {visibleColumns.clicks && <th className="px-4 py-3 text-right min-w-[100px]">Cliques</th>}
-                  {visibleColumns.ctr && <th className="px-4 py-3 text-right min-w-[80px]">CTR</th>}
-                  {visibleColumns.cpc && <th className="px-4 py-3 text-right min-w-[100px]">CPC</th>}
-                   {visibleColumns.cpm && <th className="px-4 py-3 text-right min-w-[100px]">CPM</th>}
-                   {visibleColumns.landingPageViews && <th className="px-4 py-3 text-right min-w-[100px]">Visitas LP</th>}
-                   {visibleColumns.cpv && <th className="px-4 py-3 text-right min-w-[100px]">CPV</th>}
-                   {visibleColumns.initiateCheckout && <th className="px-4 py-3 text-right min-w-[100px]">Init. Checkout</th>}
-                   {visibleColumns.cpi && <th className="px-4 py-3 text-right min-w-[100px]">CPI</th>}
-                   {visibleColumns.conversions && <th className="px-4 py-3 text-right min-w-[100px]">Conversoes</th>}
-                   {visibleColumns.cpa && <th className="px-4 py-3 text-right min-w-[100px]">CPA</th>}
-                  {visibleColumns.conversionValue && <th className="px-4 py-3 text-right min-w-[120px]">Valor Conv.</th>}
-                  {visibleColumns.roas && <th className="px-4 py-3 text-right min-w-[100px]">ROAS</th>}
-                  <th className="px-4 py-3 w-16"></th>
+                  <th className="px-4 py-3 shrink-0" style={{ width: 300 }}>Nome</th>
+                  <th className="px-4 py-3 shrink-0" style={{ width: 110 }}>Status</th>
+                  {visibleMetricColumns.map(key => (
+                    <th key={key}
+                      draggable
+                      onDragStart={() => handleDragStart(key)}
+                      onDragOver={(e) => handleDragOver(e, key)}
+                      onDragEnd={handleDragEnd}
+                      onDrop={() => handleDrop(key)}
+                      className={`px-4 py-3 text-right relative group shrink-0 select-none ${dragOverCol === key && draggingCol !== key ? 'bg-blue-50' : ''} ${draggingCol === key ? 'opacity-50' : ''}`}
+                      style={{ width: columnWidths[key] || DEFAULT_COL_WIDTH, minWidth: COL_MIN_WIDTH }}>
+                      <span className="cursor-grab active:cursor-grabbing">{COLUMN_LABELS[key]}</span>
+                      <div
+                        className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-blue-500 z-10"
+                        onMouseDown={(e) => handleResizeStart(key, e)}
+                      />
+                    </th>
+                  ))}
+                  <th className="px-4 py-3 shrink-0" style={{ width: 56 }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -727,17 +976,17 @@ export default function CampaignManagementPageInner() {
 
                   return (
                     <tr key={id} className={`border-t border-border hover:bg-surface transition-colors ${selected.has(id) ? 'bg-blue-50' : ''}`}>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" style={{ width: 48 }}>
                         <input type="checkbox" checked={selected.has(id)} onChange={() => toggleSelect(id)}
                           className="w-4 h-4 rounded border-border text-blue-600 focus:ring-blue-500" />
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" style={{ width: 300 }}>
                         <div className="font-semibold text-foreground">{item.name}</div>
                         {tab === 'campaigns' && (item as CampaignItem).objective && (
                           <div className="text-xs text-muted mt-0.5">{(item as CampaignItem).objective}</div>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" style={{ width: 110 }}>
                         <button onClick={() => handleToggle(item, level)} disabled={isToggling} className="focus:outline-none">
                           {isToggling ? (
                             <svg className="animate-spin w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24">
@@ -749,39 +998,22 @@ export default function CampaignManagementPageInner() {
                           )}
                         </button>
                       </td>
-                       {visibleColumns.budget && (tab === 'campaigns' || tab === 'adsets') && (
-                        <td className="px-4 py-3 cursor-pointer hover:bg-blue-50 transition-colors group"
-                          onClick={() => openBudgetEdit(item as CampaignItem | AdSetItem)}>
-                          <BudgetDisplay daily={(item as CampaignItem | AdSetItem).daily_budget} lifetime={(item as CampaignItem | AdSetItem).lifetime_budget} />
-                          <span className="hidden group-hover:inline ml-1 text-xs text-blue-500">editar</span>
+                       {visibleMetricColumns.map(key => (
+                        <td key={key}
+                          className={`px-4 py-3 text-right ${key === 'budget' ? 'cursor-pointer hover:bg-blue-50 transition-colors group' : ''}`}
+                          style={{ width: columnWidths[key] || DEFAULT_COL_WIDTH, minWidth: COL_MIN_WIDTH }}
+                          onClick={key === 'budget' ? () => openBudgetEdit(item as CampaignItem | AdSetItem) : undefined}>
+                          {key === 'budget' ? (
+                            <>
+                              <BudgetDisplay daily={(item as CampaignItem | AdSetItem).daily_budget} lifetime={(item as CampaignItem | AdSetItem).lifetime_budget} />
+                              <span className="hidden group-hover:inline ml-1 text-xs text-blue-500">editar</span>
+                            </>
+                          ) : (
+                            renderMetricCell(key, item, ins, { cpc, cpm, ctr, cpv, cpi, cpa, roas })
+                          )}
                         </td>
-                      )}
-                      <td className="px-4 py-3 text-right font-medium">{formatBRL(ins.spend)}</td>
-                      {visibleColumns.reach && <td className="px-4 py-3 text-right"><MetricCell value={ins.reach} /></td>}
-                      {visibleColumns.impressions && <td className="px-4 py-3 text-right"><MetricCell value={ins.impressions} /></td>}
-                      {visibleColumns.clicks && <td className="px-4 py-3 text-right"><MetricCell value={ins.clicks} /></td>}
-                      {visibleColumns.ctr && <td className="px-4 py-3 text-right"><MetricCell value={ctr} suffix="%" decimals={2} /></td>}
-                      {visibleColumns.cpc && <td className="px-4 py-3 text-right"><MetricCell value={cpc} prefix="R$ " decimals={2} /></td>}
-                       {visibleColumns.cpm && <td className="px-4 py-3 text-right"><MetricCell value={cpm} prefix="R$ " decimals={2} /></td>}
-                       {visibleColumns.landingPageViews && <td className="px-4 py-3 text-right"><MetricCell value={ins.landing_page_views || 0} /></td>}
-                       {visibleColumns.cpv && <td className="px-4 py-3 text-right"><MetricCell value={cpv} prefix="R$ " decimals={2} /></td>}
-                       {visibleColumns.initiateCheckout && <td className="px-4 py-3 text-right"><MetricCell value={ins.initiate_checkout || 0} /></td>}
-                       {visibleColumns.cpi && <td className="px-4 py-3 text-right"><MetricCell value={cpi} prefix="R$ " decimals={2} /></td>}
-                       {visibleColumns.conversions && <td className="px-4 py-3 text-right"><MetricCell value={ins.conversions} /></td>}
-                       {visibleColumns.cpa && <td className="px-4 py-3 text-right"><MetricCell value={cpa} prefix="R$ " decimals={2} /></td>}
-                      {visibleColumns.conversionValue && (
-                        <td className="px-4 py-3 text-right font-medium text-emerald-600">
-                          <MetricCell value={ins.conversion_value} prefix="R$ " decimals={2} />
-                        </td>
-                      )}
-                      {visibleColumns.roas && (
-                        <td className="px-4 py-3 text-right">
-                          <span className={`font-semibold ${roas >= 1 ? 'text-emerald-600' : roas > 0 ? 'text-amber-600' : 'text-muted'}`}>
-                            <MetricCell value={roas} suffix="x" decimals={2} />
-                          </span>
-                        </td>
-                      )}
-                      <td className="px-4 py-3">
+                      ))}
+                      <td className="px-4 py-3" style={{ width: 56 }}>
                         <button className="text-muted hover:text-muted">
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
@@ -791,6 +1023,25 @@ export default function CampaignManagementPageInner() {
                     </tr>
                   )
                 })}
+                {filtered.length > 0 && (
+                  <tr className="border-t-2 border-blue-200 bg-blue-50/50 text-sm">
+                    <td className="px-4 py-3 shrink-0" style={{ width: 48 }}>
+                      <span className="text-xs font-bold text-foreground uppercase">Total</span>
+                    </td>
+                    <td className="px-4 py-3 shrink-0" style={{ width: 300 }}>
+                      <span className="text-xs text-muted">({filtered.length} itens)</span>
+                    </td>
+                    <td className="px-4 py-3 shrink-0" style={{ width: 110 }}></td>
+                    {visibleMetricColumns.map(key => (
+                      <td key={key}
+                        className="px-4 py-3 text-right text-sm"
+                        style={{ width: columnWidths[key] || DEFAULT_COL_WIDTH, minWidth: COL_MIN_WIDTH }}>
+                        {renderSubtotalCell(key)}
+                      </td>
+                    ))}
+                    <td className="px-4 py-3 shrink-0" style={{ width: 56 }}></td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

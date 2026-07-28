@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
   try {
     // Delegate to the canonical sync implementation (same as /sync-expanded)
     const admin = (await import('@/utils/supabase/admin')).createAdminClient()
-    const result = await syncAccountFull(admin, user.id, ad_account_id, accessToken)
+    const result = await syncAccountFull(admin, user.id, ad_account_id, accessToken, account.sync_from_date || account.created_at)
 
     if (result.rateLimitHeader) {
       const metaRateLimitInfo = parseMetaRateLimitHeader(result.rateLimitHeader)

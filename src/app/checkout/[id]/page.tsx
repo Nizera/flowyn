@@ -130,7 +130,7 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
   }) as { platform: 'meta' | 'google' | 'tiktok'; pixel_id: string }[]
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: checkoutConfig.backgroundColor }}>
+    <div className="force-light min-h-screen" style={{ backgroundColor: checkoutConfig.backgroundColor }}>
       {!isPreviewMode && <PixelScripts pixels={allPixels} />}
 
       {checkoutConfig.blocks.urgency && checkoutConfig.urgencyPhrases.length > 0 && (

@@ -5,13 +5,13 @@ import { GRAPH_API } from '@/lib/meta-graph-api'
 function extractActions(actions: any[] | undefined, type: string): number {
   if (!actions) return 0
   const match = actions.find((a: any) => a.action_type === type)
-  return match ? parseInt(match.value || '0', 10) : 0
+  return match ? (parseInt(match.value || '0', 10) || 0) : 0
 }
 
 function extractActionValues(values: any[] | undefined, type: string): number {
   if (!values) return 0
   const match = values.find((v: any) => v.action_type === type)
-  return match ? parseFloat(match.value || '0') : 0
+  return match ? (parseFloat(match.value || '0') || 0) : 0
 }
 
 function parseBudget(value: string | undefined): number | null {
@@ -19,10 +19,10 @@ function parseBudget(value: string | undefined): number | null {
   return parseInt(value, 10)
 }
 
-function getDateRange() {
+function getDateRange(sinceDate?: string) {
   const now = new Date()
-  const since = new Date(now)
-  since.setDate(since.getDate() - 90)
+  const since = sinceDate ? new Date(sinceDate) : new Date(now)
+  if (!sinceDate) since.setDate(since.getDate() - 90)
   return JSON.stringify({
     since: since.toISOString().slice(0, 10),
     until: now.toISOString().slice(0, 10),
@@ -40,73 +40,64 @@ export async function syncAccountFull(
   supabase: ReturnType<typeof createAdminClient>,
   userId: string,
   adAccountId: string,
-  accessToken: string
+  accessToken: string,
+  syncFromDate?: string
 ): Promise<SyncResult> {
   let totalApiCalls = 0
   let totalRowsSynced = 0
   const errors: string[] = []
   let rateLimitHeader: string | null = null
-  const timeRange = getDateRange()
+  const timeRange = getDateRange(syncFromDate)
   const timeRangeObj = JSON.parse(timeRange)
 
   // CORREÇÃO W9 (auditoria tracking): advisory lock defensivo via sync_lock_until.
-  // Tenta atomically atualizar a row com uma condition (lock expirado); se a coluna
-  // não existe no banco ainda, capturamos o erro e seguimos sem lock.
   // Janela de lock: 5 min (sync típico leva <2 min).
+  // Atomic: update WHERE lock is null or expired, then check rows affected.
   const lockUntil = new Date(Date.now() + 5 * 60_000).toISOString()
-  const { error: lockError } = await supabase
+  const now = new Date().toISOString()
+  const { data: lockData, error: lockError } = await supabase
     .from('ad_accounts')
     .update({ sync_lock_until: lockUntil })
     .eq('ad_account_id', adAccountId)
     .eq('user_id', userId)
-    .or(`sync_lock_until.is.null,sync_lock_until.lt.${new Date().toISOString()}`)
+    .or(`sync_lock_until.is.null,sync_lock_until.lt.${now}`)
+    .select('id')
+
   if (lockError) {
-    // Se a coluna não existir (migration ainda não aplicada), segue sem lock
     if (!/column .* does not exist|Could not find the column/i.test(lockError.message)) {
-      console.warn('[Meta Sync] Lock check failed (continuing):', lockError.message)
+      console.warn('[Meta Sync] Lock set failed (continuing):', lockError.message)
     } else {
-      console.warn('[Meta Sync] sync_lock_until column not applied yet — running without advisory lock. Apply migration 20260721001.')
+      console.warn('[Meta Sync] sync_lock_until column not applied yet — running without advisory lock.')
     }
-  } else {
-    // Check how many rows were affected (only 1 should be updated if we got the lock)
-    // Se 0 rows afetadas, alguém já está com o lock ativo — aborted avoid duplicate work
-    const { data: lockAccount } = await supabase
-      .from('ad_accounts')
-      .select('sync_lock_until')
-      .eq('ad_account_id', adAccountId)
-      .eq('user_id', userId)
-      .maybeSingle()
-    if (lockAccount && lockAccount.sync_lock_until !== lockUntil) {
-      // Outro call já possui o lock — abort
-      return {
-        totalApiCalls: 0,
-        totalRowsSynced: 0,
-        errors: ['Sync já em andamento para esta conta (advisory lock ativo). Tente novamente em alguns minutos.'],
-        rateLimitHeader: null,
-      }
+  }
+
+  // If lock update succeeded but no rows were affected, another sync holds the lock
+  if (!lockError && (!lockData || lockData.length === 0)) {
+    console.warn(`[Meta Sync] Lock held by another process for ${adAccountId} — skipping`)
+    return {
+      totalApiCalls: 0,
+      totalRowsSynced: 0,
+      errors: ['Sync já em andamento para esta conta (advisory lock ativo). Tente novamente em alguns minutos.'],
+      rateLimitHeader: null,
     }
   }
 
   try {
-    // Clear stale insights before re-syncing to prevent zero-rows from overwriting real data
-    const { error: deleteError } = await supabase
-      .from('ad_insights_cache')
-      .delete()
-      .eq('ad_account_id', adAccountId)
-      .gte('date', timeRangeObj.since)
-      .lte('date', timeRangeObj.until)
-
-    if (deleteError) {
-      errors.push(`Clear old insights: ${deleteError.message}`)
-    }
 
   function metaApiCall(url: string): Promise<{ data: any; header: string | null }> {
     return fetch(url).then(async res => {
       const header = res.headers.get('x-business-use-case-usage')
         || res.headers.get('x-ad-account-usage')
         || res.headers.get('x-fb-ads-insights-throttle')
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}))
+        const msg = errBody?.error?.message || `HTTP ${res.status}`
+        return { data: { error: { message: msg } }, header }
+      }
       const data = await res.json()
       return { data, header }
+    }).catch(err => {
+      return { data: { error: { message: err?.message || 'Network error' } }, header: null }
     })
   }
 
@@ -153,9 +144,12 @@ export async function syncAccountFull(
 
   if (campaignsData.error) {
     errors.push(`Campaigns: ${campaignsData.error.message}`)
+    console.error('[Meta Sync] Campaigns API error:', campaignsData.error.message)
   } else if (campaignsData.data) {
+    console.log(`[Meta Sync] Campaigns returned from Meta API: ${campaignsData.data.length}`)
+    console.log('[Meta Sync] Campaign names:', campaignsData.data.map((c: any) => `${c.name} (${c.id}) [${c.effective_status}]`))
     for (const c of campaignsData.data) {
-      await supabase.from('campaigns').upsert({
+      const { error: upsertErr } = await supabase.from('campaigns').upsert({
         user_id: userId,
         ad_account_id: adAccountId,
         campaign_id: c.id,
@@ -173,8 +167,37 @@ export async function syncAccountFull(
         synced_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id,ad_account_id,campaign_id' })
+      if (upsertErr) {
+        console.error(`[Meta Sync] Campaign upsert error for ${c.id}:`, upsertErr.message)
+      }
     }
     totalRowsSynced += campaignsData.data.length
+    console.log(`[Meta Sync] Synced ${campaignsData.data.length} campaigns to local DB`)
+  }
+
+  // Fetch excluded campaign IDs (sync_enabled = false)
+  const { data: excludedRows } = await supabase
+    .from('campaigns')
+    .select('campaign_id')
+    .eq('user_id', userId)
+    .eq('ad_account_id', adAccountId)
+    .eq('sync_enabled', false)
+
+  const excludedCampaignIds = new Set((excludedRows || []).map(r => r.campaign_id))
+
+  // Delete insights for excluded campaigns
+  if (excludedCampaignIds.size > 0) {
+    const excludedArr = Array.from(excludedCampaignIds)
+    await supabase
+      .from('ad_insights_cache')
+      .delete()
+      .eq('ad_account_id', adAccountId)
+      .in('campaign_id', excludedArr)
+    await supabase
+      .from('campaign_insights')
+      .delete()
+      .eq('ad_account_id', adAccountId)
+      .in('campaign_id', excludedArr)
   }
 
   // 2. Sync Ad Sets
@@ -263,6 +286,21 @@ export async function syncAccountFull(
   async function upsertInsights(rows: any[], level: string) {
     const BATCH_SIZE = 100
 
+    // Only delete stale data when we have new data to replace it (prevents data loss on fetch failure)
+    if (rows.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('ad_insights_cache')
+        .delete()
+        .eq('ad_account_id', adAccountId)
+        .eq('insight_level', level)
+        .gte('date', timeRangeObj.since)
+        .lte('date', timeRangeObj.until)
+
+      if (deleteError) {
+        errors.push(`Clear stale ${level} insights: ${deleteError.message}`)
+      }
+    }
+
     function mapRow(row: any) {
       const purchases = extractActions(row.actions, 'purchase')
       const purchaseValue = extractActionValues(row.action_values, 'purchase')
@@ -300,19 +338,16 @@ export async function syncAccountFull(
     }
 
     for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-      // CORREÇÃO W3 (auditoria tracking): o filtro original descartava rows com
-      // spend/impressions/clicks/conversions = 0, perdendo dias que só tinham eventos
-      // de funil orgânico (landing_page_views, initiate_checkout, add_to_cart).
-      // Agora preservamos rows com qualquer活动 relevante.
       const batch = rows.slice(i, i + BATCH_SIZE).map(mapRow)
         .filter(row =>
-          row.spend > 0
+          !excludedCampaignIds.has(row.campaign_id)
+          && (row.spend > 0
           || row.impressions > 0
           || row.clicks > 0
           || row.conversions > 0
           || row.landing_page_views > 0
           || row.initiate_checkout > 0
-          || row.add_to_cart > 0
+          || row.add_to_cart > 0)
         )
 
       if (batch.length === 0) continue

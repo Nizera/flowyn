@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
           if (adSet?.campaign_id) {
             const campaignRes = await fetch(`${GRAPH_API}/${adSet.campaign_id}?fields=is_adset_budget_sharing_enabled,daily_budget,lifetime_budget&access_token=${accessToken}`)
             const campaignData = await campaignRes.json()
-            if (campaignData.is_adset_budget_sharing_enabled === true) {
+            if (campaignData.is_adset_budget_sharing_enabled === true || campaignData.is_adset_budget_sharing_enabled === 'true') {
               const hasCampaignBudget = (Number(campaignData.daily_budget) > 0) || (Number(campaignData.lifetime_budget) > 0)
               if (hasCampaignBudget) {
                 metaTargetId = adSet.campaign_id

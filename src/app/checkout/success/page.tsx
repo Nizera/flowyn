@@ -32,7 +32,7 @@ function productTypeLabel(productType?: string | null) {
 
 function UnavailableState({ title, message }: { title: string; message: string }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-card to-orange-50 p-4">
+    <main className="force-light flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-card to-orange-50 p-4">
       <section className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center shadow-xl">
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-amber-100">
           <ShieldCheck className="h-10 w-10 text-amber-600" />
@@ -67,7 +67,7 @@ export default async function CheckoutSuccessPage(props: {
 
   if (!order || order.status !== 'paid') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-card to-orange-50 p-4">
+      <main className="force-light flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-card to-orange-50 p-4">
         <section className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center shadow-xl">
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-amber-100">
             <ShieldCheck className="h-10 w-10 text-amber-600" />
@@ -113,7 +113,7 @@ export default async function CheckoutSuccessPage(props: {
   const loginUrl = `/login?redirect=${encodeURIComponent(accessPath)}`
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 via-card to-orange-50 p-4">
+    <main className="force-light flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 via-card to-orange-50 p-4">
       {activePixels.length > 0 && <PixelFireBackup pixels={activePixels} amount={Number(order.amount)} orderId={orderId} />}
       <section className="w-full max-w-lg rounded-3xl border border-border bg-card p-8 text-center shadow-xl sm:p-10">
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">

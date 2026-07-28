@@ -33,6 +33,15 @@ interface Summary {
   profit_margin: number
   arpu: number
   chargeback_rate: number
+  chargeback_count: number
+  chargeback_revenue: number
+  total_impressions: number
+  total_clicks: number
+  aggregate_ctr: number
+  aggregate_cpc: number
+  aggregate_cpm: number
+  total_taxes: number
+  total_production_costs: number
   roi: number
 }
 
@@ -60,7 +69,10 @@ interface DashboardData {
 const EMPTY_SUMMARY: Summary = {
   total_revenue: 0, total_spend: 0, total_sales: 0, roas: 0, net_profit: 0,
   total_orders: 0, pending_revenue: 0, refunded_revenue: 0,
-  profit_margin: 0, arpu: 0, chargeback_rate: 0, roi: 0,
+  profit_margin: 0, arpu: 0, chargeback_rate: 0, chargeback_count: 0,
+  chargeback_revenue: 0, total_impressions: 0, total_clicks: 0,
+  aggregate_ctr: 0, aggregate_cpc: 0, aggregate_cpm: 0,
+  total_taxes: 0, total_production_costs: 0, roi: 0,
 }
 
 export default function DashboardPage() {
@@ -126,15 +138,15 @@ export default function DashboardPage() {
       <h1 className="sr-only">Visão Geral</h1>
 
       {/* Revenue Hero */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <section className="lg:col-span-8 bg-card rounded-2xl p-6 border border-border shadow-sm relative overflow-hidden">
-          {/* WebGL shader background: orange flow + mouse glow */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        <section className="lg:col-span-8 bg-card rounded-2xl p-6 border border-border shadow-sm relative overflow-hidden flex flex-col justify-between">
+          {/* Particle Constellation Background (Antigravity interactive style) */}
           <RevenueShaderBackground />
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-muted uppercase tracking-wider">Faturamento</span>
               {s.total_revenue > 0 && (
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                   +{s.total_orders} vendas
                 </span>
               )}
@@ -159,7 +171,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <div className="lg:col-span-4">
+        <div className="lg:col-span-4 flex flex-col">
           <SalesGoalCard totalSales={s.total_sales} />
         </div>
       </div>
@@ -171,7 +183,16 @@ export default function DashboardPage() {
         <MetricPill label="ROAS" value={`${s.roas.toFixed(1)}x`} />
         <MetricPill label="Lucro Líquido" value={currency(s.net_profit)} positive={s.net_profit >= 0} />
         <MetricPill label="Margem de Lucro" value={`${s.profit_margin.toFixed(0)}%`} positive={s.profit_margin >= 0} />
-        <MetricPill label="Chargeback" value={`${s.chargeback_rate.toFixed(1)}%`} />
+        <MetricPill label="Chargeback" value={s.chargeback_count > 0 ? `${s.chargeback_count} (${currency(s.chargeback_revenue)})` : '0'} />
+      </div>
+
+      {/* Secondary Metrics Strip */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <MetricPill label="Impressões" value={s.total_impressions.toLocaleString('pt-BR')} />
+        <MetricPill label="Cliques" value={s.total_clicks.toLocaleString('pt-BR')} />
+        <MetricPill label="CTR" value={`${s.aggregate_ctr.toFixed(2)}%`} />
+        <MetricPill label="CPC" value={currency(s.aggregate_cpc)} />
+        <MetricPill label="CPM" value={currency(s.aggregate_cpm)} />
       </div>
 
       {/* Main Content Row */}

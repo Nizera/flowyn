@@ -64,56 +64,58 @@ export async function GET(req: NextRequest) {
   let totalApiCalls = 0
 
   for (const account of adAccounts) {
-    const accessToken = await getDecryptedToken(account.ad_account_id, account.user_id)
-    if (!accessToken) {
-      results.push({ account_id: account.ad_account_id, error: 'Token decryption failed' })
-      continue
-    }
-
     try {
-      const syncResult = await syncAccountFull(supabase, account.user_id, account.ad_account_id, accessToken)
-      totalApiCalls += syncResult.totalApiCalls
+      const accessToken = await getDecryptedToken(account.ad_account_id, account.user_id)
+      if (!accessToken) {
+        results.push({ account_id: account.ad_account_id, error: 'Token decryption failed' })
+        continue
+      }
 
-      // Check Meta rate limit from last response
-      const budget = checkSyncBudget(parseMetaRateLimitHeader(syncResult.rateLimitHeader))
-      await trackAdAccountUsage(account.user_id, account.ad_account_id, syncResult.totalApiCalls, syncResult.rateLimitHeader)
+      try {
+        const syncResult = await syncAccountFull(supabase, account.user_id, account.ad_account_id, accessToken, account.sync_from_date || account.created_at)
+        totalApiCalls += syncResult.totalApiCalls
 
-      // Update last sync timestamp
-      await supabase
-        .from('ad_accounts')
-        .update({ last_sync_at: new Date().toISOString() })
-        .eq('id', account.id)
+        const budget = checkSyncBudget(parseMetaRateLimitHeader(syncResult.rateLimitHeader))
+        await trackAdAccountUsage(account.user_id, account.ad_account_id, syncResult.totalApiCalls, syncResult.rateLimitHeader)
 
-      // Log sync
-      await supabase.from('sync_logs').insert({
-        user_id: account.user_id,
-        ad_account_id: account.ad_account_id,
-        sync_type: 'cron',
-        status: syncResult.errors.length > 0 ? 'partial' : 'completed',
-        api_calls_made: syncResult.totalApiCalls,
-        rows_synced: syncResult.totalRowsSynced,
-        error_message: syncResult.errors.length > 0 ? syncResult.errors.join('; ') : null,
-        completed_at: new Date().toISOString(),
-      })
+        await supabase
+          .from('ad_accounts')
+          .update({ last_sync_at: new Date().toISOString() })
+          .eq('id', account.id)
 
-      results.push({
-        account_id: account.ad_account_id,
-        account_name: account.ad_account_name,
-        rows_synced: syncResult.totalRowsSynced,
-        api_calls: syncResult.totalApiCalls,
-        errors: syncResult.errors.length > 0 ? syncResult.errors : undefined,
-        meta_rate_limit: budget.tier !== 'unknown' ? {
-          tier: budget.tier,
-          throttle_percentage: budget.throttlePercentage,
-        } : null,
-      })
+        await supabase.from('sync_logs').insert({
+          user_id: account.user_id,
+          ad_account_id: account.ad_account_id,
+          sync_type: 'cron',
+          status: syncResult.errors.length > 0 ? 'partial' : 'completed',
+          api_calls_made: syncResult.totalApiCalls,
+          rows_synced: syncResult.totalRowsSynced,
+          error_message: syncResult.errors.length > 0 ? syncResult.errors.join('; ') : null,
+          completed_at: new Date().toISOString(),
+        })
 
-      if (!budget.allowed) {
-        break
+        results.push({
+          account_id: account.ad_account_id,
+          account_name: account.ad_account_name,
+          rows_synced: syncResult.totalRowsSynced,
+          api_calls: syncResult.totalApiCalls,
+          errors: syncResult.errors.length > 0 ? syncResult.errors : undefined,
+          meta_rate_limit: budget.tier !== 'unknown' ? {
+            tier: budget.tier,
+            throttle_percentage: budget.throttlePercentage,
+          } : null,
+        })
+
+        if (!budget.allowed) {
+          break
+        }
+      } catch (err) {
+        console.error(`[Meta Sync Cron] Error syncing ${account.ad_account_id}:`, err)
+        results.push({ account_id: account.ad_account_id, error: 'Sync failed' })
       }
     } catch (err) {
-      console.error(`[Meta Sync Cron] Error syncing ${account.ad_account_id}:`, err)
-      results.push({ account_id: account.ad_account_id, error: 'Sync failed' })
+      console.error(`[Meta Sync Cron] Unexpected error for ${account.ad_account_id}:`, err)
+      results.push({ account_id: account.ad_account_id, error: 'Unexpected error' })
     }
   }
 

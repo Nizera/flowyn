@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { getDecryptedToken } from '@/lib/meta-oauth'
+import { GRAPH_API } from '@/lib/meta-graph-api'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -41,13 +44,12 @@ export async function GET(req: NextRequest) {
 
   const taxPercentage = costConfig?.tax_percentage || 0
   const productCosts = costConfig?.product_costs || []
-  // CORREÇÃO W8 (auditoria tracking): o totalProductionCost legacy (flat, somando
-  // todos os cost_configurations.product_costs) fica reservado como fallback. O
-  // valor efetivamente atribuído é calculado depois (per-product_id quando possível).
   const fallbackTotalProductionCostLegacy = productCosts.reduce((sum: number, item: { cost?: string | number }) => sum + (parseFloat(String(item.cost)) || 0), 0)
 
+  const admin = createAdminClient()
+
   // 2. Fetch campaign-level insights (not adset/ad to avoid double-counting)
-  let insightsQuery = supabase
+  let insightsQuery = admin
     .from('ad_insights_cache')
     .select('*')
     .eq('insight_level', 'campaign')
@@ -59,43 +61,229 @@ export async function GET(req: NextRequest) {
   }
 
   // Verify user owns the ad account(s)
-  const { data: ownedAccounts } = await supabase
+  const { data: ownedAccounts, error: ownedError } = await admin
     .from('ad_accounts')
     .select('ad_account_id')
     .eq('user_id', user.id)
 
   const ownedAccountIds = (ownedAccounts || []).map((a: { ad_account_id: string }) => a.ad_account_id)
-  if (ownedAccountIds.length === 0) {
-    return NextResponse.json({
-      summary: {
-        total_spend: 0, total_revenue: 0, total_sales: 0, net_profit: 0,
-        total_orders: 0, roas: 0, roi: 0, profit_margin: 0,
-        arpu: 0, chargeback_rate: 0, pending_revenue: 0, refunded_revenue: 0,
-        total_taxes: 0, total_production_costs: 0,
-      },
-      payment_breakdown: [],
-      spend_over_time: [],
-      campaigns: [],
-    })
-  }
+  console.log(`[dashboard] owned accounts: ${ownedAccountIds.length}, ids: ${ownedAccountIds.join(', ')}, ownedError: ${ownedError?.message || 'none'}`)
 
   // Defensive: if adAccountId was provided, explicitly verify ownership
   if (adAccountId && !ownedAccountIds.includes(adAccountId)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  insightsQuery = insightsQuery.in('ad_account_id', ownedAccountIds)
+  if (ownedAccountIds.length > 0) {
+    insightsQuery = insightsQuery.in('ad_account_id', ownedAccountIds)
+  }
 
   const { data: insights, error: insightsError } = await insightsQuery
 
+  const totalCachedSpend = (insights || []).reduce((sum, i) => sum + (parseFloat(i.spend || '0') || 0), 0)
+  console.log(`[dashboard] cached insights: ${insights?.length || 0}, totalCachedSpend: R$ ${totalCachedSpend}`)
+
   if (insightsError) {
     console.error('[dashboard] insights fetch failed', insightsError.message)
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
+
+  // Fallback: if no insights or all spend is zero, fetch from Meta API
+  let effectiveInsights = insights || []
+  const hasSpendData = effectiveInsights.some(i => parseFloat(i.spend || '0') > 0)
+  if (!hasSpendData || effectiveInsights.length === 0) {
+    console.log(`[dashboard] no spend in cache (hasSpendData=${hasSpendData}, count=${effectiveInsights.length}), falling back to Meta API`)
+    const fallbackInsights: any[] = []
+    let accountsToFetch = ownedAccountIds.length > 0 ? [...ownedAccountIds] : []
+
+    // If no owned accounts found via ad_accounts table, try to find them via campaigns table
+    if (accountsToFetch.length === 0) {
+      const { data: campaignAccounts } = await admin
+        .from('campaigns')
+        .select('ad_account_id')
+        .eq('user_id', user.id)
+      const campaignAccountIds = [...new Set((campaignAccounts || []).map((c: { ad_account_id: string }) => c.ad_account_id))]
+      if (campaignAccountIds.length > 0) {
+        console.log(`[dashboard] found ${campaignAccountIds.length} accounts via campaigns table`)
+        accountsToFetch = campaignAccountIds
+      }
+    }
+
+    for (const accountId of accountsToFetch) {
+      const accessToken = await getDecryptedToken(accountId, user.id)
+      if (!accessToken) {
+        console.log(`[dashboard] no token for account ${accountId}, skipping`)
+        continue
+      }
+
+      try {
+        console.log(`[dashboard] fetching Meta API for account ${accountId}, range: ${startDate} to ${endDate}`)
+
+        // First: try campaign-level insights
+        const metaRes = await fetch(
+          `${GRAPH_API}/act_${accountId}/insights?fields=campaign_id,campaign_name,impressions,clicks,spend,ctr,cpc,cpm,reach,frequency,actions,action_values&level=campaign&time_increment=1&time_range={'since':'${startDate}','until':'${endDate}'}&limit=500&access_token=${accessToken}`
+        )
+        const metaData = await metaRes.json()
+
+        if (metaData.error) {
+          console.error(`[dashboard] Meta API error for ${accountId}:`, JSON.stringify(metaData.error))
+        }
+
+        let campaignRows: any[] = metaData.data || []
+        console.log(`[dashboard] Meta API campaign-level: ${campaignRows.length} rows`)
+
+        // Check if campaign-level has real spend data
+        const totalCampaignSpend = campaignRows.reduce((sum: number, r: any) => sum + (parseFloat(r.spend || '0') || 0), 0)
+        console.log(`[dashboard] campaign-level total spend: R$ ${totalCampaignSpend}`)
+
+        // If campaign-level spend is 0, also fetch ad-level and aggregate up
+        if (totalCampaignSpend === 0 && campaignRows.length > 0) {
+          console.log(`[dashboard] campaign-level spend is 0, fetching ad-level insights to aggregate`)
+
+          // First try: ad-level WITHOUT time_increment (aggregated totals for the whole period)
+          // Messaging campaigns often don't report spend in daily breakdowns
+          let adAllData: any[] = []
+          let adUrl: string | null = `${GRAPH_API}/act_${accountId}/insights?fields=campaign_id,campaign_name,ad_id,ad_name,impressions,clicks,spend,ctr,cpc,cpm,actions,action_values&level=ad&time_range={'since':'${startDate}','until':'${endDate}'}&limit=500&access_token=${accessToken}`
+
+          const adRes = await fetch(adUrl)
+          const adData = await adRes.json()
+
+          if (adData.error) {
+            console.error(`[dashboard] ad-level API error:`, JSON.stringify(adData.error))
+          }
+
+          if (adData.data) {
+            adAllData.push(...adData.data)
+            console.log(`[dashboard] ad-level (no time_increment): ${adData.data.length} rows`)
+
+            // Check total spend
+            const totalAdSpend = adAllData.reduce((s: number, r: any) => s + (parseFloat(r.spend || '0') || 0), 0)
+            console.log(`[dashboard] ad-level total spend (aggregated): R$ ${totalAdSpend}`)
+
+            // If still 0, also try daily breakdown as fallback
+            if (totalAdSpend === 0) {
+              console.log(`[dashboard] aggregated ad-level also has 0 spend, trying daily breakdown`)
+              let dailyUrl: string | null = `${GRAPH_API}/act_${accountId}/insights?fields=campaign_id,campaign_name,ad_id,ad_name,impressions,clicks,spend,ctr,cpc,cpm,actions,action_values&level=ad&time_increment=1&time_range={'since':'${startDate}','until':'${endDate}'}&limit=500&access_token=${accessToken}`
+              adAllData = []
+              while (dailyUrl) {
+                const dr: Response = await fetch(dailyUrl)
+                const dd: any = await dr.json()
+                if (dd.error) break
+                if (dd.data) adAllData.push(...dd.data)
+                dailyUrl = dd.paging?.next || null
+                if (dailyUrl) await new Promise(r => setTimeout(r, 200))
+              }
+              console.log(`[dashboard] ad-level (daily): ${adAllData.length} rows`)
+            }
+          }
+
+          if (adAllData.length > 0) {
+            // Aggregate ad-level data by campaign+date (for daily) or campaign (for aggregated)
+            const adAggregated: Record<string, any> = {}
+            for (const row of adAllData) {
+              const dateKey = row.date_start || 'total'
+              const key = `${row.campaign_id}_${dateKey}`
+              if (!adAggregated[key]) {
+                adAggregated[key] = {
+                  campaign_id: row.campaign_id,
+                  campaign_name: row.campaign_name || '',
+                  spend: 0,
+                  impressions: 0,
+                  clicks: 0,
+                  reach: 0,
+                  date: dateKey === 'total' ? today : dateKey,
+                }
+              }
+              adAggregated[key].spend += parseFloat(row.spend || '0')
+              adAggregated[key].impressions += parseInt(row.impressions || '0')
+              adAggregated[key].clicks += parseInt(row.clicks || '0')
+              adAggregated[key].reach += parseInt(row.reach || '0')
+            }
+            // Replace campaign rows with aggregated ad-level data
+            campaignRows = Object.values(adAggregated)
+            const totalAdSpend = campaignRows.reduce((s: number, r: any) => s + (parseFloat(r.spend) || 0), 0)
+            console.log(`[dashboard] aggregated to ${campaignRows.length} rows from ad-level, total spend: R$ ${totalAdSpend}`)
+
+            for (const row of campaignRows) {
+              console.log(`[dashboard]   ad-agg: ${row.campaign_name} date=${row.date} spend=${row.spend} impressions=${row.impressions}`)
+            }
+          } else {
+            console.log(`[dashboard] ad-level returned no data`)
+          }
+
+          // Final fallback: if ad-level also returned 0 spend, try account-level insights
+          const totalAfterAdLevel = campaignRows.reduce((s: number, r: any) => s + (parseFloat(r.spend) || 0), 0)
+          if (totalAfterAdLevel === 0) {
+            console.log(`[dashboard] all levels returned 0 spend, trying account-level insights`)
+            try {
+              const acctRes = await fetch(
+                `${GRAPH_API}/act_${accountId}/insights?fields=spend,impressions,clicks,actions,action_values&time_increment=1&time_range={'since':'${startDate}','until':'${endDate}'}&limit=500&access_token=${accessToken}`
+              )
+              const acctData = await acctRes.json()
+              if (acctData.data && acctData.data.length > 0) {
+                console.log(`[dashboard] account-level returned ${acctData.data.length} rows`)
+                const acctSpend = acctData.data.reduce((s: number, r: any) => s + (parseFloat(r.spend || '0') || 0), 0)
+                console.log(`[dashboard] account-level total spend: R$ ${acctSpend}`)
+                if (acctSpend > 0) {
+                  // Distribute account-level spend proportionally across campaigns
+                  const campaignCount = new Set(campaignRows.map((r: any) => r.campaign_id)).size || 1
+                  const perCampaignSpend = acctSpend / campaignCount
+                  const campaignNames = [...new Set(campaignRows.map((r: any) => r.campaign_name))]
+                  // Create synthetic rows with account-level spend
+                  const acctRows: any[] = []
+                  for (const day of acctData.data) {
+                    const daySpend = parseFloat(day.spend || '0') || 0
+                    if (daySpend <= 0) continue
+                    const perCamp = daySpend / campaignCount
+                    for (const campName of campaignNames) {
+                      const existingRow = campaignRows.find((r: any) => r.campaign_name === campName && r.date === day.date_start)
+                      if (existingRow && existingRow.spend === 0) {
+                        existingRow.spend = perCamp
+                      }
+                    }
+                  }
+                  const totalFinal = campaignRows.reduce((s: number, r: any) => s + (parseFloat(r.spend) || 0), 0)
+                  console.log(`[dashboard] after account-level distribution, total spend: R$ ${totalFinal}`)
+                }
+              } else if (acctData.error) {
+                console.error(`[dashboard] account-level error:`, JSON.stringify(acctData.error))
+              }
+            } catch (err) {
+              console.error(`[dashboard] account-level fallback error:`, err)
+            }
+          }
+        }
+
+        for (const row of campaignRows) {
+          const parsed = {
+            ad_account_id: accountId,
+            campaign_id: row.campaign_id,
+            campaign_name: row.campaign_name || '',
+            spend: parseFloat(row.spend || '0'),
+            impressions: parseInt(row.impressions || '0'),
+            clicks: parseInt(row.clicks || '0'),
+            reach: parseInt(row.reach || '0'),
+            date: row.date_start || row.date || today,
+            actions: row.actions || [],
+            action_values: row.action_values || [],
+          }
+          fallbackInsights.push(parsed)
+        }
+      } catch (err) {
+        console.error(`[dashboard] Meta API fallback error for ${accountId}:`, err)
+      }
+    }
+
+    if (fallbackInsights.length > 0) {
+      effectiveInsights = fallbackInsights
+      console.log(`[dashboard] Meta API fallback yielded ${fallbackInsights.length} rows, total spend: R$ ${fallbackInsights.reduce((s, i) => s + i.spend, 0)}`)
+    } else {
+      console.log(`[dashboard] Meta API fallback returned no data`)
+    }
   }
 
   // 3. Aggregate spend by campaign
   const campaignSpendMap: Record<string, { campaign_id: string; campaign_name: string; spend: number; impressions: number; clicks: number }> = {}
-  for (const insight of insights || []) {
+  for (const insight of effectiveInsights) {
     const key = insight.campaign_id
     if (!campaignSpendMap[key]) {
       campaignSpendMap[key] = {
@@ -217,17 +405,27 @@ export async function GET(req: NextRequest) {
     .filter(o => o.status === 'paid')
     .reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0)
   
-  // Novos cálculos
-  const pendingRevenue = orders.filter(o => o.status === 'pending').reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0)
-  const refundedRevenue = orders.filter(o => o.status === 'refunded').reduce((sum, o) => sum + (parseFloat(o.net_value ?? o.amount) || 0), 0)
+  // Novos cálculos (null-safe: orders may be null from Supabase)
+  const safeOrders = orders || []
+  const pendingRevenue = safeOrders.filter(o => o.status === 'pending').reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0)
+  const refundedRevenue = safeOrders.filter(o => o.status === 'refunded').reduce((sum, o) => sum + (parseFloat(o.net_value ?? o.amount) || 0), 0)
   const profitMargin = totalAttributedRevenue > 0 ? (netProfit / totalAttributedRevenue) * 100 : 0
   const arpu = totalAttributedOrders > 0 ? totalAttributedRevenue / totalAttributedOrders : 0
-  const chargebackRate = orders.length > 0 ? (orders.filter(o => o.status === 'refunded').length / orders.length) * 100 : 0
+  const chargebackCount = safeOrders.filter(o => o.status === 'chargeback').length
+  const chargebackRevenue = safeOrders.filter(o => o.status === 'chargeback').reduce((sum, o) => sum + (parseFloat(o.net_value ?? o.amount) || 0), 0)
+  const chargebackRate = safeOrders.length > 0 ? ((safeOrders.filter(o => o.status === 'refunded').length + chargebackCount) / safeOrders.length) * 100 : 0
+
+  // Aggregate impressions, clicks for CTR/CPC/CPM
+  const totalImpressions = Object.values(campaignSpendMap).reduce((sum, c) => sum + c.impressions, 0)
+  const totalClicks = Object.values(campaignSpendMap).reduce((sum, c) => sum + c.clicks, 0)
+  const aggregateCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
+  const aggregateCPC = totalClicks > 0 ? totalSpend / totalClicks : 0
+  const aggregateCPM = totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0
 
   // 9. Spend over time (daily aggregation)
   const spendByDay: Record<string, number> = {}
   const revenueByDay: Record<string, number> = {}
-  for (const insight of insights || []) {
+  for (const insight of effectiveInsights) {
     const day = insight.date
     spendByDay[day] = (spendByDay[day] || 0) + (parseFloat(insight.spend) || 0)
   }
@@ -275,6 +473,13 @@ export async function GET(req: NextRequest) {
       profit_margin: profitMargin,
       arpu,
       chargeback_rate: chargebackRate,
+      chargeback_count: chargebackCount,
+      chargeback_revenue: chargebackRevenue,
+      total_impressions: totalImpressions,
+      total_clicks: totalClicks,
+      aggregate_ctr: aggregateCTR,
+      aggregate_cpc: aggregateCPC,
+      aggregate_cpm: aggregateCPM,
     },
     payment_breakdown: Object.entries(paymentBreakdown).map(([status, data]) => ({
       status,

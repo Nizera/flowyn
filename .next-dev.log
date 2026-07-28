@@ -1,0 +1,103 @@
+▲ Next.js 16.2.7 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://128.202.1.67:3000
+- Environments: .env.local
+✓ Ready in 608ms
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\ctb075\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * C:\Users\ctb075\Desktop\curso\aflado\package-lock.json
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+
+ GET / 200 in 571ms (next.js: 224ms, proxy.ts: 66ms, application-code: 281ms)
+ GET / 200 in 176ms (next.js: 9ms, proxy.ts: 14ms, application-code: 153ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <script>
+                      <RootLayout>
+                        <html lang="pt-BR" className="inter_b785..." suppressHydrationWarning={true}>
+                          <body
+                            className="min-h-full"
+-                           cz-shortcut-listen="true"
+                          >
+                  ...
+ 
+[browser] Please ensure that the container has a non-static position, like 'relative', 'fixed', or 'absolute' to ensure scroll offset is calculated correctly. (<anonymous>)
+ GET /register 200 in 2.3s (next.js: 2.1s, proxy.ts: 5ms, application-code: 245ms)
+ GET /register 200 in 67ms (next.js: 32ms, proxy.ts: 7ms, application-code: 28ms)
+ GET /dashboard 200 in 3.6s (next.js: 1800ms, proxy.ts: 1198ms, application-code: 644ms)
+ GET /api/meta-ads/funnel? 200 in 923ms (next.js: 528ms, proxy.ts: 195ms, application-code: 200ms)
+ GET /api/meta-ads/dashboard 200 in 1281ms (next.js: 813ms, proxy.ts: 110ms, application-code: 357ms)
+[Env] Optional vars not set: WHATSAPP_VERIFY_TOKEN, NEXT_PUBLIC_GOOGLE_ADS_PIXEL_ID, NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL
+[Env] All required environment variables validated
+ GET /dashboard 200 in 3.3s (next.js: 102ms, proxy.ts: 1411ms, application-code: 1778ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/dashboard" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <script>
+                      <RootLayout>
+                        <html lang="pt-BR" className="inter_b785..." suppressHydrationWarning={true}>
+                          <body
+                            className="min-h-full"
+-                           cz-shortcut-listen="true"
+                          >
+                  ...
+ 
+ GET /api/meta-ads/dashboard 200 in 313ms (next.js: 34ms, proxy.ts: 79ms, application-code: 200ms)
+ GET /api/meta-ads/funnel? 200 in 207ms (next.js: 9ms, proxy.ts: 73ms, application-code: 125ms)
+
+C:\Users\ctb075\Desktop\curso\aflado>

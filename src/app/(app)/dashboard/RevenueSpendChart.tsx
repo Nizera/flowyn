@@ -48,10 +48,19 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
       ))}
       {payload.length === 2 && (
         <div className="mt-2 border-t border-border pt-2 text-xs font-bold">
-          <span className="text-muted">Lucro: </span>
-          <span className={(payload[0].value as number) - (payload[1].value as number) >= 0 ? 'text-emerald-600' : 'text-red-600'}>
-            {currency((payload[0].value as number) - (payload[1].value as number))}
-          </span>
+          {(() => {
+            const rev = (payload.find(p => p.dataKey === 'revenue')?.value as number) || 0
+            const spd = (payload.find(p => p.dataKey === 'spend')?.value as number) || 0
+            const profit = rev - spd
+            return (
+              <>
+                <span className="text-muted">Lucro: </span>
+                <span className={profit >= 0 ? 'text-emerald-600' : 'text-red-600'}>
+                  {currency(profit)}
+                </span>
+              </>
+            )
+          })()}
         </div>
       )}
     </div>

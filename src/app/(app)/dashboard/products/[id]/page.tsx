@@ -91,7 +91,7 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h2 className="text-2xl font-semibold text-foreground">Produto</h2>
+            <h2 data-tour="tour-product-edit-page" className="text-2xl font-semibold text-foreground">Produto</h2>
             <p className="mt-2 text-sm text-muted">Edite informacoes, entrega e configuracoes de {product.name}.</p>
           </div>
         </div>
@@ -104,10 +104,10 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
       <ProductTabs productId={id} active="details" />
 
       <form id="product-details-form" action={updateProduct} className="mt-10 max-w-6xl">
-        <div className="flex items-center gap-4 rounded-xl border border-border bg-surface px-5 py-4 mb-6">
+        <div data-tour="tour-activate-toggle" className="flex items-center gap-4 rounded-xl border border-border bg-surface px-5 py-4 mb-6">
           <label className="relative inline-flex cursor-pointer items-center">
             <input type="checkbox" name="is_public" defaultChecked={product.is_public} className="peer sr-only" />
-            <div className="h-6 w-11 rounded-full bg-surface after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-card after:transition-all peer-checked:bg-orange-500 peer-checked:after:translate-x-full" />
+            <div className="h-7 w-12 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[3px] after:top-[3px] after:h-6 after:w-6 after:rounded-full after:bg-white after:shadow-sm after:transition-all peer-checked:bg-orange-500 peer-checked:after:translate-x-5" />
           </label>
           <div>
             <span className="text-sm font-semibold text-foreground">{product.is_public ? 'Publicado' : 'Rascunho'}</span>
@@ -156,7 +156,7 @@ const textareaClass = 'w-full resize-none rounded-xl border-0 bg-surface px-4 py
 function ProductTabs({ productId, active }: { productId: string; active: string }) {
   const tabs = [
     { href: `/dashboard/products/${productId}`, label: 'Detalhes', icon: Building2, key: 'details' },
-    { href: `/dashboard/products/${productId}/plans`, label: 'Planos', icon: CreditCard, key: 'plans' },
+    { href: `/dashboard/products/${productId}/plans`, label: 'Planos', icon: CreditCard, key: 'plans', dataTour: 'tour-go-plans' },
     { href: `/dashboard/products/${productId}/content`, label: 'Conteudo', icon: BookOpen, key: 'content' },
     { href: `/dashboard/products/${productId}/journey`, label: 'Mentoria', icon: Users, key: 'journey' },
     { href: `/dashboard/products/${productId}/checkout-editor`, label: 'Checkout', icon: Palette, key: 'checkout' },
@@ -168,7 +168,7 @@ function ProductTabs({ productId, active }: { productId: string; active: string 
         const Icon = tab.icon
         const isActive = tab.key === active
         return (
-          <Link key={tab.key} href={tab.href} className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${isActive ? 'border-orange-500 text-orange-600' : 'border-transparent text-muted hover:text-foreground'}`}>
+          <Link key={tab.key} href={tab.href} data-tour={(tab as { dataTour?: string }).dataTour} className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${isActive ? 'border-orange-500 text-orange-600' : 'border-transparent text-muted hover:text-foreground'}`}>
             <Icon className="h-4 w-4" />
             {tab.label}
           </Link>

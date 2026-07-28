@@ -176,6 +176,7 @@ export function ProductWizard({
           type="button"
           onClick={submit}
           disabled={loading}
+          data-tour="tour-create-submit"
           className="inline-flex h-11 items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-7 text-sm font-semibold text-white transition hover:from-orange-600 hover:to-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? 'Criando...' : 'Criar'}
@@ -189,6 +190,7 @@ export function ProductWizard({
             <div className="grid gap-5 lg:grid-cols-2">
               <Field label="Nome do produto" required hint="Esse nome sera exibido para os clientes.">
                 <input
+                  data-tour="tour-product-name"
                   className={fieldClass}
                   value={draft.name}
                   onChange={event => update('name', event.target.value)}
@@ -197,7 +199,7 @@ export function ProductWizard({
               </Field>
 
               <Field label="Tipo de produto" required hint="Define os recursos liberados depois da venda.">
-                <select className={fieldClass} value={draft.product_type} onChange={event => update('product_type', event.target.value)}>
+                <select data-tour="tour-product-type" className={fieldClass} value={draft.product_type} onChange={event => update('product_type', event.target.value)}>
                   <option value="">Selecione o tipo de produto</option>
                   {PRODUCT_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
                 </select>
@@ -205,7 +207,7 @@ export function ProductWizard({
             </div>
 
             <Field label="Categoria do produto" required>
-              <select className={fieldClass} value={draft.category} onChange={event => update('category', event.target.value)}>
+              <select data-tour="tour-category" className={fieldClass} value={draft.category} onChange={event => update('category', event.target.value)}>
                 <option value="">Selecione a categoria do produto</option>
                 {CATEGORIES.map(category => <option key={category} value={category}>{category}</option>)}
               </select>
@@ -236,6 +238,7 @@ export function ProductWizard({
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <Field label={draft.billing_type === 'recurring' ? 'Valor mensal' : 'Preco inicial'} required hint={draft.billing_type === 'recurring' ? 'Cobrado todo mes enquanto a assinatura estiver ativa.' : 'Voce pode ajustar planos e ofertas dentro do produto.'}>
                 <input
+                  data-tour="tour-price"
                   className={`${fieldClass} max-w-sm`}
                   type="number"
                   min="5"

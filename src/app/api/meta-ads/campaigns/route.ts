@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
   if (action === 'accounts') {
     const { data: accounts } = await supabase
       .from('ad_accounts')
-      .select('id, ad_account_id, ad_account_name, pixel_id, sync_enabled, last_sync_at, created_at')
+      .select('id, ad_account_id, ad_account_name, pixel_id, sync_enabled, last_sync_at, created_at, sync_from_date')
       .eq('user_id', user.id)
       .eq('platform', 'meta')
       .eq('is_active', true)
