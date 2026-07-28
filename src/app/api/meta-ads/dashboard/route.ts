@@ -48,6 +48,18 @@ export async function GET(req: NextRequest) {
 
   const admin = createAdminClient()
 
+  // Fetch disabled campaign IDs for this user
+  const { data: userCampaigns } = await admin
+    .from('campaigns')
+    .select('campaign_id, sync_enabled')
+    .eq('user_id', user.id)
+
+  const disabledCampaignIds = new Set(
+    (userCampaigns || [])
+      .filter(c => c.sync_enabled === false)
+      .map(c => c.campaign_id)
+  )
+
   // 2. Fetch campaign-level insights (not adset/ad to avoid double-counting)
   let insightsQuery = admin
     .from('ad_insights_cache')
@@ -78,17 +90,20 @@ export async function GET(req: NextRequest) {
     insightsQuery = insightsQuery.in('ad_account_id', ownedAccountIds)
   }
 
-  const { data: insights, error: insightsError } = await insightsQuery
+  const { data: rawInsights, error: insightsError } = await insightsQuery
 
-  const totalCachedSpend = (insights || []).reduce((sum, i) => sum + (parseFloat(i.spend || '0') || 0), 0)
-  console.log(`[dashboard] cached insights: ${insights?.length || 0}, totalCachedSpend: R$ ${totalCachedSpend}`)
+  // Filter out disabled campaigns from insights
+  const insights = (rawInsights || []).filter(i => !disabledCampaignIds.has(i.campaign_id))
+
+  const totalCachedSpend = insights.reduce((sum, i) => sum + (parseFloat(i.spend || '0') || 0), 0)
+  console.log(`[dashboard] cached insights: ${insights.length}, totalCachedSpend: R$ ${totalCachedSpend}`)
 
   if (insightsError) {
     console.error('[dashboard] insights fetch failed', insightsError.message)
   }
 
   // Fallback: if no insights or all spend is zero, fetch from Meta API
-  let effectiveInsights = insights || []
+  let effectiveInsights = insights
   const hasSpendData = effectiveInsights.some(i => parseFloat(i.spend || '0') > 0)
   if (!hasSpendData || effectiveInsights.length === 0) {
     console.log(`[dashboard] no spend in cache (hasSpendData=${hasSpendData}, count=${effectiveInsights.length}), falling back to Meta API`)
@@ -254,6 +269,7 @@ export async function GET(req: NextRequest) {
         }
 
         for (const row of campaignRows) {
+          if (disabledCampaignIds.has(row.campaign_id)) continue
           const parsed = {
             ad_account_id: accountId,
             campaign_id: row.campaign_id,

@@ -59,17 +59,30 @@ export async function GET(req: NextRequest) {
     })
   }
 
+  const admin = (await import('@/utils/supabase/admin')).createAdminClient()
+  const { data: userCampaigns } = await admin
+    .from('campaigns')
+    .select('campaign_id, sync_enabled')
+    .eq('user_id', user.id)
+
+  const disabledCampaignIds = new Set(
+    (userCampaigns || [])
+      .filter(c => c.sync_enabled === false)
+      .map(c => c.campaign_id)
+  )
+
   // 2. Get total clicks from ad_insights_cache (campaign level)
   const insightsQuery = supabase
     .from('ad_insights_cache')
-    .select('clicks')
+    .select('clicks, campaign_id')
     .eq('insight_level', 'campaign')
     .gte('date', startDate)
     .lte('date', endDate)
     .in('ad_account_id', ownedAccountIds)
 
-  const { data: insights } = await insightsQuery
-  let totalClicks = (insights || []).reduce((sum: number, i: { clicks?: number }) => sum + (i.clicks || 0), 0)
+  const { data: rawInsights } = await insightsQuery
+  const insights = (rawInsights || []).filter(i => !disabledCampaignIds.has(i.campaign_id))
+  let totalClicks = insights.reduce((sum: number, i: { clicks?: number }) => sum + (i.clicks || 0), 0)
 
   // Fallback: if cache is empty, fetch clicks from Meta API
   if (totalClicks === 0 && ownedAccountIds.length > 0) {
