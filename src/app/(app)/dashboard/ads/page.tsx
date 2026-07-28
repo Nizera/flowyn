@@ -284,17 +284,17 @@ export default function AdsAccountsPage() {
         ) : accounts.length === 0 ? (
           <EmptyState onConnect={() => setShowConnectModal(true)} />
         ) : (
-          <div className="overflow-x-auto light-scrollbar">
+          <div className="w-full">
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-10 border-b border-border bg-card">
                 <tr className="text-left text-xs uppercase text-muted">
-                  <th className="min-w-[250px] px-4 py-3">Conta</th>
-                  <th className="w-32 px-4 py-3">ID</th>
-                  <th className="w-32 px-4 py-3 text-center">Sincronizacao</th>
-                  <th className="w-32 px-4 py-3 text-center">Status</th>
-                  <th className="w-36 px-4 py-3">Dados desde</th>
-                  <th className="w-36 px-4 py-3">Ultimo sync</th>
-                  <th className="w-56 px-4 py-3 text-right">Acoes</th>
+                  <th className="px-4 py-3">Conta</th>
+                  <th className="px-4 py-3">ID</th>
+                  <th className="px-4 py-3 text-center">Sincronizacao</th>
+                  <th className="px-4 py-3 text-center">Status</th>
+                  <th className="px-4 py-3">Dados desde</th>
+                  <th className="px-4 py-3">Ultimo sync</th>
+                  <th className="px-4 py-3 text-right">Acoes</th>
                 </tr>
               </thead>
               <tbody>

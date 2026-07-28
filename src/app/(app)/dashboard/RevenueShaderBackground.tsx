@@ -34,8 +34,6 @@ export function RevenueShaderBackground() {
     class Particle {
       x: number
       y: number
-      baseX: number
-      baseY: number
       vx: number
       vy: number
       size: number
@@ -47,29 +45,25 @@ export function RevenueShaderBackground() {
       constructor(w: number, h: number) {
         this.x = Math.random() * w
         this.y = Math.random() * h
-        this.baseX = this.x
-        this.baseY = this.y
-        this.vx = (Math.random() - 0.5) * 0.6
-        this.vy = -Math.random() * 0.8 - 0.2 // Drift upwards (antigravity)
-        this.size = Math.random() * 2 + 1
-        this.alpha = Math.random() * 0.5 + 0.3
+        this.vx = (Math.random() - 0.5) * 0.4
+        this.vy = -Math.random() * 0.5 - 0.1 // Slow gentle drift upwards
+        this.size = Math.random() * 1.5 + 0.8
+        this.alpha = Math.random() * 0.3 + 0.15 // Subtler alpha
         this.angle = Math.random() * Math.PI * 2
-        this.speed = Math.random() * 0.02 + 0.01
+        this.speed = Math.random() * 0.015 + 0.005
 
         const colors = [
           'rgba(249, 115, 22, ',  // orange-500
           'rgba(245, 158, 11, ',  // amber-500
-          'rgba(251, 146, 60, ',  // orange-400
         ]
         this.color = colors[Math.floor(Math.random() * colors.length)]
       }
 
       update(w: number, h: number, mouseX: number | null, mouseY: number | null) {
         this.angle += this.speed
-        this.y += this.vy + Math.sin(this.angle) * 0.3
-        this.x += this.vx + Math.cos(this.angle) * 0.3
+        this.y += this.vy + Math.sin(this.angle) * 0.2
+        this.x += this.vx + Math.cos(this.angle) * 0.2
 
-        // Wrap around edges
         if (this.y < -10) {
           this.y = h + 10
           this.x = Math.random() * w
@@ -77,15 +71,15 @@ export function RevenueShaderBackground() {
         if (this.x < -10) this.x = w + 10
         if (this.x > w + 10) this.x = -10
 
-        // Mouse interaction (Antigravity repulsion effect similar to antigravity.google)
+        // Gentle mouse repulsion (Antigravity style)
         if (mouseX !== null && mouseY !== null) {
           const dx = mouseX - this.x
           const dy = mouseY - this.y
           const dist = Math.sqrt(dx * dx + dy * dy)
-          const maxDist = 90
+          const maxDist = 80
 
           if (dist < maxDist && dist > 0) {
-            const force = (1 - dist / maxDist) * 3
+            const force = (1 - dist / maxDist) * 2
             const angle = Math.atan2(dy, dx)
             this.x -= Math.cos(angle) * force
             this.y -= Math.sin(angle) * force
@@ -97,16 +91,14 @@ export function RevenueShaderBackground() {
         c.beginPath()
         c.arc(this.x, this.y, this.size, 0, Math.PI * 2)
         c.fillStyle = `${this.color}${this.alpha})`
-        
-        // Soft glow
-        c.shadowColor = 'rgba(249, 115, 22, 0.4)'
-        c.shadowBlur = 6
+        c.shadowColor = 'rgba(249, 115, 22, 0.2)'
+        c.shadowBlur = 3
         c.fill()
         c.shadowBlur = 0
       }
     }
 
-    const particleCount = 45
+    const particleCount = 25 // Fewer particles for a cleaner look
     let particles: Particle[] = []
     for (let i = 0; i < particleCount; i++) {
       particles.push(new Particle(width || 400, height || 200))
@@ -141,25 +133,24 @@ export function RevenueShaderBackground() {
       ctx.save()
       ctx.scale(dpr, dpr)
 
-      // Draw connecting lines between close particles (constellation effect)
+      // Subtle constellation lines
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x
           const dy = particles[i].y - particles[j].y
           const dist = Math.sqrt(dx * dx + dy * dy)
-          if (dist < 65) {
-            const alpha = (1 - dist / 65) * 0.15
+          if (dist < 55) {
+            const alpha = (1 - dist / 55) * 0.08 // Very subtle lines
             ctx.beginPath()
             ctx.moveTo(particles[i].x, particles[i].y)
             ctx.lineTo(particles[j].x, particles[j].y)
             ctx.strokeStyle = `rgba(249, 115, 22, ${alpha})`
-            ctx.lineWidth = 0.8
+            ctx.lineWidth = 0.5
             ctx.stroke()
           }
         }
       }
 
-      // Update and draw particles
       for (const p of particles) {
         p.update(width, height, mouseX, mouseY)
         p.draw(ctx)
@@ -183,7 +174,7 @@ export function RevenueShaderBackground() {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 h-full w-full pointer-events-none z-0"
+      className="absolute inset-0 h-full w-full pointer-events-none z-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
       style={{ display: 'block' }}
     />
   )

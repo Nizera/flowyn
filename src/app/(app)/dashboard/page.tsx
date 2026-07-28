@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { SalesGoalCard } from '@/components/SalesGoalCard'
-import { TrendingUp, CreditCard, CheckCircle, Undo, Clock, AlertCircle } from 'lucide-react'
+import { TrendingUp, CreditCard, CheckCircle, Undo, Clock, AlertCircle, RefreshCw } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { currency } from '@/lib/format'
 
@@ -79,6 +79,29 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [syncingAll, setSyncingAll] = useState(false)
+
+  async function handleSyncAllActive() {
+    setSyncingAll(true)
+    try {
+      const resAccounts = await fetch('/api/meta-ads/campaigns?action=accounts')
+      const dataAccounts = await resAccounts.json()
+      const activeAccounts = (dataAccounts.accounts || []).filter((a: any) => a.sync_enabled !== false)
+
+      for (const acc of activeAccounts) {
+        await fetch('/api/meta-ads/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ad_account_id: acc.ad_account_id }),
+        })
+      }
+      window.location.reload()
+    } catch (e) {
+      console.error('Sync all error:', e)
+    } finally {
+      setSyncingAll(false)
+    }
+  }
 
   useEffect(() => {
     const controller = new AbortController()
@@ -135,11 +158,24 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="sr-only">Visão Geral</h1>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-foreground tracking-tight">Visão Geral</h1>
+          <p className="text-xs text-muted mt-0.5">Acompanhe sua operação de vendas e desempenho de anúncios.</p>
+        </div>
+        <button
+          onClick={handleSyncAllActive}
+          disabled={syncingAll}
+          className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-bold text-foreground shadow-sm transition hover:bg-surface disabled:opacity-50"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${syncingAll ? 'animate-spin' : ''}`} />
+          {syncingAll ? 'Sincronizando contas...' : 'Sincronizar Contas Ativas'}
+        </button>
+      </div>
 
       {/* Revenue Hero */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        <section className="lg:col-span-8 bg-card rounded-2xl p-6 border border-border shadow-sm relative overflow-hidden flex flex-col justify-between">
+        <section className="lg:col-span-8 bg-card rounded-2xl p-6 border border-border shadow-sm relative overflow-hidden flex flex-col justify-between group">
           {/* Particle Constellation Background (Antigravity interactive style) */}
           <RevenueShaderBackground />
           <div className="relative z-10">
