@@ -88,6 +88,9 @@ export async function POST(req: NextRequest) {
     const customerDocument = onlyDigits(String(body.customer_document || ''))
     const customerPhone = onlyDigits(String(body.customer_phone || ''))
     const addOrderBump = Boolean(body.add_order_bump)
+    const selectedOrderBumpIds: string[] = Array.isArray(body.selected_order_bump_ids)
+      ? body.selected_order_bump_ids.filter((id: unknown): id is string => typeof id === 'string')
+      : []
     const billingType = String(body.billing_type || 'CREDIT_CARD')
     const trackingParams = body.tracking_params as Record<string, string> | undefined
 
@@ -200,10 +203,28 @@ export async function POST(req: NextRequest) {
     }
 
     let orderBumpAmount = 0
-    if (addOrderBump) {
+    const effectiveBumpIds: string[] = []
+
+    if (selectedOrderBumpIds.length > 0) {
+      const { data: selectedBumps } = await supabase
+        .from('product_order_bumps')
+        .select('id, price, plan_ids')
+        .eq('product_id', product.id)
+        .in('id', selectedOrderBumpIds)
+
+      const validBumps = (selectedBumps ?? []).filter(bump => {
+        if (!bump.plan_ids || !Array.isArray(bump.plan_ids) || bump.plan_ids.length === 0) return true
+        return bump.plan_ids.includes(plan.id)
+      })
+
+      for (const bump of validBumps) {
+        orderBumpAmount += Number(bump.price)
+        effectiveBumpIds.push(bump.id)
+      }
+    } else if (addOrderBump) {
       const { data: allBumps } = await supabase
         .from('product_order_bumps')
-        .select('price, plan_ids')
+        .select('id, price, plan_ids')
         .eq('product_id', product.id)
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true })
@@ -215,6 +236,7 @@ export async function POST(req: NextRequest) {
 
       if (bumps.length > 0) {
         orderBumpAmount = Number(bumps[0].price)
+        effectiveBumpIds.push(bumps[0].id)
       }
     }
     const totalAmount = Number((Number(plan.price) + orderBumpAmount).toFixed(2))
@@ -257,7 +279,9 @@ export async function POST(req: NextRequest) {
         status: 'pending',
         asaas_customer_id: asaasCustomer.id,
         payment_provider: 'asaas',
-        tracking_params: trackingParams && Object.keys(trackingParams).length > 0 ? trackingParams : null,
+        tracking_params: (trackingParams && Object.keys(trackingParams).length > 0) || effectiveBumpIds.length > 0
+          ? { ...(trackingParams || {}), ...(effectiveBumpIds.length > 0 ? { order_bump_ids: effectiveBumpIds } : {}) }
+          : null,
         client_ip: clientIp,
         user_agent: userAgent,
         includes_order_bump: orderBumpAmount > 0,

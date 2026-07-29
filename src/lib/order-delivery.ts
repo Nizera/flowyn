@@ -5,10 +5,12 @@ import { deliveryEmail, studentPasswordEmail } from '@/lib/email-templates'
 import { getAppUrl } from '@/lib/app-url'
 import { getResendClient } from '@/lib/resend'
 import { createStudentPasswordSetupUrl, findAuthUserIdByEmail } from '@/lib/student-password-link'
+import { isAccessProduct } from '@/lib/order-fulfillment'
 
 type Product = {
   id: string
   name: string
+  product_type?: string | null
   delivery_type?: string | null
   delivery_url?: string | null
   deliverable_file_paths?: string[] | null
@@ -76,7 +78,7 @@ export async function resendOrderDelivery(supabase: SupabaseClient, orderId: str
     .from('orders')
     .select(`
       id, status,
-      product:products(id, name, delivery_type, delivery_url, deliverable_file_paths)
+      product:products(id, name, product_type, delivery_type, delivery_url, deliverable_file_paths)
     `)
     .eq('id', orderId)
     .maybeSingle()
@@ -98,7 +100,7 @@ export async function resendOrderDelivery(supabase: SupabaseClient, orderId: str
 
   const appUrl = getAppUrl()
 
-  if (product.delivery_type === 'platform') {
+  if (isAccessProduct(product.product_type)) {
     let createdStudent = false
     const { data: orderAccess } = await supabase
       .from('student_access')

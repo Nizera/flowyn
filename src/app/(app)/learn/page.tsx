@@ -55,7 +55,9 @@ export default async function LearnLibraryPage() {
 
   const accesses = ((accessRows ?? []) as unknown as AccessRow[]).flatMap((row) => {
     const product = Array.isArray(row.product) ? row.product[0] : row.product
-    return product ? [{ ...product, grantedAt: row.granted_at, lastAccessedAt: row.last_accessed_at }] : []
+    if (!product) return []
+    if (product.product_type !== 'course' && product.product_type !== 'mentoria') return []
+    return [{ ...product, grantedAt: row.granted_at, lastAccessedAt: row.last_accessed_at }]
   })
   const productIds = accesses.map(product => product.id)
 

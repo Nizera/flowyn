@@ -9,6 +9,10 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 type SupabaseAdmin = SupabaseClient
 
+export function isAccessProduct(productType?: string | null): boolean {
+  return productType === 'course' || productType === 'mentoria'
+}
+
 type Product = {
   id: string
   name: string
@@ -223,7 +227,7 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
   let platformStudentIsNew = false
   let platformAccessUrl: string | null = null
 
-  if (product?.delivery_type === 'platform') {
+  if (isAccessProduct(product?.product_type)) {
     let studentUserId = await findAuthUserIdByEmail(supabase, deliveryCustomerEmail)
     let setupPasswordUrl: string | null = null
     const productPath = `/learn/${product.id}`
@@ -325,7 +329,7 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
     }
   }
 
-  if (product?.delivery_type === 'external') {
+  if (!isAccessProduct(product?.product_type)) {
     const hasContent = product.delivery_url || (Array.isArray(product.deliverable_file_paths) && product.deliverable_file_paths.length > 0)
 
     if (!hasContent) {
@@ -419,7 +423,7 @@ export async function revokePaidOrder(supabase: SupabaseAdmin, orderId: string, 
     })
     .eq('id', orderId)
     .eq('status', 'paid')
-    .select('*, product:products(id, delivery_type)')
+    .select('*, product:products(id, product_type, delivery_type)')
     .single()
 
   if (orderError || !orderData) {
@@ -428,7 +432,7 @@ export async function revokePaidOrder(supabase: SupabaseAdmin, orderId: string, 
 
   const product = orderData.product as Product | null
 
-  if (product?.delivery_type === 'platform') {
+  if (isAccessProduct(product?.product_type)) {
     const { data: privateCustomer } = await supabase
       .from('order_customer_private')
       .select('customer_email')
@@ -436,7 +440,7 @@ export async function revokePaidOrder(supabase: SupabaseAdmin, orderId: string, 
       .single()
 
     const email = privateCustomer?.customer_email || orderData.customer_email
-    if (email) {
+    if (email && product) {
       const { data: student } = await supabase
         .from('student_access')
         .select('user_id')

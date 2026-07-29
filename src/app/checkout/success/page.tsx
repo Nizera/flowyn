@@ -105,7 +105,7 @@ export default async function CheckoutSuccessPage(props: {
     .filter((p: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.pixel_id === p.pixel_id) === i)
     .map((p: any) => ({ ...p, pixel_id: decryptApiKey(p.pixel_id) }))
 
-  const isPlatformProduct = product.delivery_type === 'platform'
+  const isPlatformProduct = product.product_type === 'course' || product.product_type === 'mentoria'
   const typeLabel = productTypeLabel(product.product_type)
   const maskedEmail = maskEmail(customer.customer_email)
 

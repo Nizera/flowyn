@@ -5,17 +5,20 @@ import { ArrowRight, CreditCard, Loader2, Lock, Mail, MapPin, Phone, Search, Shi
 import { formatCardNumber, formatCpfCnpj, formatPhone, formatPostalCode, lookupPostalCode, type CepAddress } from '@/lib/brazil-fields'
 
 interface OrderBumpData {
+  id?: string
   active: boolean
   title: string | null
   description: string | null
   price: number | null
+  originalPrice?: number | null
   imageUrl: string | null
 }
 
 interface CheckoutFormProps {
   planId: string
   amount: number
-  orderBump: OrderBumpData
+  orderBump?: OrderBumpData
+  orderBumps?: OrderBumpData[]
   primaryColor?: string
   buttonText?: string
   previewMode?: boolean
@@ -34,13 +37,14 @@ export function CheckoutForm({
   planId,
   amount,
   orderBump,
+  orderBumps = [],
   primaryColor = '#059669',
   buttonText = 'Pagar',
   previewMode = false,
   recurring = false,
 }: CheckoutFormProps) {
   const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix'>(recurring ? 'credit_card' : 'pix')
-  const [addOrderBump, setAddOrderBump] = useState(false)
+  const [selectedBumpIds, setSelectedBumpIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pixQrCode, setPixQrCode] = useState<string | null>(null)
@@ -182,9 +186,13 @@ export function CheckoutForm({
   }
 
   const bumpPrice = useMemo(() => {
-    if (!addOrderBump || !orderBump.price) return 0
-    return Number(orderBump.price)
-  }, [addOrderBump, orderBump.price])
+    return orderBumps.reduce((sum, bump) => {
+      if (bump.id && selectedBumpIds.has(bump.id) && bump.price) {
+        return sum + Number(bump.price)
+      }
+      return sum
+    }, 0)
+  }, [orderBumps, selectedBumpIds])
 
   const totalAmount = amount + bumpPrice
 
@@ -263,7 +271,8 @@ export function CheckoutForm({
         customer_email: customerEmail,
         customer_document: customerDocument,
         customer_phone: customerPhone,
-        add_order_bump: addOrderBump,
+        add_order_bump: selectedBumpIds.size > 0,
+        selected_order_bump_ids: Array.from(selectedBumpIds),
         billing_type: paymentMethod === 'pix' ? 'PIX' : 'CREDIT_CARD',
         tracking_params: trackingParams,
       }
@@ -551,43 +560,66 @@ export function CheckoutForm({
         </div>
       </div>
 
-      {orderBump.active && orderBump.price && (
-        <button
-          type="button"
-          className="w-full rounded-2xl border-2 p-4 text-left transition-all"
-          style={{
-            backgroundColor: addOrderBump ? `${primaryColor}10` : '#f8fafc',
-            borderColor: addOrderBump ? primaryColor : '#e2e8f0',
-            borderStyle: addOrderBump ? 'solid' : 'dashed',
-          }}
-          onClick={() => setAddOrderBump(!addOrderBump)}
-        >
-          <div className="flex gap-3">
-            <div
-              className="mt-1 flex h-5 w-5 items-center justify-center rounded border"
-              style={{
-                backgroundColor: addOrderBump ? primaryColor : '#ffffff',
-                borderColor: addOrderBump ? primaryColor : '#cbd5e1',
-              }}
-            >
-              {addOrderBump && <span className="text-xs font-bold text-white">✓</span>}
+      {orderBumps.length > 0 && orderBumps.map((bump) => {
+        if (!bump.active || !bump.price) return null
+        const isSelected = bump.id ? selectedBumpIds.has(bump.id) : false
+        return (
+          <button
+            key={bump.id || bump.title}
+            type="button"
+            className="w-full rounded-2xl border-2 p-4 text-left transition-all"
+            style={{
+              backgroundColor: isSelected ? `${primaryColor}10` : '#f8fafc',
+              borderColor: isSelected ? primaryColor : '#e2e8f0',
+              borderStyle: isSelected ? 'solid' : 'dashed',
+            }}
+            onClick={() => {
+              if (!bump.id) return
+              setSelectedBumpIds(prev => {
+                const next = new Set(prev)
+                if (next.has(bump.id!)) {
+                  next.delete(bump.id!)
+                } else {
+                  next.add(bump.id!)
+                }
+                return next
+              })
+            }}
+          >
+            <div className="flex gap-3">
+              <div
+                className="mt-1 flex h-5 w-5 items-center justify-center rounded border"
+                style={{
+                  backgroundColor: isSelected ? primaryColor : '#ffffff',
+                  borderColor: isSelected ? primaryColor : '#cbd5e1',
+                }}
+              >
+                {isSelected && <span className="text-xs font-bold text-white">✓</span>}
+              </div>
+              {bump.imageUrl && (
+                <img src={bump.imageUrl} alt={bump.title || 'Order bump'} className="h-16 w-16 rounded-lg border border-border object-cover" />
+              )}
+              <div className="flex-1">
+                <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-red-700">
+                  Oferta especial
+                </span>
+                <h4 className="mt-2 font-bold leading-tight text-foreground">{bump.title || 'Adicionar ao pedido'}</h4>
+                <p className="mt-1 text-sm text-muted">{bump.description}</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <p className="font-bold" style={{ color: primaryColor }}>
+                    R$ {money(Number(bump.price))}
+                  </p>
+                  {bump.originalPrice && bump.originalPrice > bump.price && (
+                    <span className="text-sm text-muted line-through">
+                      R$ {money(bump.originalPrice)}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-            {orderBump.imageUrl && (
-              <img src={orderBump.imageUrl} alt="Order bump" className="h-16 w-16 rounded-lg border border-border object-cover" />
-            )}
-            <div className="flex-1">
-              <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-red-700">
-                Oferta especial
-              </span>
-              <h4 className="mt-2 font-bold leading-tight text-foreground">{orderBump.title || 'Adicionar ao pedido'}</h4>
-              <p className="mt-1 text-sm text-muted">{orderBump.description}</p>
-              <p className="mt-2 font-bold" style={{ color: primaryColor }}>
-                R$ {money(bumpPrice || Number(orderBump.price))}
-              </p>
-            </div>
-          </div>
-        </button>
-      )}
+          </button>
+        )
+      })}
 
       {paymentMethod === 'credit_card' && (
         <div className="space-y-4 rounded-2xl border border-border bg-background p-5">

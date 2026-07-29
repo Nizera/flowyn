@@ -80,16 +80,16 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
 
   const { data: allBumps } = await admin
     .from('product_order_bumps')
-    .select('title, description, price, original_price, image_url, plan_ids')
+    .select('id, title, description, price, original_price, image_url, plan_ids')
     .eq('product_id', product.id)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
 
-  const orderBumps = (allBumps ?? []).filter(bump => {
+  const validBumps = (allBumps ?? []).filter(bump => {
     if (!bump.plan_ids || !Array.isArray(bump.plan_ids) || bump.plan_ids.length === 0) return true
     return bump.plan_ids.includes(plan.id)
   })
-  const firstBump = orderBumps.length > 0 ? orderBumps[0] : null
+  const firstBump = validBumps.length > 0 ? validBumps[0] : null
 
   const checkoutConfig = normalizeCheckoutConfig(
     canPreviewDraft ? customization?.draft_config : customization?.published_config,
@@ -199,7 +199,17 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
                 buttonText={checkoutConfig.buttonText}
                 previewMode={isPreviewMode}
                 recurring={plan.billing_type === 'recurring'}
+                orderBumps={validBumps.map(b => ({
+                  id: b.id,
+                  active: true,
+                  title: b.title,
+                  description: b.description,
+                  price: Number(b.price),
+                  originalPrice: b.original_price ? Number(b.original_price) : null,
+                  imageUrl: b.image_url || checkoutConfig.orderBumpImageUrl || '',
+                }))}
                 orderBump={firstBump ? {
+                  id: firstBump.id,
                   active: true,
                   title: firstBump.title,
                   description: firstBump.description,
