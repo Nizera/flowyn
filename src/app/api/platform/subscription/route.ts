@@ -102,15 +102,15 @@ export async function POST(req: NextRequest) {
   const cardExpiryMonth = String(body.card?.expiryMonth || '').padStart(2, '0')
   const cardExpiryYear = String(body.card?.expiryYear || '')
 
-  if (!name || !email || !cpfCnpj || !phone) {
-    return NextResponse.json({ error: 'Preencha nome, e-mail, CPF/CNPJ e telefone.' }, { status: 400 })
+  if (!name || !email || !cpfCnpj || !phone || !postalCode || !addressNumber) {
+    return NextResponse.json({ error: 'Preencha todos os dados obrigatórios.' }, { status: 400 })
   }
 
   if (!isValidEmail(email) || !isValidCpfCnpj(cpfCnpj) || !isValidPhone(phone)) {
     return NextResponse.json({ error: 'Informe e-mail, CPF/CNPJ e telefone válidos.' }, { status: 400 })
   }
 
-  if (postalCode && !isValidPostalCode(postalCode)) {
+  if (!isValidPostalCode(postalCode)) {
     return NextResponse.json({ error: 'Informe um CEP válido com 8 dígitos.' }, { status: 400 })
   }
 

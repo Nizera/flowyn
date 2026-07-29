@@ -675,6 +675,7 @@ export function CheckoutForm({
                 <MapPin className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
                 <input
                   id="postal_code"
+                  required
                   inputMode="numeric"
                   autoComplete="postal-code"
                   minLength={9}
@@ -702,7 +703,7 @@ export function CheckoutForm({
               <label htmlFor="address_number" className="mb-2 block text-sm font-semibold text-foreground">
                 Numero
               </label>
-              <input id="address_number" inputMode="numeric" maxLength={10} value={addressNumber} onChange={e => setAddressNumber(digits(e.target.value).slice(0, 10))} placeholder="123" className={plainInputClass} style={focusStyle} />
+              <input id="address_number" required inputMode="numeric" maxLength={10} value={addressNumber} onChange={e => setAddressNumber(digits(e.target.value).slice(0, 10))} placeholder="123" className={plainInputClass} style={focusStyle} />
             </div>
           </div>
 

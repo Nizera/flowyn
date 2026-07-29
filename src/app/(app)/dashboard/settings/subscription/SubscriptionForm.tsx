@@ -128,6 +128,7 @@ export function SubscriptionForm({ defaultName, defaultEmail, hasActiveSubscript
           <div className="flex gap-2">
             <input
               name="postalCode"
+              required
               inputMode="numeric"
               autoComplete="postal-code"
               value={postalCode}
@@ -150,7 +151,7 @@ export function SubscriptionForm({ defaultName, defaultEmail, hasActiveSubscript
           </div>
           {postalCodeError && <span className="mt-2 block text-xs font-medium text-red-600">{postalCodeError}</span>}
         </label>
-        <Field label="Número" name="addressNumber" required={false} inputMode="numeric" maxLength={10} format={value => value.replace(/\D/g, '').slice(0, 10)} />
+        <Field label="Número" name="addressNumber" inputMode="numeric" maxLength={10} format={value => value.replace(/\D/g, '').slice(0, 10)} />
         {address && (
           <div className="md:col-span-2 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
