@@ -6,6 +6,7 @@ import {
   createCreditCardSubscription,
   createCustomer,
   createSubaccount,
+  normalizeAsaasError,
   onlyDigits,
 } from '@/lib/asaas'
 import { isValidCardExpiry, isValidCpfCnpj, isValidEmail, isValidPhone, isValidCardNumber, isValidCvv, isValidPostalCode } from '@/lib/validation'
@@ -147,14 +148,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Pagamento temporariamente indisponível.' }, { status: 503 })
   }
 
-  const customer = await createCustomer({
-    name,
-    email,
-    cpfCnpj,
-    mobilePhone: phone,
-    externalReference: userId,
-    notificationDisabled: true,
-  }, apiKey)
+  let customer: { id: string }
+  try {
+    customer = await createCustomer({
+      name,
+      email,
+      cpfCnpj,
+      mobilePhone: phone,
+      externalReference: userId,
+      notificationDisabled: true,
+    }, apiKey)
+  } catch (customerError) {
+    const message = normalizeAsaasError(customerError)
+    console.error('[Platform Subscription] Asaas customer error:', message)
+    return NextResponse.json({ error: message }, { status: 422 })
+  }
 
   const trialEndsAt = localSubscription.trial_ends_at as string | null
 
@@ -230,33 +238,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Erro ao processar indicação. Tente novamente.' }, { status: 500 })
   }
 
-  const asaasSubscription = await createCreditCardSubscription({
-    customer: customer.id,
-    billingType: 'CREDIT_CARD',
-    value: FLOWYN_PRO_PRICE,
-    nextDueDate,
-    cycle: 'MONTHLY',
-    description: 'Flowyn Pro - mensalidade sem taxa por venda',
-    externalReference: String(localSubscription.id),
-    creditCard: {
-      holderName: String(body.card?.holderName || name).trim(),
-      number: cardNumber,
-      expiryMonth: cardExpiryMonth,
-      expiryYear: cardExpiryYear,
-      ccv: cardCcv,
-    },
-    creditCardHolderInfo: {
-      name,
-      email,
-      cpfCnpj,
-      postalCode,
-      addressNumber,
-      addressComplement: String(body.addressComplement || '').trim() || null,
-      mobilePhone: phone,
-    },
-    remoteIp: getClientIp(req),
-    ...(split ? { split } : {}),
-  }, apiKey)
+  let asaasSubscription: { id: string; status: string }
+  try {
+    asaasSubscription = await createCreditCardSubscription({
+      customer: customer.id,
+      billingType: 'CREDIT_CARD',
+      value: FLOWYN_PRO_PRICE,
+      nextDueDate,
+      cycle: 'MONTHLY',
+      description: 'Flowyn Pro - mensalidade sem taxa por venda',
+      externalReference: String(localSubscription.id),
+      creditCard: {
+        holderName: String(body.card?.holderName || name).trim(),
+        number: cardNumber,
+        expiryMonth: cardExpiryMonth,
+        expiryYear: cardExpiryYear,
+        ccv: cardCcv,
+      },
+      creditCardHolderInfo: {
+        name,
+        email,
+        cpfCnpj,
+        postalCode,
+        addressNumber,
+        addressComplement: String(body.addressComplement || '').trim() || null,
+        mobilePhone: phone,
+      },
+      remoteIp: getClientIp(req),
+      ...(split ? { split } : {}),
+    }, apiKey)
+  } catch (asaasError) {
+    const message = normalizeAsaasError(asaasError)
+    console.error('[Platform Subscription] Asaas subscription error:', message)
+    return NextResponse.json({ error: message }, { status: 422 })
+  }
 
   const nextStatus = isFuture(trialEndsAt) ? 'scheduled' : 'active'
   const { data: updatedSubscription, error: updateError } = await admin
