@@ -6,13 +6,14 @@ import { useEffect, useState, useCallback } from 'react'
 const POLL_INTERVAL_MS = 5_000
 const MAX_POLL_ATTEMPTS = 60
 
-export function PaymentPolling({ orderId }: { orderId: string }) {
+export function PaymentPolling({ orderId, customerEmail }: { orderId: string; customerEmail?: string }) {
   const [attempts, setAttempts] = useState(0)
   const [error, setError] = useState(false)
 
   const check = useCallback(async () => {
     try {
-      const res = await fetch(`/api/checkout/status?order_id=${orderId}`)
+      const emailParam = customerEmail ? `&customer_email=${encodeURIComponent(customerEmail)}` : ''
+      const res = await fetch(`/api/checkout/status?order_id=${orderId}${emailParam}`)
       const data = await res.json()
 
       if (data.paid) {
@@ -35,7 +36,7 @@ export function PaymentPolling({ orderId }: { orderId: string }) {
     } catch {
       setAttempts(prev => prev + 1)
     }
-  }, [orderId])
+  }, [orderId, customerEmail])
 
   useEffect(() => {
     if (error) return

@@ -260,10 +260,42 @@ export async function POST(req: NextRequest) {
 
       const expectedAmount = orderAmountRow ? Number(orderAmountRow.amount) : null
 
+      let webhookApiKey = process.env.ASAAS_API_KEY!
+
+      if (orderId) {
+        const { data: orderForKey } = await supabase
+          .from('orders')
+          .select('product_id')
+          .eq('id', orderId)
+          .maybeSingle()
+
+        if (orderForKey?.product_id) {
+          const { data: productOwner } = await supabase
+            .from('products')
+            .select('owner_id')
+            .eq('id', orderForKey.product_id)
+            .maybeSingle()
+
+          if (productOwner?.owner_id) {
+            const { data: producerAcct } = await supabase
+              .from('payment_accounts')
+              .select('api_key, connection_mode')
+              .eq('user_id', productOwner.owner_id)
+              .eq('provider', 'asaas')
+              .maybeSingle()
+
+            if (producerAcct?.connection_mode === 'standalone' && producerAcct?.api_key) {
+              const { decryptApiKey } = await import('@/lib/encryption')
+              webhookApiKey = decryptApiKey(producerAcct.api_key)
+            }
+          }
+        }
+      }
+
       let verifiedValue: number | null = null
       let verifiedStatus: string | null = null
       try {
-        const asaasPayment = await retrievePayment(paymentId!, process.env.ASAAS_API_KEY!)
+        const asaasPayment = await retrievePayment(paymentId!, webhookApiKey)
         verifiedValue = Number(asaasPayment.value)
         verifiedStatus = asaasPayment.status ? String(asaasPayment.status) : null
       } catch (verificationError) {

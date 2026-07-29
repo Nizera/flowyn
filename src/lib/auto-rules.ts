@@ -9,7 +9,7 @@ const PRIVATE_IP_RE = /^(localhost|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[
 export function isAllowedWebhookUrl(url: string): boolean {
   try {
     const parsed = new URL(url)
-    if (!['https:', 'http:'].includes(parsed.protocol)) return false
+    if (parsed.protocol !== 'https:') return false
     if (PRIVATE_IP_RE.test(parsed.hostname)) return false
     return true
   } catch { return false }

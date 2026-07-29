@@ -22,7 +22,7 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith('/t/') && pathname.endsWith('.js')) return NextResponse.next()
   if (pathname === '/api/tr/track') return NextResponse.next()
 
-  let supabaseResponse = NextResponse.next({ request: req })
+  const supabaseResponse = NextResponse.next({ request: req })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -46,6 +46,21 @@ export async function middleware(req: NextRequest) {
     url.pathname = '/login'
     url.searchParams.set('redirect', pathname + req.nextUrl.search)
     return NextResponse.redirect(url)
+  }
+
+  // RBAC: restrict /dashboard/* to producer and admin roles only
+  if (pathname.startsWith('/dashboard')) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (profile?.role !== 'producer' && profile?.role !== 'admin') {
+      const url = req.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse

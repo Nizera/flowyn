@@ -79,6 +79,18 @@ export function FileUpload({
       for (let i = 0; i < fileArray.length; i++) {
         const file = fileArray[i]
         const ext = file.name.split('.').pop()
+        // Server-side MIME type validation
+        const ALLOWED_MIME: Record<string, RegExp> = {
+          image: /^(image\/(jpeg|png|gif|webp|svg\+xml))$/,
+          video: /^(video\/(mp4|webm|ogg|quicktime))$/,
+          file: /^(application\/(pdf|zip|x-zip-compressed|msword|vnd\.openxmlformats-officedocument\.\w+|vnd\.ms-excel|vnd\.ms-powerpoint|text\/plain|epub\+zip)|audio\/(mpeg|mp3|ogg|wav)|font\/(otf|woff|woff2)|image\/svg\+xml)$/,
+        }
+        const allowedPattern = ALLOWED_MIME[mode]
+        if (allowedPattern && !allowedPattern.test(file.type)) {
+          setError(`Tipo de arquivo nao permitido: ${file.type || 'desconhecido'}`)
+          setUploading(false)
+          return
+        }
         const path = `${subfolder}/${Date.now()}_${i}.${ext}`
 
         if (mode === 'image') {

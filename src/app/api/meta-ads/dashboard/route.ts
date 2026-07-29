@@ -35,6 +35,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid ad_account_id' }, { status: 400 })
   }
 
+  const campaignIdsParam = searchParams.get('campaign_ids')
+  const campaignIdsFilter = campaignIdsParam
+    ? campaignIdsParam.split(',').map(s => s.trim()).filter(Boolean)
+    : null
+
+  const hasCampaignFilter = campaignIdsFilter !== null && campaignIdsFilter.length > 0
+
   // 1. Fetch cost configuration
   const { data: costConfig } = await supabase
     .from('cost_configurations')
@@ -93,7 +100,13 @@ export async function GET(req: NextRequest) {
   const { data: rawInsights, error: insightsError } = await insightsQuery
 
   // Filter out disabled campaigns from insights
-  const insights = (rawInsights || []).filter(i => !disabledCampaignIds.has(i.campaign_id))
+  let insights = (rawInsights || []).filter(i => !disabledCampaignIds.has(i.campaign_id))
+
+  // Filter by selected campaign IDs if provided
+  if (campaignIdsFilter && campaignIdsFilter.length > 0) {
+    const selectedSet = new Set(campaignIdsFilter)
+    insights = insights.filter(i => selectedSet.has(i.campaign_id))
+  }
 
   const totalCachedSpend = insights.reduce((sum, i) => sum + (parseFloat(i.spend || '0') || 0), 0)
   console.log(`[dashboard] cached insights: ${insights.length}, totalCachedSpend: R$ ${totalCachedSpend}`)
@@ -298,6 +311,12 @@ export async function GET(req: NextRequest) {
   }
 
   // 3. Aggregate spend by campaign
+  // Re-apply campaign filter after Meta API fallback (fallback may return all campaigns)
+  if (campaignIdsFilter && campaignIdsFilter.length > 0) {
+    const selectedSet = new Set(campaignIdsFilter)
+    effectiveInsights = effectiveInsights.filter(i => selectedSet.has(i.campaign_id))
+  }
+
   const campaignSpendMap: Record<string, { campaign_id: string; campaign_name: string; spend: number; impressions: number; clicks: number }> = {}
   for (const insight of effectiveInsights) {
     const key = insight.campaign_id
@@ -331,8 +350,32 @@ export async function GET(req: NextRequest) {
   }
 
   // 5. Build payment breakdown for donut chart
+  // When campaign filter is active, only include orders attributed to selected campaigns
   const paymentBreakdown: Record<string, { count: number; total: number }> = {}
-  for (const order of orders || []) {
+
+  // Build a set of order IDs that match the campaign filter for payment_breakdown and recent_sales
+  let filteredOrdersForDisplay = orders || []
+  if (hasCampaignFilter) {
+    filteredOrdersForDisplay = (orders || []).filter(order => {
+      if (order.status !== 'paid' && order.status !== 'pending') return false
+      const trackingParams = order.tracking_params as Record<string, string> | null
+      if (!trackingParams) return false
+      // Check if this order's utm_campaign or src matches any of the selected campaigns
+      const utmCampaign = trackingParams.utm_campaign
+      const src = trackingParams.src
+      const utmSource = trackingParams.utm_source
+      const utmMedium = trackingParams.utm_medium
+      if (utmCampaign && campaignIdsFilter.includes(utmCampaign)) return true
+      if (src && campaignIdsFilter.includes(src)) return true
+      if (utmSource && utmMedium) {
+        const compositeKey = `${utmSource}_${utmMedium}`
+        if (campaignIdsFilter.includes(compositeKey)) return true
+      }
+      return false
+    })
+  }
+
+  for (const order of filteredOrdersForDisplay) {
     const status = order.status || 'unknown'
     if (!paymentBreakdown[status]) {
       paymentBreakdown[status] = { count: 0, total: 0 }
@@ -417,10 +460,15 @@ export async function GET(req: NextRequest) {
   const roi = totalSpend > 0 ? (netProfit / totalSpend) * 100 : 0
   
   // Total sales (all paid orders, not just attributed)
-  const totalSalesAllOrders = (orders || [])
-    .filter(o => o.status === 'paid')
-    .reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0)
-  
+  const paidOrders = (orders || []).filter(o => o.status === 'paid')
+  const totalSalesAllOrders = paidOrders.reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0)
+  const totalPaidOrders = paidOrders.length
+
+  // Untracked: paid orders that didn't match any campaign
+  // When filtering by specific campaigns, untracked is not meaningful (card hidden in frontend)
+  const untrackedRevenue = hasCampaignFilter ? 0 : totalSalesAllOrders - totalAttributedRevenue
+  const untrackedOrders = hasCampaignFilter ? 0 : totalPaidOrders - totalAttributedOrders
+
   // Novos cálculos (null-safe: orders may be null from Supabase)
   const safeOrders = orders || []
   const pendingRevenue = safeOrders.filter(o => o.status === 'pending').reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0)
@@ -496,6 +544,8 @@ export async function GET(req: NextRequest) {
       aggregate_ctr: aggregateCTR,
       aggregate_cpc: aggregateCPC,
       aggregate_cpm: aggregateCPM,
+      untracked_revenue: untrackedRevenue,
+      untracked_orders: untrackedOrders,
     },
     payment_breakdown: Object.entries(paymentBreakdown).map(([status, data]) => ({
       status,
@@ -505,7 +555,7 @@ export async function GET(req: NextRequest) {
     // CORREÇÃO W10 (auditoria tracking): recent_sales retornava TODOS os pedidos,
     // incluindo reembolsados. Agora filtramos refunded/refused/cancelled para exibir
     // apenas vendas válidas no feed "vendas recentes" do dashboard.
-    recent_sales: (orders || [])
+    recent_sales: filteredOrdersForDisplay
       .filter(o => !['refunded', 'refused', 'cancelled', 'chargeback'].includes(o.status || ''))
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 5)

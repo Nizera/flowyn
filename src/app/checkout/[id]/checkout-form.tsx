@@ -151,10 +151,9 @@ export function CheckoutForm({
   const fireInitiateCheckout = useCallback(() => {
     if (initiateCheckoutFired.current || previewMode) return
     initiateCheckoutFired.current = true
-    // CORREÇÃO C5 (auditoria tracking): initiate_checkout não enviava tracking_params,
-    // impossibilitando atribuir este evento a campanhas no funil. Agora reusa o
-    // trackingParams do escopo do componente (já inclui UTMs da URL/sessionStorage
-    // + _fbp/_fbc do cookie). O guard já impede disparo duplicado.
+    // CORREÇÃO C5: initiate_checkout agora dispara quando o campo nome recebe
+    // conteúdo (não apenas onFocus), pois preenchimento indica intenção real de compra.
+    // O guard já impede disparo duplicado.
     fetch('/api/checkout/funnel', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -486,10 +485,10 @@ export function CheckoutForm({
               id="customer_name"
               required
               value={customerName}
-              onFocus={fireInitiateCheckout}
               onChange={e => {
                 setCustomerName(e.target.value)
                 if (!cardHolderName) setCardHolderName(e.target.value)
+                if (e.target.value.trim()) fireInitiateCheckout()
               }}
               placeholder="Seu nome completo"
               className={inputClass}

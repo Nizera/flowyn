@@ -1,3 +1,5 @@
+import { redirect } from 'next/navigation'
+import { createClient } from '@/utils/supabase/server'
 import HeroSection from '@/components/landing/HeroSection'
 import ProblemSection from '@/components/landing/ProblemSection'
 import FeaturesSection from '@/components/landing/FeaturesSection'
@@ -9,7 +11,11 @@ import CtaSection from '@/components/landing/CtaSection'
 import Footer from '@/components/landing/Footer'
 import ChatWidget from '@/components/landing/ChatWidget'
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) redirect('/dashboard')
+
   return (
     <main>
       <HeroSection />

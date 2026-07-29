@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { verifyOrigin } from '@/lib/csrf'
 
 export async function POST(req: NextRequest) {
+  const csrfError = verifyOrigin(req)
+  if (csrfError) return csrfError
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -35,7 +39,7 @@ export async function POST(req: NextRequest) {
     .delete()
     .eq('id', account.id)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: 'Erro ao desconectar conta.' }, { status: 500 })
 
   return NextResponse.json({ ok: true })
 }

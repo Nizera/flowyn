@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { verifyOrigin } from '@/lib/csrf'
 
 export async function POST(req: NextRequest) {
+  const csrfError = verifyOrigin(req)
+  if (csrfError) return csrfError
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { requireProPlan } from '@/lib/subscription'
+import { verifyOrigin } from '@/lib/csrf'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const csrfError = verifyOrigin(req)
+  if (csrfError) return csrfError
+
   const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -39,15 +43,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .update(updates)
     .eq('id', id)
     .eq('user_id', user.id)
-    .select()
+    .select('id, user_id, ad_account_id, name, entity_level, entity_ids, condition_metric, condition_operator, condition_value, condition_period, action_type, action_value, action_value_type, cooldown_hours, notify_whatsapp, notify_email, webhook_url, enabled, created_at, updated_at')
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: 'Erro ao atualizar regra.' }, { status: 500 })
 
   return NextResponse.json({ rule: data })
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const csrfError = verifyOrigin(req)
+  if (csrfError) return csrfError
+
   const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -64,7 +71,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     .eq('id', id)
     .eq('user_id', user.id)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: 'Erro ao excluir regra.' }, { status: 500 })
 
   return NextResponse.json({ success: true })
 }

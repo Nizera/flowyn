@@ -56,6 +56,25 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ accounts: accounts || [] })
   }
 
+  // Return active (synced) campaigns from DB for filter selector
+  if (action === 'list') {
+    const admin = createAdminClient()
+    const { data: campaigns } = await admin
+      .from('campaigns')
+      .select('campaign_id, name')
+      .eq('user_id', user.id)
+      .eq('sync_enabled', true)
+      .order('name', { ascending: true })
+
+    const unique = new Map<string, string>()
+    for (const c of campaigns || []) {
+      if (!unique.has(c.campaign_id)) unique.set(c.campaign_id, c.name || c.campaign_id)
+    }
+    return NextResponse.json({
+      campaigns: Array.from(unique.entries()).map(([campaign_id, name]) => ({ campaign_id, name })),
+    })
+  }
+
   if (!adAccountId) {
     return NextResponse.json({ error: 'ad_account_id required' }, { status: 400 })
   }
@@ -72,7 +91,7 @@ export async function GET(req: NextRequest) {
     const campaignsData = await campaignsRes.json()
 
     if (campaignsData.error) {
-      return NextResponse.json({ error: campaignsData.error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Erro ao buscar campanhas no Meta.' }, { status: 500 })
     }
 
     const campaigns: Campaign[] = campaignsData.data || []

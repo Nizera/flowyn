@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
   if (authError) {
     console.error('[Cron] Error fetching authorizations:', authError.message)
-    return NextResponse.json({ error: authError.message }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao buscar autorizacoes.' }, { status: 500 })
   }
 
   if (!activeAuths || activeAuths.length === 0) {

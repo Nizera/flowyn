@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { data, error, count } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: 'Erro ao buscar logs.' }, { status: 500 })
 
   return NextResponse.json({ logs: data || [], total: count || 0 })
 }

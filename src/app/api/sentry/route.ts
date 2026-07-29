@@ -6,12 +6,21 @@ const SENTRY_PATH = '/api/0/envelope/'
 export async function POST(req: NextRequest) {
   try {
     const envelope = await req.text()
+    if (envelope.length > 1_000_000) {
+      return new NextResponse('Payload too large', { status: 413 })
+    }
+
     const piece = envelope.split('\n')[0]
     const header = JSON.parse(piece)
 
     const dsn = new URL(header.dsn)
-    if (!dsn.hostname.endsWith(SENTRY_HOST)) {
+    if (!dsn.hostname.endsWith('.' + SENTRY_HOST) && dsn.hostname !== SENTRY_HOST) {
       return new NextResponse('Invalid DSN', { status: 400 })
+    }
+
+    const projectId = process.env.SENTRY_PROJECT_ID
+    if (projectId && dsn.pathname.replace('/', '') !== projectId) {
+      return new NextResponse('Invalid project', { status: 403 })
     }
 
     const project_id = dsn.pathname.replace('/', '')

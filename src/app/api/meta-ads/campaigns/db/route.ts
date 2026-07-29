@@ -163,7 +163,7 @@ export async function GET(req: NextRequest) {
       const res = await fetch(url)
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        return { data: { error: { message: err?.error?.message || `HTTP ${res.status}` } } }
+        return { data: { error: { message: `HTTP ${res.status}` } } }
       }
       return { data: await res.json() }
     }
@@ -174,7 +174,7 @@ export async function GET(req: NextRequest) {
     )
 
     if (campaignsData.error) {
-      return NextResponse.json({ campaigns: [], ad_sets: [], ads: [], error: campaignsData.error.message })
+      return NextResponse.json({ campaigns: [], ad_sets: [], ads: [], error: 'Erro ao buscar dados no Meta.' })
     }
 
     const metaCampaigns = campaignsData.data || []
@@ -375,6 +375,6 @@ export async function GET(req: NextRequest) {
       ads: enrichedAds,
     })
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao buscar dados de campanhas.' }, { status: 500 })
   }
 }

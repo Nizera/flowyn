@@ -26,19 +26,21 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
 
-  // Verify Meta's HMAC-SHA256 signature if APP_SECRET is configured
-  if (APP_SECRET) {
-    const signature = req.headers.get('x-hub-signature-256')
-    if (!signature) {
-      return NextResponse.json({ error: 'Missing signature' }, { status: 401 })
-    }
+  if (!APP_SECRET) {
+    console.error('[Meta Webhook] META_APP_SECRET is not configured — rejecting request.')
+    return NextResponse.json({ error: 'Service unavailable' }, { status: 503 })
+  }
 
-    const expectedSig = 'sha256=' + createHmac('sha256', APP_SECRET).update(rawBody).digest('hex')
+  const signature = req.headers.get('x-hub-signature-256')
+  if (!signature) {
+    return NextResponse.json({ error: 'Missing signature' }, { status: 401 })
+  }
 
-    if (!safeTokenEqual(signature, expectedSig)) {
-      console.warn('[Meta Webhook] Signature verification failed')
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
-    }
+  const expectedSig = 'sha256=' + createHmac('sha256', APP_SECRET).update(rawBody).digest('hex')
+
+  if (!safeTokenEqual(signature, expectedSig)) {
+    console.warn('[Meta Webhook] Signature verification failed')
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
   try {

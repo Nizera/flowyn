@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { requireProPlan } from '@/lib/subscription'
 import { isAllowedWebhookUrl, isValidMetaId } from '@/lib/auto-rules'
+import { verifyOrigin } from '@/lib/csrf'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('automation_rules')
-    .select('*')
+    .select('id, user_id, ad_account_id, name, entity_level, entity_ids, condition_metric, condition_operator, condition_value, condition_period, action_type, action_value, action_value_type, cooldown_hours, notify_whatsapp, notify_email, webhook_url, enabled, created_at, updated_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -36,6 +37,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const csrfError = verifyOrigin(req)
+  if (csrfError) return csrfError
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -127,7 +131,7 @@ export async function POST(req: NextRequest) {
       webhook_url: webhook_url || null,
       webhook_secret: webhook_secret || null,
     })
-    .select()
+    .select('id, user_id, ad_account_id, name, entity_level, entity_ids, condition_metric, condition_operator, condition_value, condition_period, action_type, action_value, action_value_type, cooldown_hours, notify_whatsapp, notify_email, webhook_url, enabled, created_at, updated_at')
     .single()
 
   if (error) {

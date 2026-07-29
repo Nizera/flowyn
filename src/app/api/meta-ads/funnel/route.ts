@@ -32,6 +32,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid ad_account_id' }, { status: 400 })
   }
 
+  const campaignIdsParam = searchParams.get('campaign_ids')
+  const campaignIdsFilter = campaignIdsParam
+    ? campaignIdsParam.split(',').map(s => s.trim()).filter(Boolean)
+    : null
+
+  const hasCampaignFilter = campaignIdsFilter !== null && campaignIdsFilter.length > 0
+
   // 1. Get user's owned ad accounts
   let accountsQuery = supabase
     .from('ad_accounts')
@@ -81,7 +88,14 @@ export async function GET(req: NextRequest) {
     .in('ad_account_id', ownedAccountIds)
 
   const { data: rawInsights } = await insightsQuery
-  const insights = (rawInsights || []).filter(i => !disabledCampaignIds.has(i.campaign_id))
+  let insights = (rawInsights || []).filter(i => !disabledCampaignIds.has(i.campaign_id))
+
+  // Filter by selected campaign IDs if provided
+  if (campaignIdsFilter && campaignIdsFilter.length > 0) {
+    const selectedSet = new Set(campaignIdsFilter)
+    insights = insights.filter(i => selectedSet.has(i.campaign_id))
+  }
+
   let totalClicks = insights.reduce((sum: number, i: { clicks?: number }) => sum + (i.clicks || 0), 0)
 
   // Fallback: if cache is empty, fetch clicks from Meta API
@@ -97,7 +111,10 @@ export async function GET(req: NextRequest) {
         )
         const metaData = await metaRes.json()
         if (metaData.data) {
-          const metaClicks = metaData.data.reduce((sum: number, r: any) => sum + (parseInt(r.clicks || '0') || 0), 0)
+          const filtered = campaignIdsFilter && campaignIdsFilter.length > 0
+            ? metaData.data.filter((r: any) => campaignIdsFilter.includes(r.campaign_id))
+            : metaData.data
+          const metaClicks = filtered.reduce((sum: number, r: any) => sum + (parseInt(r.clicks || '0') || 0), 0)
           if (metaClicks > 0) {
             totalClicks = metaClicks
           } else {
@@ -107,7 +124,10 @@ export async function GET(req: NextRequest) {
             )
             const adData = await adRes.json()
             if (adData.data) {
-              totalClicks = adData.data.reduce((sum: number, r: any) => sum + (parseInt(r.clicks || '0') || 0), 0)
+              const adFiltered = campaignIdsFilter && campaignIdsFilter.length > 0
+                ? adData.data.filter((r: any) => campaignIdsFilter.includes(r.campaign_id))
+                : adData.data
+              totalClicks = adFiltered.reduce((sum: number, r: any) => sum + (parseInt(r.clicks || '0') || 0), 0)
             }
           }
         }
@@ -229,12 +249,39 @@ export async function GET(req: NextRequest) {
   const salesInitiated = initiatedCount || 0
   const salesApproved = approvedCount || 0
 
+  // When campaign filter is active, re-count orders that match the selected campaigns
+  let filteredSalesInitiated = salesInitiated
+  let filteredSalesApproved = salesApproved
+  if (hasCampaignFilter) {
+    // Fetch order details to check tracking_params
+    const { data: filteredOrders } = await supabase
+      .from('orders')
+      .select('status, tracking_params')
+      .in('product_id', productIds)
+      .in('status', ['pending', 'paid'])
+      .gte('created_at', startDateTs)
+      .lte('created_at', endDateTs)
+
+    const selectedSet = new Set(campaignIdsFilter)
+    const matched = (filteredOrders || []).filter(o => {
+      const tp = o.tracking_params as Record<string, string> | null
+      if (!tp) return false
+      if (tp.utm_campaign && selectedSet.has(tp.utm_campaign)) return true
+      if (tp.src && selectedSet.has(tp.src)) return true
+      if (tp.utm_source && tp.utm_medium && selectedSet.has(`${tp.utm_source}_${tp.utm_medium}`)) return true
+      return false
+    })
+
+    filteredSalesInitiated = matched.length
+    filteredSalesApproved = matched.filter(o => o.status === 'paid').length
+  }
+
   const stages = [
     { name: 'Cliques', value: totalClicks },
     { name: 'Visita na Página', value: pageViews },
     { name: 'Initiate Checkout', value: initiateCheckouts },
-    { name: 'Vendas Iniciadas', value: salesInitiated },
-    { name: 'Vendas Aprovadas', value: salesApproved },
+    { name: 'Vendas Iniciadas', value: hasCampaignFilter ? filteredSalesInitiated : salesInitiated },
+    { name: 'Vendas Aprovadas', value: hasCampaignFilter ? filteredSalesApproved : salesApproved },
   ]
 
   // 6. Calculate conversion rates between adjacent stages

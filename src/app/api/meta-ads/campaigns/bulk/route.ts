@@ -5,10 +5,14 @@ import { getDecryptedToken } from '@/lib/meta-oauth'
 import { requireProPlan } from '@/lib/subscription'
 import { GRAPH_API } from '@/lib/meta-graph-api'
 import { isValidMetaId } from '@/lib/auto-rules'
+import { verifyOrigin } from '@/lib/csrf'
 
 const MAX_BULK_IDS = 50
 
 export async function POST(req: NextRequest) {
+  const csrfError = verifyOrigin(req)
+  if (csrfError) return csrfError
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -126,7 +130,7 @@ export async function POST(req: NextRequest) {
       if (action === 'delete') {
         const metaRes = await fetch(`${GRAPH_API}/${id}?access_token=${accessToken}`, { method: 'DELETE' })
         const metaData = await metaRes.json()
-        if (metaData.error) errors.push(`${id}: ${metaData.error.message}`)
+        if (metaData.error) errors.push(`${id}: Erro ao excluir item no Meta.`)
 
         await admin.from(localTable).delete().eq(localIdField, id).eq('ad_account_id', ad_account_id).eq('user_id', user.id)
         if (level === 'campaign') {
@@ -186,7 +190,7 @@ export async function POST(req: NextRequest) {
         })
         const metaData = await metaRes.json()
         if (metaData.error) {
-          errors.push(`${id}: ${metaData.error.message}`)
+          errors.push(`${id}: Erro ao atualizar orcamento no Meta.`)
           continue
         }
 
@@ -204,7 +208,7 @@ export async function POST(req: NextRequest) {
         })
         const metaData = await metaRes.json()
         if (metaData.error) {
-          errors.push(`${id}: ${metaData.error.message}`)
+          errors.push(`${id}: Erro ao alterar status no Meta.`)
           continue
         }
 

@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     const metaData = await metaRes.json()
 
     if (metaData.error) {
-      return NextResponse.json({ error: metaData.error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Erro ao atualizar orcamento no Meta.' }, { status: 500 })
     }
 
     const localTable = targetLevel === 'campaign' ? 'campaigns' : 'ad_sets'

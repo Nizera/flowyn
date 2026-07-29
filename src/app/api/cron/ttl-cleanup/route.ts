@@ -4,7 +4,7 @@ import { safeBearerCompare } from '@/lib/safe-bearer-compare'
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('Authorization') || ''
-  const cronSecret = process.env.CRN_SECRET || process.env.CRON_SECRET
+  const cronSecret = process.env.CRON_SECRET
 
   if (!cronSecret || !safeBearerCompare(authHeader, cronSecret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

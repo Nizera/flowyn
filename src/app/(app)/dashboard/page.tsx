@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { SalesGoalCard } from '@/components/SalesGoalCard'
-import { TrendingUp, CreditCard, CheckCircle, Undo, Clock, AlertCircle, RefreshCw } from 'lucide-react'
+import { DashboardFilters } from './DashboardFilters'
+import { TrendingUp, CreditCard, CheckCircle, Undo, Clock, AlertCircle, RefreshCw, Unlink } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { currency } from '@/lib/format'
 
@@ -43,6 +44,8 @@ interface Summary {
   total_taxes: number
   total_production_costs: number
   roi: number
+  untracked_revenue: number
+  untracked_orders: number
 }
 
 interface Sale {
@@ -73,6 +76,37 @@ const EMPTY_SUMMARY: Summary = {
   chargeback_revenue: 0, total_impressions: 0, total_clicks: 0,
   aggregate_ctr: 0, aggregate_cpc: 0, aggregate_cpm: 0,
   total_taxes: 0, total_production_costs: 0, roi: 0,
+  untracked_revenue: 0, untracked_orders: 0,
+}
+
+function getDefaultDateRange() {
+  const now = new Date()
+  const from = new Date(now.getTime() - 30 * 86400000)
+  return { from: from.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) }
+}
+
+const STORAGE_KEY = 'flowyn_dashboard_filters'
+
+function loadPersistedFilters(): { dateRange: { from: string; to: string }; selectedCampaigns: string[] | null } | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (parsed?.dateRange?.from && parsed?.dateRange?.to) return parsed
+    return null
+  } catch {
+    return null
+  }
+}
+
+function persistFilters(dateRange: { from: string; to: string }, selectedCampaigns: Set<string> | null) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      dateRange,
+      selectedCampaigns: selectedCampaigns ? Array.from(selectedCampaigns) : null,
+    }))
+  } catch {}
 }
 
 export default function DashboardPage() {
@@ -80,6 +114,13 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [syncingAll, setSyncingAll] = useState(false)
+
+  const persisted = useMemo(() => loadPersistedFilters(), [])
+  const [dateRange, setDateRange] = useState(persisted?.dateRange || getDefaultDateRange)
+  const [selectedCampaigns, setSelectedCampaigns] = useState<Set<string> | null>(
+    persisted?.selectedCampaigns ? new Set(persisted.selectedCampaigns) : null
+  )
+  const [campaigns, setCampaigns] = useState<Array<{ campaign_id: string; name: string }>>([])
 
   async function handleSyncAllActive() {
     setSyncingAll(true)
@@ -103,26 +144,53 @@ export default function DashboardPage() {
     }
   }
 
+  // Fetch user's campaigns for the filter selector
   useEffect(() => {
-    const controller = new AbortController()
-    fetch('/api/meta-ads/dashboard', { signal: controller.signal })
+    fetch('/api/meta-ads/campaigns?action=list')
       .then(async (res) => {
-        if (!res.ok) {
-          if (res.status === 401) {
-            window.location.href = '/sign-in'
-            return
-          }
-          throw new Error(`HTTP ${res.status}`)
-        }
-        return res.json()
+        if (!res.ok) return
+        const d = await res.json()
+        setCampaigns(d.campaigns || [])
       })
-      .then((d) => { if (d) setData(d as DashboardData) })
-      .catch((e) => {
-        if (e?.name !== 'AbortError') setError('Falha ao carregar. Tente novamente.')
-      })
-      .finally(() => setLoading(false))
-    return () => controller.abort()
+      .catch(() => {})
   }, [])
+
+  // Persist filters to localStorage
+  useEffect(() => {
+    persistFilters(dateRange, selectedCampaigns)
+  }, [dateRange, selectedCampaigns])
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    const params = new URLSearchParams({
+      start_date: dateRange.from,
+      end_date: dateRange.to,
+    })
+    if (selectedCampaigns && selectedCampaigns.size > 0) {
+      params.set('campaign_ids', Array.from(selectedCampaigns).join(','))
+    }
+    try {
+      const res = await fetch(`/api/meta-ads/dashboard?${params}`)
+      if (!res.ok) {
+        if (res.status === 401) {
+          window.location.href = '/sign-in'
+          return
+        }
+        throw new Error(`HTTP ${res.status}`)
+      }
+      const d = await res.json()
+      setData(d as DashboardData)
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') setError('Falha ao carregar. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
+  }, [dateRange, selectedCampaigns])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   const s = useMemo<Summary>(() => data?.summary || EMPTY_SUMMARY, [data])
 
@@ -173,6 +241,15 @@ export default function DashboardPage() {
         </button>
       </div>
 
+      {/* Filters */}
+      <DashboardFilters
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+        selectedCampaigns={selectedCampaigns}
+        onCampaignsChange={setSelectedCampaigns}
+        campaigns={campaigns}
+      />
+
       {/* Revenue Hero */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         <section className="lg:col-span-8 bg-card rounded-2xl p-6 border border-border shadow-sm relative overflow-hidden flex flex-col justify-between group">
@@ -213,13 +290,21 @@ export default function DashboardPage() {
       </div>
 
       {/* Performance Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
         <MetricPill label="Faturamento Líquido" value={currency(s.total_revenue - s.refunded_revenue)} />
         <MetricPill label="Gasto com Anúncios" value={currency(s.total_spend)} />
         <MetricPill label="ROAS" value={`${s.roas.toFixed(1)}x`} />
         <MetricPill label="Lucro Líquido" value={currency(s.net_profit)} positive={s.net_profit >= 0} />
         <MetricPill label="Margem de Lucro" value={`${s.profit_margin.toFixed(0)}%`} positive={s.profit_margin >= 0} />
         <MetricPill label="Chargeback" value={s.chargeback_count > 0 ? `${s.chargeback_count} (${currency(s.chargeback_revenue)})` : '0'} />
+        {s.untracked_orders > 0 && !selectedCampaigns && (
+          <MetricPill
+            label="Vendas s/ Rastreamento"
+            value={`${s.untracked_orders} (${currency(s.untracked_revenue)})`}
+            icon={Unlink}
+            iconColor="text-amber-500"
+          />
+        )}
       </div>
 
       {/* Secondary Metrics Strip */}
@@ -234,7 +319,7 @@ export default function DashboardPage() {
       {/* Main Content Row */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <section className="lg:col-span-3">
-          <FunnelChart />
+          <FunnelChart dateRange={dateRange} selectedCampaigns={selectedCampaigns} />
         </section>
 
         <section className="lg:col-span-2 bg-card rounded-2xl p-6 border border-border shadow-sm flex flex-col items-center">
@@ -380,11 +465,14 @@ export default function DashboardPage() {
   )
 }
 
-function MetricPill({ label, value, positive = true }: { label: string; value: string; positive?: boolean }) {
+function MetricPill({ label, value, positive = true, icon: Icon, iconColor }: { label: string; value: string; positive?: boolean; icon?: LucideIcon; iconColor?: string }) {
   return (
     <div className="bg-card rounded-2xl p-3 border border-border shadow-sm flex flex-col gap-1 relative overflow-hidden">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-muted truncate">{label}</span>
+        <span className="text-xs font-bold text-muted truncate flex items-center gap-1">
+          {Icon && <Icon className={`w-3 h-3 ${iconColor || ''}`} />}
+          {label}
+        </span>
         <span className={`text-[10px] font-bold flex items-center ${positive ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'} px-1.5 py-0.5 rounded`}>
           {positive ? <TrendingUp className="w-3 h-3" /> : <TrendingUp className="w-3 h-3 rotate-180" />}
         </span>

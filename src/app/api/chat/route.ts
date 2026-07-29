@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
     const admin = createAdminClient()
     const { data: allowed } = await admin.rpc('consume_rate_limit', {
-      p_user_id: '00000000-0000-0000-0000-000000000000',
+      p_user_id: (req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || 'anonymous').slice(0, 64),
       p_action: 'chatbot',
       p_limit: 20,
       p_window_seconds: 60,

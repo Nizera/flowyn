@@ -65,6 +65,12 @@ export default async function CheckoutSuccessPage(props: {
     .eq('id', orderId)
     .maybeSingle()
 
+  const { data: pollingCustomer } = await supabase
+    .from('order_customer_private')
+    .select('customer_email')
+    .eq('order_id', orderId)
+    .maybeSingle()
+
   if (!order || order.status !== 'paid') {
     return (
       <main className="force-light flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-card to-orange-50 p-4">
@@ -74,7 +80,7 @@ export default async function CheckoutSuccessPage(props: {
           </div>
           <h1 className="text-2xl font-black text-foreground">Pagamento em processamento</h1>
           <p className="mt-3 leading-7 text-muted">A confirmacao ainda nao chegou. Verificando automaticamente...</p>
-          <PaymentPolling orderId={orderId} />
+          <PaymentPolling orderId={orderId} customerEmail={pollingCustomer?.customer_email} />
         </section>
       </main>
     )

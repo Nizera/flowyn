@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { requireProPlan } from '@/lib/subscription'
+import { verifyOrigin } from '@/lib/csrf'
 
 export async function POST(req: NextRequest) {
+  const csrfError = verifyOrigin(req)
+  if (csrfError) return csrfError
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -34,7 +38,7 @@ export async function POST(req: NextRequest) {
       .lte('created_at', end_date + 'T23:59:59')
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Erro ao buscar atribuicoes.' }, { status: 500 })
     }
 
     // Fetch campaign names
@@ -95,7 +99,7 @@ export async function POST(req: NextRequest) {
       results,
       period: { start_date, end_date },
     })
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Internal server error' }, { status: 500 })
+  } catch {
+    return NextResponse.json({ error: 'Erro ao buscar atribuicoes.' }, { status: 500 })
   }
 }

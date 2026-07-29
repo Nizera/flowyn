@@ -5,8 +5,12 @@ import { getDecryptedToken } from '@/lib/meta-oauth'
 import { requireProPlan } from '@/lib/subscription'
 import { GRAPH_API } from '@/lib/meta-graph-api'
 import { isValidMetaId } from '@/lib/auto-rules'
+import { verifyOrigin } from '@/lib/csrf'
 
 export async function POST(req: NextRequest) {
+  const csrfError = verifyOrigin(req)
+  if (csrfError) return csrfError
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -77,7 +81,7 @@ export async function POST(req: NextRequest) {
     const metaData = await metaRes.json()
 
     if (metaData.error) {
-      return NextResponse.json({ error: metaData.error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Erro ao alterar status no Meta.' }, { status: 500 })
     }
 
     // Update local DB

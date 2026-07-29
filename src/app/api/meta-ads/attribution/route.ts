@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { requireProPlan } from '@/lib/subscription'
+import { verifyOrigin } from '@/lib/csrf'
 
 type CampaignAttribution = {
   campaign_id: string
@@ -31,6 +32,9 @@ type CampaignAttribution = {
 }
 
 export async function POST(req: NextRequest) {
+  const csrfError = verifyOrigin(req)
+  if (csrfError) return csrfError
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

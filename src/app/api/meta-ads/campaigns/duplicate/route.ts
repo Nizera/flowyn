@@ -5,6 +5,7 @@ import { getDecryptedToken } from '@/lib/meta-oauth'
 import { requireProPlan } from '@/lib/subscription'
 import { GRAPH_API } from '@/lib/meta-graph-api'
 import { isValidMetaId } from '@/lib/auto-rules'
+import { verifyOrigin } from '@/lib/csrf'
 
 const API_BUDGET_PER_OP = 1000
 const HARD_CAP = 20
@@ -198,11 +199,11 @@ async function copyOneCampaign(
   const newCampaign = await createCampaign(targetToken, targetAccountId, campaignDetails, campaignName, startPaused)
   if (newCampaign.error) {
     console.error('[Duplicate] Campaign creation failed:', JSON.stringify(newCampaign))
-    return { campaign: { error: newCampaign.error.message || JSON.stringify(newCampaign.error) }, ad_sets: [], ads: [] }
+    return { campaign: { error: 'Erro ao criar campanha no Meta.' }, ad_sets: [], ads: [] }
   }
   if (!newCampaign.id) {
     console.error('[Duplicate] Campaign no id returned:', JSON.stringify(newCampaign))
-    return { campaign: { error: 'No campaign ID. Response: ' + JSON.stringify(newCampaign).slice(0, 500) }, ad_sets: [], ads: [] }
+    return { campaign: { error: 'Erro ao criar campanha no Meta.' }, ad_sets: [], ads: [] }
   }
 
   const admin = createAdminClient()
@@ -232,7 +233,7 @@ async function copyOneCampaign(
     for (const adSet of adSets) {
       const newAdSet = await createAdSet(targetToken, targetAccountId, newCampaign.id, adSet, startPaused)
       if (newAdSet.error) {
-        result.ad_sets.push({ name: adSet.name, error: newAdSet.error.message })
+        result.ad_sets.push({ name: adSet.name, error: 'Erro ao criar conjunto de anuncios no Meta.' })
         continue
       }
       result.ad_sets.push({ id: newAdSet.id, name: adSet.name })
@@ -288,7 +289,7 @@ async function copyOneCampaign(
 
           const newAd = await createAd(targetToken, targetAccountId, newAdSet.id, ad, startPaused, newCreativeId)
           if (newAd.error) {
-            result.ads.push({ name: ad.name, error: newAd.error.message })
+            result.ads.push({ name: ad.name, error: 'Erro ao criar anuncio no Meta.' })
             continue
           }
           result.ads.push({ id: newAd.id, name: ad.name })
@@ -356,6 +357,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const csrfError = verifyOrigin(req)
+  if (csrfError) return csrfError
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -419,7 +423,7 @@ export async function POST(req: NextRequest) {
   try {
     const campaignDetails = await fetchCampaignDetails(sourceToken, source_campaign_id)
     if (campaignDetails.error) {
-      return NextResponse.json({ error: campaignDetails.error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Erro ao buscar detalhes da campanha no Meta.' }, { status: 500 })
     }
 
     const adSets = await fetchAdSets(sourceToken, source_campaign_id)

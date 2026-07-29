@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { verifyOrigin } from '@/lib/csrf'
 
 export async function GET(req: NextRequest) {
   const html = `<!DOCTYPE html>
@@ -102,6 +103,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const csrfError = verifyOrigin(req)
+  if (csrfError) return csrfError
   try {
     const rawBody = await req.text()
     if (rawBody.length > 4096) {

@@ -3,8 +3,12 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { getDecryptedToken } from '@/lib/meta-oauth'
 import { GRAPH_API } from '@/lib/meta-graph-api'
+import { verifyOrigin } from '@/lib/csrf'
 
 export async function PATCH(req: NextRequest) {
+  const csrfError = verifyOrigin(req)
+  if (csrfError) return csrfError
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -73,7 +77,7 @@ export async function PATCH(req: NextRequest) {
       .single()
 
     if (insertErr) {
-      return NextResponse.json({ error: insertErr.message }, { status: 500 })
+      return NextResponse.json({ error: 'Erro ao criar campanha.' }, { status: 500 })
     }
     campaign = inserted
   } else {
@@ -84,7 +88,7 @@ export async function PATCH(req: NextRequest) {
       .eq('id', campaign.id)
 
     if (updateErr) {
-      return NextResponse.json({ error: updateErr.message }, { status: 500 })
+      return NextResponse.json({ error: 'Erro ao atualizar campanha.' }, { status: 500 })
     }
   }
 

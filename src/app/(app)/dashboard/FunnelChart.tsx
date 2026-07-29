@@ -19,7 +19,7 @@ const STAGE_META = [
   { color: '#10b981', description: 'Compras aprovadas', Icon: CheckCircle },
 ]
 
-export function FunnelChart({ adAccountId }: { adAccountId?: string }) {
+export function FunnelChart({ adAccountId, dateRange, selectedCampaigns }: { adAccountId?: string; dateRange?: { from: string; to: string }; selectedCampaigns?: Set<string> | null }) {
   const [stages, setStages] = useState<FunnelStage[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -28,6 +28,13 @@ export function FunnelChart({ adAccountId }: { adAccountId?: string }) {
     const controller = new AbortController()
     const params = new URLSearchParams()
     if (adAccountId) params.set('ad_account_id', adAccountId)
+    if (dateRange) {
+      params.set('start_date', dateRange.from)
+      params.set('end_date', dateRange.to)
+    }
+    if (selectedCampaigns && selectedCampaigns.size > 0) {
+      params.set('campaign_ids', Array.from(selectedCampaigns).join(','))
+    }
     fetch(`/api/meta-ads/funnel?${params.toString()}`, { signal: controller.signal })
       .then(async (r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
@@ -52,7 +59,7 @@ export function FunnelChart({ adAccountId }: { adAccountId?: string }) {
       })
       .finally(() => setLoading(false))
     return () => controller.abort()
-  }, [adAccountId])
+  }, [adAccountId, dateRange, selectedCampaigns])
 
   if (loading) {
     return (

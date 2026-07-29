@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { requireProPlan } from '@/lib/subscription'
 import { materializeOrderAttributions } from '@/lib/order-attribution'
+import { verifyOrigin } from '@/lib/csrf'
 
 // POST: Materialize order attributions for the user
 export async function POST(req: NextRequest) {
+  const csrfError = verifyOrigin(req)
+  if (csrfError) return csrfError
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -34,13 +38,13 @@ export async function POST(req: NextRequest) {
       skipped: result.skipped,
       errors: result.errors.length > 0 ? result.errors : undefined,
     })
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Internal server error' }, { status: 500 })
+  } catch {
+    return NextResponse.json({ error: 'Erro ao materializar atribuicoes.' }, { status: 500 })
   }
 }
 
 // GET: Return attribution summary for the user
-export async function GET(req: NextRequest) {
+export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -67,7 +71,7 @@ export async function GET(req: NextRequest) {
       total_attributions: totalAttributions,
       total_attributed_revenue: totalRevenue,
     })
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Internal server error' }, { status: 500 })
+  } catch {
+    return NextResponse.json({ error: 'Erro ao buscar atribuicoes.' }, { status: 500 })
   }
 }
