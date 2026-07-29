@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createCreditCardPayment, createCreditCardSubscription, createCustomer, createPixAutomaticAuthorization, createPixPayment, getPixQrCode, onlyDigits } from '@/lib/asaas'
+import { createCreditCardPayment, createCreditCardSubscription, createCustomer, createPixAutomaticAuthorization, createPixPayment, getPixQrCode, normalizeAsaasError, onlyDigits } from '@/lib/asaas'
 import { fulfillPaidOrder } from '@/lib/order-fulfillment'
 import { getPlatformAccess } from '@/lib/platform-access'
 import { createAdminClient } from '@/utils/supabase/admin'
@@ -541,17 +541,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Configuração de pagamento do produtor inválida. Ele precisa revisar a conta Asaas.' }, { status: 502 })
     }
 
-    if (step === 'credit_card_payment') {
-      console.error('[Asaas Checkout] CC payment error at step:', step)
-      return NextResponse.json({ error: 'Pagamento não aprovado. Verifique os dados do cartão e tente novamente.' }, { status: 422 })
+    if (step === 'credit_card_payment' || step === 'credit_card_subscription') {
+      return NextResponse.json({ error: normalizeAsaasError(err) }, { status: 422 })
     }
 
     if (step === 'pix_payment' || step === 'pix_qrcode_fallback') {
-      console.error('[Asaas Checkout] PIX error at step:', step, '| message:', message)
       if (message.includes('not available') || message.includes('not eligible') || message.includes(' PIX') || message.includes('pix_automatic')) {
         return NextResponse.json({ error: 'Pix Automatico nao disponivel para este produtor. Utilize cartao de credito para assinatura mensal.' }, { status: 422 })
       }
-      return NextResponse.json({ error: 'Nao foi possivel gerar o Pix. Tente novamente em instantes.' }, { status: 502 })
+      return NextResponse.json({ error: normalizeAsaasError(err) }, { status: 502 })
     }
 
     return NextResponse.json({
