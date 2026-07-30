@@ -122,7 +122,7 @@ export function DashboardFilters({
                   type="date"
                   value={dateRange.from}
                   onChange={e => onDateRangeChange({ ...dateRange, from: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-background text-foreground"
+                  className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-background text-foreground [color-scheme:dark]"
                 />
               </div>
               <div className="flex-1">
@@ -131,7 +131,7 @@ export function DashboardFilters({
                   type="date"
                   value={dateRange.to}
                   onChange={e => onDateRangeChange({ ...dateRange, to: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-background text-foreground"
+                  className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-background text-foreground [color-scheme:dark]"
                 />
               </div>
             </div>

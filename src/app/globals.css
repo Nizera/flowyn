@@ -92,6 +92,15 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--color-surface-elevated); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-border); }
 
+/* Date input dark mode styling */
+input[type="date"] {
+  color-scheme: dark;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+  cursor: pointer;
+}
+
 .light-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
 .light-scrollbar::-webkit-scrollbar-track { background: var(--color-surface); border-radius: 3px; }
 .light-scrollbar::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
