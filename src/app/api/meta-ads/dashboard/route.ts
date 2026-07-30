@@ -465,16 +465,15 @@ export async function GET(req: NextRequest) {
   const totalPaidOrders = paidOrders.length
 
   // Untracked: paid orders that didn't match any campaign
-  // When filtering by specific campaigns, untracked is not meaningful (card hidden in frontend)
-  const untrackedRevenue = hasCampaignFilter ? 0 : totalSalesAllOrders - totalAttributedRevenue
-  const untrackedOrders = hasCampaignFilter ? 0 : totalPaidOrders - totalAttributedOrders
+  const untrackedRevenue = totalSalesAllOrders - totalAttributedRevenue
+  const untrackedOrders = totalPaidOrders - totalAttributedOrders
 
   // Novos cálculos (null-safe: orders may be null from Supabase)
   const safeOrders = orders || []
   const pendingRevenue = safeOrders.filter(o => o.status === 'pending').reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0)
   const refundedRevenue = safeOrders.filter(o => o.status === 'refunded').reduce((sum, o) => sum + (parseFloat(o.net_value ?? o.amount) || 0), 0)
-  const profitMargin = totalAttributedRevenue > 0 ? (netProfit / totalAttributedRevenue) * 100 : 0
-  const arpu = totalAttributedOrders > 0 ? totalAttributedRevenue / totalAttributedOrders : 0
+  const profitMargin = totalSalesAllOrders > 0 ? (netProfit / totalSalesAllOrders) * 100 : 0
+  const arpu = totalPaidOrders > 0 ? totalSalesAllOrders / totalPaidOrders : 0
   const chargebackCount = safeOrders.filter(o => o.status === 'chargeback').length
   const chargebackRevenue = safeOrders.filter(o => o.status === 'chargeback').reduce((sum, o) => sum + (parseFloat(o.net_value ?? o.amount) || 0), 0)
   const chargebackRate = safeOrders.length > 0 ? ((safeOrders.filter(o => o.status === 'refunded').length + chargebackCount) / safeOrders.length) * 100 : 0
@@ -521,11 +520,21 @@ export async function GET(req: NextRequest) {
     cpm: c.impressions > 0 ? (c.spend / c.impressions) * 1000 : 0,
   }))
 
+  const recentSalesFinal = filteredOrdersForDisplay
+    .filter(o => !['refunded', 'refused', 'cancelled', 'chargeback'].includes(o.status || ''))
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 5)
+
   return NextResponse.json({
     summary: {
       total_spend: totalSpend,
       total_revenue: totalAttributedRevenue,
       total_sales: totalSalesAllOrders,
+      total_paid: totalPaidOrders,
+      tracked_revenue: totalAttributedRevenue,
+      tracked_orders: totalAttributedOrders,
+      untracked_revenue: untrackedRevenue,
+      untracked_orders: untrackedOrders,
       total_taxes: totalTaxes,
       total_production_costs: totalProductionCost,
       net_profit: netProfit,
@@ -544,22 +553,13 @@ export async function GET(req: NextRequest) {
       aggregate_ctr: aggregateCTR,
       aggregate_cpc: aggregateCPC,
       aggregate_cpm: aggregateCPM,
-      untracked_revenue: untrackedRevenue,
-      untracked_orders: untrackedOrders,
     },
     payment_breakdown: Object.entries(paymentBreakdown).map(([status, data]) => ({
       status,
       count: data.count,
       total: data.total,
     })),
-    // CORREÇÃO W10 (auditoria tracking): recent_sales retornava TODOS os pedidos,
-    // incluindo reembolsados. Agora filtramos refunded/refused/cancelled para exibir
-    // apenas vendas válidas no feed "vendas recentes" do dashboard.
-    recent_sales: filteredOrdersForDisplay
-      .filter(o => !['refunded', 'refused', 'cancelled', 'chargeback'].includes(o.status || ''))
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 5)
-      .map(o => ({
+    recent_sales: recentSalesFinal.map(o => ({
         id: o.id,
         customer_name: o.customer_name,
         product_name: (o.product as { name?: string })?.name || null,

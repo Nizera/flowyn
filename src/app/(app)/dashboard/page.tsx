@@ -8,6 +8,7 @@ import { DashboardFilters } from './DashboardFilters'
 import { TrendingUp, CreditCard, CheckCircle, Undo, Clock, AlertCircle, RefreshCw, Unlink } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { currency } from '@/lib/format'
+import { KpiSparkline } from './KpiSparkline'
 
 const FunnelChart = dynamic(
   () => import('./FunnelChart').then(m => ({ default: m.FunnelChart })),
@@ -17,8 +18,8 @@ const RevenueSpendChart = dynamic(
   () => import('./RevenueSpendChart').then(m => ({ default: m.RevenueSpendChart })),
   { loading: () => <div className="h-[300px] animate-pulse rounded-xl bg-surface" /> },
 )
-const RevenueShaderBackground = dynamic(
-  () => import('./RevenueShaderBackground').then(m => ({ default: m.RevenueShaderBackground })),
+const RevenueWaveBackground = dynamic(
+  () => import('./RevenueWaveBackground').then(m => ({ default: m.RevenueWaveBackground })),
   { ssr: false, loading: () => null },
 )
 
@@ -26,6 +27,11 @@ interface Summary {
   total_revenue: number
   total_spend: number
   total_sales: number
+  total_paid: number
+  tracked_revenue: number
+  tracked_orders: number
+  untracked_revenue: number
+  untracked_orders: number
   roas: number
   net_profit: number
   total_orders: number
@@ -44,8 +50,6 @@ interface Summary {
   total_taxes: number
   total_production_costs: number
   roi: number
-  untracked_revenue: number
-  untracked_orders: number
 }
 
 interface Sale {
@@ -70,18 +74,18 @@ interface DashboardData {
 }
 
 const EMPTY_SUMMARY: Summary = {
-  total_revenue: 0, total_spend: 0, total_sales: 0, roas: 0, net_profit: 0,
-  total_orders: 0, pending_revenue: 0, refunded_revenue: 0,
+  total_revenue: 0, total_spend: 0, total_sales: 0, total_paid: 0,
+  tracked_revenue: 0, tracked_orders: 0, untracked_revenue: 0, untracked_orders: 0,
+  roas: 0, net_profit: 0, total_orders: 0, pending_revenue: 0, refunded_revenue: 0,
   profit_margin: 0, arpu: 0, chargeback_rate: 0, chargeback_count: 0,
   chargeback_revenue: 0, total_impressions: 0, total_clicks: 0,
   aggregate_ctr: 0, aggregate_cpc: 0, aggregate_cpm: 0,
   total_taxes: 0, total_production_costs: 0, roi: 0,
-  untracked_revenue: 0, untracked_orders: 0,
 }
 
 function getDefaultDateRange() {
   const now = new Date()
-  const from = new Date(now.getTime() - 30 * 86400000)
+  const from = new Date(now.getTime() - 7 * 86400000) // Default to 7 days for closer zoom
   return { from: from.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) }
 }
 
@@ -144,7 +148,7 @@ export default function DashboardPage() {
     }
   }
 
-  // Fetch user's campaigns for the filter selector
+  // Fetch campaigns for the filter selector
   useEffect(() => {
     fetch('/api/meta-ads/campaigns?action=list')
       .then(async (res) => {
@@ -196,6 +200,34 @@ export default function DashboardPage() {
 
   const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string; value: string } | null>(null)
 
+  // Sparkline data sampling (Proportional & Monotone Curve Ready)
+  const spendOverTime = data?.spend_over_time || []
+  
+  const getSparklinePoints = (type: 'orders' | 'aov' | 'customers' | 'roas' | 'profit' | 'refunds') => {
+    if (spendOverTime.length === 0) return []
+
+    return spendOverTime.map(d => {
+      const rev = d.revenue || 0
+      const spd = d.spend || 0
+      const prof = rev - spd
+      
+      switch (type) {
+        case 'orders':
+          return rev > 0 ? Math.max(1, Math.round((rev / (s.total_revenue || 1)) * s.total_orders)) : 0
+        case 'aov':
+          return spd > 0 ? rev / Math.max(1, Math.round((rev / (s.total_revenue || 1)) * s.total_orders)) : 0
+        case 'customers':
+          return rev > 0 ? Math.max(1, Math.round((rev / (s.total_revenue || 1)) * s.total_sales)) : 0
+        case 'roas':
+          return spd > 0 ? rev / spd : 0
+        case 'profit':
+          return prof
+        case 'refunds':
+          return Math.max(0, Math.round(rev * (s.refunded_revenue / (s.total_revenue || 1))))
+      }
+    })
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -226,22 +258,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-black text-foreground tracking-tight">Visão Geral</h1>
-          <p className="text-xs text-muted mt-0.5">Acompanhe sua operação de vendas e desempenho de anúncios.</p>
-        </div>
-        <button
-          onClick={handleSyncAllActive}
-          disabled={syncingAll}
-          className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-bold text-foreground shadow-sm transition hover:bg-surface disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${syncingAll ? 'animate-spin' : ''}`} />
-          {syncingAll ? 'Sincronizando contas...' : 'Sincronizar Contas Ativas'}
-        </button>
-      </div>
-
-      {/* Filters */}
+      {/* Filters (Clean sticky-like header style) */}
       <DashboardFilters
         dateRange={dateRange}
         onDateRangeChange={setDateRange}
@@ -250,36 +267,44 @@ export default function DashboardPage() {
         campaigns={campaigns}
       />
 
-      {/* Revenue Hero */}
+      {/* Hero Revenue Card & Sales Goal Card */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        <section className="lg:col-span-8 bg-card rounded-2xl p-6 border border-border shadow-sm relative overflow-hidden flex flex-col justify-between group">
-          {/* Particle Constellation Background (Antigravity interactive style) */}
-          <RevenueShaderBackground />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-muted uppercase tracking-wider">Faturamento</span>
-              {s.total_revenue > 0 && (
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                  +{s.total_orders} vendas
+        <section className="lg:col-span-8 bg-card text-foreground rounded-2xl p-6 border border-border shadow-sm relative overflow-hidden flex flex-col justify-between group min-h-[220px]">
+          <div className="relative z-10 flex-1 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-muted uppercase tracking-wider">Receita Rastreada</span>
+                <span className="text-[11px] font-semibold text-muted bg-secondary px-2.5 py-0.5 rounded-full border border-border">
+                  Últimos {dateRange ? Math.round((new Date(dateRange.to).getTime() - new Date(dateRange.from).getTime()) / 86400000) : 7} dias
                 </span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-black text-foreground tracking-tight mt-1 font-sans">
+                {currency(s.tracked_revenue)}
+              </h2>
+              {s.tracked_orders > 0 && (
+                <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-2 flex items-center gap-1 bg-emerald-500/10 px-2.5 py-0.5 rounded-full w-fit">
+                  <span>↗</span>
+                  <span>{s.tracked_orders} vendas via campanhas Meta Ads</span>
+                </p>
               )}
             </div>
-            <h2 className="text-3xl md:text-4xl font-black text-foreground tracking-tight">
-              {currency(s.total_revenue)}
-            </h2>
-          </div>
-          <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border relative z-10">
-            <div>
-              <p className="text-xs font-bold text-muted">Vendas</p>
-              <p className="text-lg font-black text-foreground">{s.total_orders}</p>
-            </div>
-            <div>
-              <p className="text-xs font-bold text-muted">Ticket Médio</p>
-              <p className="text-lg font-black text-foreground">{currency(s.arpu)}</p>
-            </div>
-            <div>
-              <p className="text-xs font-bold text-muted">ROI</p>
-              <p className="text-lg font-black text-emerald-600">{s.roi.toFixed(1)}%</p>
+
+            {/* Animated orange line divider */}
+            <RevenueWaveBackground data={spendOverTime} />
+
+            <div className="grid grid-cols-3 gap-4 pt-4">
+              <div>
+                <p className="text-xs font-bold text-muted">Pedidos Rastreados</p>
+                <p className="text-base sm:text-lg font-black text-foreground mt-0.5">{s.tracked_orders}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-muted">Ticket Médio</p>
+                <p className="text-base sm:text-lg font-black text-foreground mt-0.5">{currency(s.arpu)}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-muted">ROAS</p>
+                <p className="text-base sm:text-lg font-black text-primary mt-0.5">{s.roas.toFixed(1)}x</p>
+              </div>
             </div>
           </div>
         </section>
@@ -289,47 +314,69 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Performance Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
-        <MetricPill label="Faturamento Líquido" value={currency(s.total_revenue - s.refunded_revenue)} />
-        <MetricPill label="Gasto com Anúncios" value={currency(s.total_spend)} />
-        <MetricPill label="ROAS" value={`${s.roas.toFixed(1)}x`} />
-        <MetricPill label="Lucro Líquido" value={currency(s.net_profit)} positive={s.net_profit >= 0} />
-        <MetricPill label="Margem de Lucro" value={`${s.profit_margin.toFixed(0)}%`} positive={s.profit_margin >= 0} />
-        <MetricPill label="Chargeback" value={s.chargeback_count > 0 ? `${s.chargeback_count} (${currency(s.chargeback_revenue)})` : '0'} />
-        {s.untracked_orders > 0 && !selectedCampaigns && (
-          <MetricPill
-            label="Vendas s/ Rastreamento"
-            value={`${s.untracked_orders} (${currency(s.untracked_revenue)})`}
-            icon={Unlink}
-            iconColor="text-amber-500"
-          />
-        )}
+      {/* Modern 6 KPI Grid with Edge-to-Edge Sparklines */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <KpiCard
+          label="Não Rastreados"
+          subtitle="Vendas orgânicas/diretas"
+          value={s.untracked_orders.toLocaleString('pt-BR')}
+          sparklineData={getSparklinePoints('orders')}
+          sparklineColor="#f97316"
+        />
+        <KpiCard
+          label="Ticket Médio"
+          subtitle="Média por pedido"
+          value={currency(s.arpu)}
+          sparklineData={getSparklinePoints('aov')}
+          sparklineColor="#fb923c"
+        />
+        <KpiCard
+          label="Vendas Totais"
+          subtitle="Receita bruta"
+          value={currency(s.total_sales)}
+          sparklineData={getSparklinePoints('customers')}
+          sparklineColor="#ea580c"
+        />
+        <KpiCard
+          label="ROAS"
+          subtitle="Retorno sobre investimento"
+          value={`${s.roas.toFixed(2)}x`}
+          sparklineData={getSparklinePoints('roas')}
+          sparklineColor="#10b981"
+        />
+        <KpiCard
+          label="Lucro Líquido"
+          subtitle="Após custos e impostos"
+          value={currency(s.net_profit)}
+          isPositive={s.net_profit >= 0}
+          sparklineData={getSparklinePoints('profit')}
+          sparklineColor="#059669"
+        />
+        <KpiCard
+          label="Reembolsos"
+          subtitle="Valor devolvido"
+          value={currency(s.refunded_revenue)}
+          sparklineData={getSparklinePoints('refunds')}
+          sparklineColor="#f43f5e"
+        />
       </div>
 
-      {/* Secondary Metrics Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        <MetricPill label="Impressões" value={s.total_impressions.toLocaleString('pt-BR')} />
-        <MetricPill label="Cliques" value={s.total_clicks.toLocaleString('pt-BR')} />
-        <MetricPill label="CTR" value={`${s.aggregate_ctr.toFixed(2)}%`} />
-        <MetricPill label="CPC" value={currency(s.aggregate_cpc)} />
-        <MetricPill label="CPM" value={currency(s.aggregate_cpm)} />
-      </div>
-
-      {/* Main Content Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <section className="lg:col-span-3">
+      {/* 4-Column Grid: Funnel | Payment Status | Revenue vs Spend | Recent Sales */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Conversion Funnel */}
+        <section>
           <FunnelChart dateRange={dateRange} selectedCampaigns={selectedCampaigns} />
         </section>
 
-        <section className="lg:col-span-2 bg-card rounded-2xl p-6 border border-border shadow-sm flex flex-col items-center">
-          <h3 className="text-lg font-bold text-foreground mb-6 self-start w-full">Receita por Status</h3>
+        {/* Payment Status Donut */}
+        <section className="bg-card rounded-2xl p-5 border border-border shadow-sm flex flex-col">
+          <h4 className="text-sm font-bold text-foreground mb-4">Receita por Status</h4>
           {(() => {
             const statusColors: Record<string, string> = {
               paid: '#10b981',
-              pending: '#fcd34d',
+              pending: '#f59e0b',
               refunded: '#94a3b8',
-              chargeback: '#f87171',
+              chargeback: '#f43f5e',
             }
             const statusLabels: Record<string, string> = {
               paid: 'Pago',
@@ -349,6 +396,7 @@ export default function DashboardPage() {
                 color: statusColors[b.status] || '#cbd5e1',
               }))
 
+            const totalCount = segments.reduce((sum, seg) => sum + seg.count, 0)
             const total = segments.reduce((sum, seg) => sum + seg.value, 0) || 1
             const circumference = 251.2
 
@@ -362,19 +410,27 @@ export default function DashboardPage() {
               return arc
             })
 
+            if (segments.length === 0) {
+              return (
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-xs text-muted text-center">Nenhum dado de receita disponível</p>
+                </div>
+              )
+            }
+
             return (
-              <>
-                <div className="relative w-48 h-48 mb-6" role="img" aria-label="Distribuição de vendas por status">
+              <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                <div className="relative w-32 h-32 shrink-0" role="img" aria-label="Distribuição de vendas por status">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                     {arcs.map((arc, i) => (
                       <circle
                         key={i}
                         cx="50" cy="50" fill="none" r="40"
                         stroke={arc.color}
-                        strokeWidth="16"
+                        strokeWidth="14"
                         strokeDasharray={arc.strokeDasharray}
                         strokeDashoffset={arc.strokeDashoffset}
-                        className="transition-all duration-200"
+                        className="transition-all duration-300"
                         style={{ cursor: 'pointer' }}
                         onMouseEnter={(e) => setTooltip({ x: e.clientX + 12, y: e.clientY - 10, label: arc.label, value: currency(arc.value) })}
                         onMouseMove={(e) => setTooltip(prev => prev ? { ...prev, x: e.clientX + 12, y: e.clientY - 10 } : null)}
@@ -382,118 +438,159 @@ export default function DashboardPage() {
                       />
                     ))}
                   </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <CreditCard className="w-8 h-8 text-muted" />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                    <span className="text-[9px] font-bold text-muted uppercase tracking-wider">Total</span>
+                    <span className="text-base font-black text-foreground">{totalCount.toLocaleString('pt-BR')}</span>
                   </div>
                   {tooltip && (
                     <div
-                      className="fixed px-3 py-2 text-sm font-bold text-white bg-slate-900 rounded-xl shadow-lg pointer-events-none z-50"
+                      className="fixed px-3 py-2 text-xs font-bold text-white bg-slate-900 rounded-xl shadow-lg pointer-events-none z-50"
                       style={{ left: tooltip.x, top: tooltip.y }}
                     >
                       {tooltip.label}: {tooltip.value}
                     </div>
                   )}
                 </div>
-                <div className="w-full grid grid-cols-2 gap-y-3 mt-auto">
-                  {segments.map((seg, i) => (
-                    <div key={i} className="flex items-center gap-2 group relative">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: seg.color }} />
-                      <span className="text-sm text-muted">{seg.label}</span>
-                      <div className="absolute bottom-full left-0 mb-1 px-2 py-1 text-xs font-bold text-white bg-slate-900 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-                        {seg.label}: {currency(seg.value)}
+                <div className="w-full flex flex-col space-y-1.5">
+                  {segments.map((seg, i) => {
+                    const pct = totalCount > 0 ? ((seg.count / totalCount) * 100).toFixed(1) : '0'
+                    return (
+                      <div key={i} className="flex items-center justify-between gap-2 px-1">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+                          <span className="text-[11px] font-bold text-muted">{seg.label}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[11px] font-black text-foreground font-mono">{seg.count.toLocaleString('pt-BR')}</span>
+                          <span className="text-[9px] text-muted ml-1">({pct}%)</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
-                {segments.length === 0 && (
-                  <p className="text-sm text-muted mt-4">Nenhum dado de receita disponível.</p>
-                )}
-              </>
+              </div>
             )
           })()}
         </section>
-      </div>
 
-      {/* Revenue vs Spend Chart */}
-      <section className="bg-card rounded-2xl p-6 border border-border shadow-sm">
-        <RevenueSpendChart data={data?.spend_over_time || []} />
-      </section>
+        {/* Revenue vs Ad Spend Chart (Compact) */}
+        <section className="bg-card rounded-2xl p-5 border border-border shadow-sm">
+          <RevenueSpendChart data={data?.spend_over_time || []} compact />
+        </section>
 
-      {/* Recent Activity */}
-      <section className="bg-card rounded-2xl p-6 border border-border shadow-sm mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-foreground">Vendas Recentes</h3>
-          <Link href="/dashboard/sales" className="text-sm font-medium text-orange-600 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 rounded">
-            Ver todas
-          </Link>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <caption className="sr-only">Lista de vendas recentes</caption>
-            <thead>
-              <tr className="border-b border-border">
-                <th scope="col" className="py-3 px-4 text-xs font-bold text-muted">Cliente</th>
-                <th scope="col" className="py-3 px-4 text-xs font-bold text-muted">Produto</th>
-                <th scope="col" className="py-3 px-4 text-xs font-bold text-muted">Valor</th>
-                <th scope="col" className="py-3 px-4 text-xs font-bold text-muted">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Array.isArray(data?.recent_sales) && data.recent_sales.length > 0 ? (
-                data.recent_sales.slice(0, 5).map((sale, i) => (
-                  <tr key={sale.id || `${sale.customer_name}-${sale.amount}-${i}`} className="border-b border-border hover:bg-surface/50 transition-colors">
-                    <td className="py-3 px-4 text-sm font-medium text-foreground">{sale.customer_name || 'Cliente'}</td>
-                    <td className="py-3 px-4 text-sm text-muted">{sale.product_name || 'Produto'}</td>
-                    <td className="py-3 px-4 text-sm font-medium text-foreground">{currency(sale.amount)}</td>
-                    <td className="py-3 px-4">
-                      <StatusBadge status={sale.status} />
+        {/* Recent Sales Table (Compact) */}
+        <section className="bg-card rounded-2xl p-5 border border-border shadow-sm flex flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-sm font-bold text-foreground">Vendas Recentes</h4>
+            <Link href="/dashboard/sales" className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20 hover:bg-primary/20 transition-colors">
+              Ver todas
+            </Link>
+          </div>
+          <div className="overflow-x-auto flex-1">
+            <table className="w-full text-left border-collapse">
+              <caption className="sr-only">Lista de vendas recentes</caption>
+              <thead>
+                <tr className="border-b border-border text-muted">
+                  <th scope="col" className="py-2 px-2 text-[10px] font-bold uppercase tracking-wider">Pedido</th>
+                  <th scope="col" className="py-2 px-2 text-[10px] font-bold uppercase tracking-wider">Cliente</th>
+                  <th scope="col" className="py-2 px-2 text-[10px] font-bold uppercase tracking-wider text-right">Valor</th>
+                  <th scope="col" className="py-2 px-2 text-[10px] font-bold uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.isArray(data?.recent_sales) && data.recent_sales.length > 0 ? (
+                  data.recent_sales.slice(0, 5).map((sale, i) => (
+                    <tr key={sale.id || `${sale.customer_name}-${sale.amount}-${i}`} className="border-b border-border/50 hover:bg-surface/50 transition-colors">
+                      <td className="py-2 px-2 text-[11px] font-mono text-muted">#{sale.id?.slice(0, 8) || `00${i + 1}`}</td>
+                      <td className="py-2 px-2 text-[11px] font-semibold text-foreground truncate max-w-[80px]">{sale.customer_name || 'Cliente'}</td>
+                      <td className="py-2 px-2 text-[11px] font-black text-foreground text-right">{currency(sale.amount)}</td>
+                      <td className="py-2 px-2">
+                        <StatusBadge status={sale.status} />
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="py-8 text-center text-[11px] text-muted">
+                      Nenhuma venda recente
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={4} className="py-8 text-center text-sm text-muted">
-                    Nenhuma venda recente
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      {/* KPI Summary Footer Bar (Nexora Style) */}
+      <div className="bg-card rounded-2xl p-4 sm:p-5 border border-border shadow-sm grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-center items-center">
+        <div>
+          <p className="text-[10px] font-bold text-muted uppercase tracking-wider">Total Faturado</p>
+          <p className="text-xs sm:text-sm font-black text-foreground mt-0.5">{currency(s.total_sales)}</p>
         </div>
-      </section>
+        <div>
+          <p className="text-[10px] font-bold text-muted uppercase tracking-wider">Total Pedidos</p>
+          <p className="text-xs sm:text-sm font-black text-foreground mt-0.5">{s.total_paid.toLocaleString('pt-BR')}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold text-muted uppercase tracking-wider">Ticket Médio</p>
+          <p className="text-xs sm:text-sm font-black text-foreground mt-0.5">{currency(s.arpu)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold text-muted uppercase tracking-wider">Margem de Lucro</p>
+          <p className="text-xs sm:text-sm font-black text-foreground mt-0.5">{s.profit_margin.toFixed(1)}%</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold text-muted uppercase tracking-wider">Campanhas Ativas</p>
+          <p className="text-xs sm:text-sm font-black text-foreground mt-0.5">{campaigns.length}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold text-muted uppercase tracking-wider">Canal Principal</p>
+          <p className="text-xs sm:text-sm font-black text-primary mt-0.5">Meta Ads</p>
+        </div>
+      </div>
     </div>
   )
 }
 
-function MetricPill({ label, value, positive = true, icon: Icon, iconColor }: { label: string; value: string; positive?: boolean; icon?: LucideIcon; iconColor?: string }) {
+interface KpiCardProps {
+  label: string
+  subtitle?: string
+  value: string | number
+  isPositive?: boolean
+  sparklineData: number[]
+  sparklineColor: string
+}
+
+function KpiCard({ label, subtitle, value, isPositive, sparklineData, sparklineColor }: KpiCardProps) {
   return (
-    <div className="bg-card rounded-2xl p-3 border border-border shadow-sm flex flex-col gap-1 relative overflow-hidden">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-muted truncate flex items-center gap-1">
-          {Icon && <Icon className={`w-3 h-3 ${iconColor || ''}`} />}
-          {label}
-        </span>
-        <span className={`text-[10px] font-bold flex items-center ${positive ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'} px-1.5 py-0.5 rounded`}>
-          {positive ? <TrendingUp className="w-3 h-3" /> : <TrendingUp className="w-3 h-3 rotate-180" />}
-        </span>
+    <div className="bg-card rounded-2xl p-4 border border-border shadow-sm flex flex-col justify-between relative overflow-hidden transition-all hover:border-border/80 group">
+      <div className="mb-2">
+        <span className="text-[10px] sm:text-xs font-bold text-muted uppercase tracking-wider block">{label}</span>
+        {subtitle && <span className="text-[9px] text-subtle block mt-0.5">{subtitle}</span>}
+        <h3 className={`text-lg sm:text-xl font-black tracking-tight truncate mt-1 ${isPositive === false ? 'text-rose-600' : 'text-foreground'}`}>{value}</h3>
       </div>
-      <span className="text-base font-bold text-foreground">{value}</span>
+
+      {/* Animated sparkline */}
+      <div className="w-full shrink-0 -mx-4 -mb-4 overflow-hidden rounded-b-2xl">
+        <KpiSparkline data={sparklineData} color={sparklineColor} isPositive={isPositive} />
+      </div>
     </div>
   )
 }
 
 const STATUS_CONFIG: Record<string, { bg: string; icon: LucideIcon; label: string }> = {
-  paid: { bg: 'bg-emerald-100 text-emerald-800', icon: CheckCircle, label: 'Pago' },
-  pending: { bg: 'bg-amber-100 text-amber-800', icon: Clock, label: 'Pendente' },
-  refunded: { bg: 'bg-rose-100 text-rose-800', icon: Undo, label: 'Reembolsado' },
+  paid: { bg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-500', icon: CheckCircle, label: 'Pago' },
+  pending: { bg: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-500', icon: Clock, label: 'Pendente' },
+  refunded: { bg: 'bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-500', icon: Undo, label: 'Reembolsado' },
 }
 
 function StatusBadge({ status }: { status: string }) {
   const c = STATUS_CONFIG[status] || STATUS_CONFIG.pending
   const Icon = c.icon
   return (
-    <span className={`inline-flex items-center gap-1 ${c.bg} text-[10px] font-bold px-2 py-1 rounded-full`}>
-      <Icon className="w-3.5 h-3.5" /> {c.label}
+    <span className={`inline-flex items-center gap-1 ${c.bg} text-[10px] font-bold px-2 py-0.5 rounded-full`}>
+      <Icon className="w-3 h-3" /> {c.label}
     </span>
   )
 }

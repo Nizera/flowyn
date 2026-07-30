@@ -59,6 +59,10 @@ function SubscriptionBanner({ subscription }: { subscription: AppLayoutUIProps['
   const isGrace = subscription.status === 'grace_period'
   const isBlocked = ['suspended', 'cancelled'].includes(subscription.status)
 
+  // Se é trial mas a data já passou, não mostra o banner de trial
+  const trialExpired = isTrial && subscription.trial_ends_at && new Date(subscription.trial_ends_at).getTime() < Date.now()
+  if (trialExpired) return null
+
   if (!isTrial && !isScheduled && !isGrace && !isBlocked) return null
 
   const text = isTrial
