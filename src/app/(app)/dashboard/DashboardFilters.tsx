@@ -113,25 +113,25 @@ export function DashboardFilters({
           <ChevronDown className="w-3 h-3" />
         </button>
         {showDatePicker && (
-          <div className="absolute top-full left-0 mt-1 w-80 bg-card border border-border rounded-xl shadow-xl z-50 p-5">
+          <div className="absolute top-full left-0 mt-1 w-80 bg-card border border-border rounded-xl shadow-xl z-50 p-5 overflow-hidden">
             <p className="text-[10px] font-bold text-muted uppercase tracking-wider mb-2">Período personalizado</p>
-            <div className="flex gap-3 mb-5">
-              <div className="flex-1">
+            <div className="flex gap-2 mb-5">
+              <div className="flex-1 min-w-0">
                 <label className="block text-[11px] font-semibold text-muted mb-1.5">De</label>
                 <input
                   type="date"
                   value={dateRange.from}
                   onChange={e => onDateRangeChange({ ...dateRange, from: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-background text-foreground [color-scheme:dark]"
+                  className="w-full px-2.5 py-2 text-[13px] border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-background text-foreground [color-scheme:dark]"
                 />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <label className="block text-[11px] font-semibold text-muted mb-1.5">Até</label>
                 <input
                   type="date"
                   value={dateRange.to}
                   onChange={e => onDateRangeChange({ ...dateRange, to: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-background text-foreground [color-scheme:dark]"
+                  className="w-full px-2.5 py-2 text-[13px] border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-background text-foreground [color-scheme:dark]"
                 />
               </div>
             </div>
