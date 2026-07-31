@@ -124,7 +124,7 @@ export async function syncAccountFull(
       currentUrl = data.paging?.next || null
 
       if (currentUrl) {
-        await delay(200)
+        await delay(50)
       }
     }
 
@@ -148,28 +148,30 @@ export async function syncAccountFull(
   } else if (campaignsData.data) {
     console.log(`[Meta Sync] Campaigns returned from Meta API: ${campaignsData.data.length}`)
     console.log('[Meta Sync] Campaign names:', campaignsData.data.map((c: any) => `${c.name} (${c.id}) [${c.effective_status}]`))
-    for (const c of campaignsData.data) {
-      const { error: upsertErr } = await supabase.from('campaigns').upsert({
-        user_id: userId,
-        ad_account_id: adAccountId,
-        campaign_id: c.id,
-        name: c.name,
-        status: c.status,
-        effective_status: c.effective_status,
-        objective: c.objective,
-        buying_type: c.buying_type,
-        daily_budget: parseBudget(c.daily_budget),
-        lifetime_budget: parseBudget(c.lifetime_budget),
-        bid_strategy: c.bid_strategy,
-        special_ad_categories: c.special_ad_categories || [],
-        created_time: c.created_time,
-        updated_time: c.updated_time,
-        synced_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,ad_account_id,campaign_id' })
-      if (upsertErr) {
-        console.error(`[Meta Sync] Campaign upsert error for ${c.id}:`, upsertErr.message)
-      }
+    const now = new Date().toISOString()
+    const campaignRows = campaignsData.data.map((c: any) => ({
+      user_id: userId,
+      ad_account_id: adAccountId,
+      campaign_id: c.id,
+      name: c.name,
+      status: c.status,
+      effective_status: c.effective_status,
+      objective: c.objective,
+      buying_type: c.buying_type,
+      daily_budget: parseBudget(c.daily_budget),
+      lifetime_budget: parseBudget(c.lifetime_budget),
+      bid_strategy: c.bid_strategy,
+      special_ad_categories: c.special_ad_categories || [],
+      created_time: c.created_time,
+      updated_time: c.updated_time,
+      synced_at: now,
+      updated_at: now,
+    }))
+    const { error: upsertErr } = await supabase
+      .from('campaigns')
+      .upsert(campaignRows, { onConflict: 'user_id,ad_account_id,campaign_id' })
+    if (upsertErr) {
+      console.error('[Meta Sync] Campaigns batch upsert error:', upsertErr.message)
     }
     totalRowsSynced += campaignsData.data.length
     console.log(`[Meta Sync] Synced ${campaignsData.data.length} campaigns to local DB`)
@@ -201,7 +203,6 @@ export async function syncAccountFull(
   }
 
   // 2. Sync Ad Sets
-  await delay(100)
   const { data: adsetsData, header: ah } = await metaApiCall(
     `${GRAPH_API}/act_${adAccountId}/adsets?fields=id,name,campaign_id,status,effective_status,optimization_goal,billing_event,bid_strategy,bid_amount,budget_remaining,daily_budget,lifetime_budget,start_time,end_time,targeting&limit=500&access_token=${accessToken}`
   )
@@ -211,34 +212,38 @@ export async function syncAccountFull(
   if (adsetsData.error) {
     errors.push(`AdSets: ${adsetsData.error.message}`)
   } else if (adsetsData.data) {
-    for (const a of adsetsData.data) {
-      await supabase.from('ad_sets').upsert({
-        user_id: userId,
-        ad_account_id: adAccountId,
-        campaign_id: a.campaign_id,
-        ad_set_id: a.id,
-        name: a.name,
-        status: a.status,
-        effective_status: a.effective_status,
-        optimization_goal: a.optimization_goal,
-        billing_event: a.billing_event,
-        bid_strategy: a.bid_strategy,
-        bid_amount: a.bid_amount,
-        budget_remaining: parseBudget(a.budget_remaining),
-        daily_budget: parseBudget(a.daily_budget),
-        lifetime_budget: parseBudget(a.lifetime_budget),
-        start_time: a.start_time,
-        end_time: a.end_time,
-        targeting: a.targeting || {},
-        synced_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,ad_account_id,ad_set_id' })
+    const adsetNow = new Date().toISOString()
+    const adsetRows = adsetsData.data.map((a: any) => ({
+      user_id: userId,
+      ad_account_id: adAccountId,
+      campaign_id: a.campaign_id,
+      ad_set_id: a.id,
+      name: a.name,
+      status: a.status,
+      effective_status: a.effective_status,
+      optimization_goal: a.optimization_goal,
+      billing_event: a.billing_event,
+      bid_strategy: a.bid_strategy,
+      bid_amount: a.bid_amount,
+      budget_remaining: parseBudget(a.budget_remaining),
+      daily_budget: parseBudget(a.daily_budget),
+      lifetime_budget: parseBudget(a.lifetime_budget),
+      start_time: a.start_time,
+      end_time: a.end_time,
+      targeting: a.targeting || {},
+      synced_at: adsetNow,
+      updated_at: adsetNow,
+    }))
+    const { error: adsetUpsertErr } = await supabase
+      .from('ad_sets')
+      .upsert(adsetRows, { onConflict: 'user_id,ad_account_id,ad_set_id' })
+    if (adsetUpsertErr) {
+      console.error('[Meta Sync] AdSets batch upsert error:', adsetUpsertErr.message)
     }
     totalRowsSynced += adsetsData.data.length
   }
 
   // 3. Sync Ads + Creatives
-  await delay(100)
   const { data: adsData, header: adh } = await metaApiCall(
     `${GRAPH_API}/act_${adAccountId}/ads?fields=id,name,adset_id,campaign_id,status,effective_status,creative{id,name,object_story_spec,effective_object_story_id,url_tags},tracking_specs,ad_review_feedback&limit=500&access_token=${accessToken}`
   )
@@ -248,14 +253,15 @@ export async function syncAccountFull(
   if (adsData.error) {
     errors.push(`Ads: ${adsData.error.message}`)
   } else if (adsData.data) {
-    for (const a of adsData.data) {
+    const adNow = new Date().toISOString()
+    const adRows = adsData.data.map((a: any) => {
       const creative = a.creative || {}
       const storySpec = creative.object_story_spec || {}
       const linkData = storySpec.link_data || {}
       const photoData = storySpec.photo_data || {}
       const videoData = storySpec.video_data || {}
 
-      await supabase.from('ads').upsert({
+      return {
         user_id: userId,
         ad_account_id: adAccountId,
         campaign_id: a.campaign_id,
@@ -275,31 +281,22 @@ export async function syncAccountFull(
         video_id: videoData.id || null,
         website_url: linkData.link || null,
         trackings: a.tracking_specs || {},
-        synced_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,ad_account_id,ad_id' })
+        synced_at: adNow,
+        updated_at: adNow,
+      }
+    })
+    const { error: adUpsertErr } = await supabase
+      .from('ads')
+      .upsert(adRows, { onConflict: 'user_id,ad_account_id,ad_id' })
+    if (adUpsertErr) {
+      console.error('[Meta Sync] Ads batch upsert error:', adUpsertErr.message)
     }
     totalRowsSynced += adsData.data.length
   }
 
   // Helper to upsert insights in batches
   async function upsertInsights(rows: any[], level: string) {
-    const BATCH_SIZE = 100
-
-    // Only delete stale data when we have new data to replace it (prevents data loss on fetch failure)
-    if (rows.length > 0) {
-      const { error: deleteError } = await supabase
-        .from('ad_insights_cache')
-        .delete()
-        .eq('ad_account_id', adAccountId)
-        .eq('insight_level', level)
-        .gte('date', timeRangeObj.since)
-        .lte('date', timeRangeObj.until)
-
-      if (deleteError) {
-        errors.push(`Clear stale ${level} insights: ${deleteError.message}`)
-      }
-    }
+    const BATCH_SIZE = 500
 
     function mapRow(row: any) {
       const purchases = extractActions(row.actions, 'purchase')
@@ -361,15 +358,10 @@ export async function syncAccountFull(
       } else {
         totalRowsSynced += batch.length
       }
-
-      if (i + BATCH_SIZE < rows.length) {
-        await delay(100)
-      }
     }
   }
 
   // 4. Campaign-level insights (paginated)
-  await delay(100)
   const { allData: campaignInsightsData, header: cih } = await fetchAllPages(
     `${GRAPH_API}/act_${adAccountId}/insights?fields=campaign_id,campaign_name,impressions,clicks,spend,ctr,cpc,cpm,reach,frequency,actions,action_values,quality_ranking,engagement_rate_ranking,conversion_rate_ranking&level=campaign&time_increment=1&time_range=${timeRange}&limit=500&access_token=${accessToken}`
   )
@@ -381,7 +373,6 @@ export async function syncAccountFull(
   }
 
   // 5. Ad Set-level insights (paginated)
-  await delay(100)
   const { allData: adsetInsightsData, header: aih } = await fetchAllPages(
     `${GRAPH_API}/act_${adAccountId}/insights?fields=campaign_id,adset_id,adset_name,impressions,clicks,spend,ctr,cpc,cpm,reach,frequency,actions,action_values&level=adset&time_increment=1&time_range=${timeRange}&limit=500&access_token=${accessToken}`
   )
@@ -393,7 +384,6 @@ export async function syncAccountFull(
   }
 
   // 6. Ad-level insights (paginated)
-  await delay(100)
   const { allData: adInsightsData, header: adi } = await fetchAllPages(
     `${GRAPH_API}/act_${adAccountId}/insights?fields=campaign_id,adset_id,ad_id,ad_name,impressions,clicks,spend,ctr,cpc,cpm,reach,frequency,actions,action_values&level=ad&time_increment=1&time_range=${timeRange}&limit=500&access_token=${accessToken}`
   )
