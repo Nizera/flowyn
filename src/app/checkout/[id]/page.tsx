@@ -196,7 +196,6 @@ export default async function CheckoutPage(props: CheckoutPageProps) {
                 planId={plan.id}
                 amount={plan.price}
                 primaryColor={checkoutConfig.primaryColor}
-                buttonText={checkoutConfig.buttonText}
                 previewMode={isPreviewMode}
                 recurring={plan.billing_type === 'recurring'}
                 orderBumps={validBumps.map(b => ({

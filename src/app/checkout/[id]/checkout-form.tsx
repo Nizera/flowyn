@@ -20,7 +20,6 @@ interface CheckoutFormProps {
   orderBump?: OrderBumpData
   orderBumps?: OrderBumpData[]
   primaryColor?: string
-  buttonText?: string
   previewMode?: boolean
   recurring?: boolean
 }
@@ -39,7 +38,6 @@ export function CheckoutForm({
   orderBump,
   orderBumps = [],
   primaryColor = '#059669',
-  buttonText = 'Pagar',
   previewMode = false,
   recurring = false,
 }: CheckoutFormProps) {
@@ -750,7 +748,7 @@ export function CheckoutForm({
         ) : (
           <>
             <Lock className="h-5 w-5" />
-            {paymentMethod === 'pix' ? 'Gerar QR Code PIX' : `${buttonText} R$ ${money(totalAmount)}`}
+            {paymentMethod === 'pix' ? 'Gerar QR Code PIX' : `Finalizar compra R$ ${money(totalAmount)}`}
           </>
         )}
       </button>

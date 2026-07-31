@@ -176,7 +176,6 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
           <div className="space-y-4">
             <Field label="Headline" value={config.headline} onChange={(value) => update('headline', value)} />
             <Field label="Subheadline" value={config.subheadline} onChange={(value) => update('subheadline', value)} textarea />
-            <Field label="Texto do botao" value={config.buttonText} onChange={(value) => update('buttonText', value)} />
             <Field label="Selo de seguranca" value={config.securityText} onChange={(value) => update('securityText', value)} />
             <Field label="Garantia" value={config.guaranteeText} onChange={(value) => update('guaranteeText', value)} textarea />
           </div>
@@ -317,7 +316,6 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
                     <div className="space-y-4">
                       <Field label="Headline" value={config.headline} onChange={(value) => update('headline', value)} />
                       <Field label="Subheadline" value={config.subheadline} onChange={(value) => update('subheadline', value)} textarea />
-                      <Field label="Texto do botao" value={config.buttonText} onChange={(value) => update('buttonText', value)} />
                       <Field label="Selo de seguranca" value={config.securityText} onChange={(value) => update('securityText', value)} />
                       <Field label="Garantia" value={config.guaranteeText} onChange={(value) => update('guaranteeText', value)} textarea />
                     </div>
