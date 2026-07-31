@@ -479,12 +479,12 @@ function TestimonialList({ items, onChange, userId }: { items: Array<{ name: str
             </button>
           </div>
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-muted">Nome</span>
-            <input value={item.name} onChange={(e) => update(i, 'name', e.target.value)} maxLength={100} className="h-10 w-full rounded-lg border-0 bg-surface px-3 text-sm font-medium text-foreground outline-none focus:bg-card focus:ring-2 focus:ring-orange-500/20" />
+            <span className="mb-1 block text-xs font-semibold text-muted">Nome</span>
+            <input value={item.name} onChange={(e) => update(i, 'name', e.target.value)} maxLength={100} className="h-10 w-full rounded-lg border border-border/60 bg-card px-3 text-sm font-medium text-foreground outline-none transition focus:border-orange-500/40 focus:ring-2 focus:ring-orange-500/20" />
           </label>
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-muted">Depoimento</span>
-            <textarea value={item.text} onChange={(e) => update(i, 'text', e.target.value)} maxLength={500} className="min-h-16 w-full rounded-lg border-0 bg-surface px-3 py-2 text-sm font-medium text-foreground outline-none focus:bg-card focus:ring-2 focus:ring-orange-500/20" />
+            <span className="mb-1 block text-xs font-semibold text-muted">Depoimento</span>
+            <textarea value={item.text} onChange={(e) => update(i, 'text', e.target.value)} maxLength={500} className="min-h-16 w-full rounded-lg border border-border/60 bg-card px-3 py-2 text-sm font-medium text-foreground outline-none transition focus:border-orange-500/40 focus:ring-2 focus:ring-orange-500/20" />
           </label>
           <div>
             <span className="mb-1 block text-xs font-medium text-muted">Foto (opcional)</span>
@@ -535,12 +535,12 @@ function FaqList({ items, onChange }: { items: Array<{ question: string; answer:
             </button>
           </div>
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-muted">Pergunta</span>
-            <input value={item.question} onChange={(e) => update(i, 'question', e.target.value)} maxLength={200} className="h-10 w-full rounded-lg border-0 bg-surface px-3 text-sm font-medium text-foreground outline-none focus:bg-card focus:ring-2 focus:ring-orange-500/20" />
+            <span className="mb-1 block text-xs font-semibold text-muted">Pergunta</span>
+            <input value={item.question} onChange={(e) => update(i, 'question', e.target.value)} maxLength={200} className="h-10 w-full rounded-lg border border-border/60 bg-card px-3 text-sm font-medium text-foreground outline-none transition focus:border-orange-500/40 focus:ring-2 focus:ring-orange-500/20" />
           </label>
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-muted">Resposta</span>
-            <textarea value={item.answer} onChange={(e) => update(i, 'answer', e.target.value)} maxLength={500} className="min-h-16 w-full rounded-lg border-0 bg-surface px-3 py-2 text-sm font-medium text-foreground outline-none focus:bg-card focus:ring-2 focus:ring-orange-500/20" />
+            <span className="mb-1 block text-xs font-semibold text-muted">Resposta</span>
+            <textarea value={item.answer} onChange={(e) => update(i, 'answer', e.target.value)} maxLength={500} className="min-h-16 w-full rounded-lg border border-border/60 bg-card px-3 py-2 text-sm font-medium text-foreground outline-none transition focus:border-orange-500/40 focus:ring-2 focus:ring-orange-500/20" />
           </label>
         </div>
       ))}
@@ -557,11 +557,11 @@ function FaqList({ items, onChange }: { items: Array<{ question: string; answer:
 function Field({ label, value, onChange, textarea = false }: { label: string; value: string; onChange: (value: string) => void; textarea?: boolean }) {
   return (
     <div className="block">
-      <span className="mb-2 block text-sm font-medium text-foreground">{label}</span>
+      <span className="mb-2 block text-sm font-semibold text-foreground">{label}</span>
       {textarea ? (
-        <textarea value={value} onChange={(event) => onChange(event.target.value)} className="min-h-24 w-full rounded-xl border-0 bg-surface px-4 py-3 text-sm font-medium text-foreground outline-none focus:bg-card focus:ring-2 focus:ring-orange-500/20" />
+        <textarea value={value} onChange={(event) => onChange(event.target.value)} className="min-h-24 w-full rounded-xl border border-border/60 bg-card px-4 py-3 text-sm font-medium text-foreground outline-none transition focus:border-orange-500/40 focus:ring-2 focus:ring-orange-500/20" />
       ) : (
-        <input value={value} onChange={(event) => onChange(event.target.value)} className="h-12 w-full rounded-xl border-0 bg-surface px-4 text-sm font-medium text-foreground outline-none focus:bg-card focus:ring-2 focus:ring-orange-500/20" />
+        <input value={value} onChange={(event) => onChange(event.target.value)} className="h-12 w-full rounded-xl border border-border/60 bg-card px-4 text-sm font-medium text-foreground outline-none transition focus:border-orange-500/40 focus:ring-2 focus:ring-orange-500/20" />
       )}
     </div>
   )
