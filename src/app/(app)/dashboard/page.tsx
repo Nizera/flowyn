@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { SalesGoalCard } from '@/components/SalesGoalCard'
+import { BadgeCard } from '@/components/BadgeCard'
 import { DashboardFilters } from './DashboardFilters'
 import { TrendingUp, CreditCard, CheckCircle, Undo, Clock, AlertCircle, RefreshCw, Unlink } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -258,7 +258,23 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Filters (Clean sticky-like header style) */}
+      {/* Header with sync button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-foreground tracking-tight">Visão Geral</h1>
+          <p className="text-xs text-muted mt-0.5">Acompanhe sua operação de vendas.</p>
+        </div>
+        <button
+          onClick={handleSyncAllActive}
+          disabled={syncingAll}
+          className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-bold text-foreground shadow-sm transition hover:bg-surface disabled:opacity-50"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${syncingAll ? 'animate-spin' : ''}`} />
+          {syncingAll ? 'Sincronizando...' : 'Sincronizar'}
+        </button>
+      </div>
+
+      {/* Filters */}
       <DashboardFilters
         dateRange={dateRange}
         onDateRangeChange={setDateRange}
@@ -310,7 +326,7 @@ export default function DashboardPage() {
         </section>
 
         <div className="lg:col-span-4 flex flex-col">
-          <SalesGoalCard totalSales={s.total_sales} />
+          <BadgeCard totalSales={s.total_sales} />
         </div>
       </div>
 
