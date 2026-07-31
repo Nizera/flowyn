@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
-import { AlertCircle, Check, ExternalLink, Eye, Loader2, Monitor, RefreshCw, Save, Smartphone, Trash2, Plus } from 'lucide-react'
+import { AlertCircle, Check, ExternalLink, Eye, Loader2, Monitor, RefreshCw, Save, Smartphone, Trash2, Plus, Image, Type, Clock, Palette, LayoutGrid } from 'lucide-react'
 import { FileUpload } from '@/components/FileUpload'
 import type { CheckoutCustomizationConfig } from '@/lib/checkout-customization'
 import { publishCheckout, saveCheckoutDraft } from './actions'
@@ -23,6 +23,16 @@ type CheckoutEditorClientProps = {
   publishedAt: string | null
 }
 
+type TabId = 'images' | 'copy' | 'urgency' | 'style' | 'blocks'
+
+const TABS: { id: TabId; label: string; icon: typeof Image }[] = [
+  { id: 'images', label: 'Imagens', icon: Image },
+  { id: 'copy', label: 'Copy', icon: Type },
+  { id: 'urgency', label: 'Urgencia', icon: Clock },
+  { id: 'style', label: 'Estilo', icon: Palette },
+  { id: 'blocks', label: 'Blocos', icon: LayoutGrid },
+]
+
 export function CheckoutEditorClient({ productId, userId, product, plans, initialConfig, publishedAt }: CheckoutEditorClientProps) {
   const [config, setConfig] = useState(initialConfig)
   const [viewport, setViewport] = useState<'desktop' | 'mobile'>('desktop')
@@ -32,6 +42,7 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
   const [previewError, setPreviewError] = useState(false)
   const [autoSaved, setAutoSaved] = useState(false)
   const [bannerWarning, setBannerWarning] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<TabId>('copy')
   const previewFrameRef = useRef<HTMLDivElement | null>(null)
   const previewTimeoutRef = useRef<number | null>(null)
   const autoSaveTimerRef = useRef<number | null>(null)
@@ -147,8 +158,83 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
     })
   }
 
+  function renderTabContent() {
+    switch (activeTab) {
+      case 'images':
+        return (
+          <div className="space-y-4">
+            <FileUpload mode="image" label="Banner desktop" hint="Imagem horizontal para o topo do checkout" dimensionsHint="Recomendado: 1280 × 320px" userId={userId} folder="checkout-assets" currentUrl={config.bannerImageUrl} onUpload={(url) => update('bannerImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('bannerImageUrl', '')} />
+            <FileUpload mode="image" label="Banner mobile" hint="Imagem para a versao mobile do checkout" dimensionsHint="Recomendado: 750 × 300px" userId={userId} folder="checkout-assets" currentUrl={config.bannerMobileImageUrl} onUpload={(url) => update('bannerMobileImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('bannerMobileImageUrl', '')} />
+            <FileUpload mode="image" label="Mockup do produto" hint="Arraste ou anexe uma imagem do produto" dimensionsHint="Recomendado: 400 × 400px (quadrado)" userId={userId} folder="checkout-assets" currentUrl={config.mockupImageUrl} onUpload={(url) => update('mockupImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('mockupImageUrl', '')} />
+            {orderBumpEnabled && (
+              <FileUpload mode="image" label="Imagem do order bump" hint="Imagem usada na oferta extra" dimensionsHint="Recomendado: 200 × 200px (quadrado)" userId={userId} folder="checkout-assets" currentUrl={config.orderBumpImageUrl} onUpload={(url) => update('orderBumpImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('orderBumpImageUrl', '')} />
+            )}
+          </div>
+        )
+      case 'copy':
+        return (
+          <div className="space-y-4">
+            <Field label="Headline" value={config.headline} onChange={(value) => update('headline', value)} />
+            <Field label="Subheadline" value={config.subheadline} onChange={(value) => update('subheadline', value)} textarea />
+            <Field label="Texto do botao" value={config.buttonText} onChange={(value) => update('buttonText', value)} />
+            <Field label="Selo de seguranca" value={config.securityText} onChange={(value) => update('securityText', value)} />
+            <Field label="Garantia" value={config.guaranteeText} onChange={(value) => update('guaranteeText', value)} textarea />
+          </div>
+        )
+      case 'urgency':
+        return (
+          <div className="space-y-4">
+            <label className="flex items-center justify-between rounded-xl bg-surface px-4 py-3 text-sm font-medium text-foreground">
+              Mostrar faixa de urgencia
+              <input type="checkbox" checked={config.blocks.urgency} onChange={(event) => updateBlock('urgency', event.target.checked)} className="accent-orange-500" />
+            </label>
+            {config.blocks.urgency && (
+              <>
+                <ColorField label="Cor da faixa" value={config.urgencyBarColor} onChange={(value) => update('urgencyBarColor', value)} />
+                <Field label="Frases de urgencia (uma por linha)" value={config.urgencyPhrases.join('\n')} onChange={(value) => update('urgencyPhrases', value.split('\n').map(item => item.trim()).filter(Boolean))} textarea />
+              </>
+            )}
+          </div>
+        )
+      case 'style':
+        return (
+          <div className="space-y-4">
+            <ColorField label="Cor primaria" value={config.primaryColor} onChange={(value) => update('primaryColor', value)} />
+            <ColorField label="Fundo" value={config.backgroundColor} onChange={(value) => update('backgroundColor', value)} />
+          </div>
+        )
+      case 'blocks':
+        return (
+          <div className="space-y-4">
+            {Object.entries(config.blocks).filter(([key]) => key !== 'urgency').map(([key, value]) => (
+              <label key={key} className="flex items-center justify-between rounded-xl bg-surface px-4 py-3 text-sm font-medium text-foreground">
+                {blockLabel(key)}
+                <input type="checkbox" checked={value} onChange={(event) => updateBlock(key as keyof CheckoutCustomizationConfig['blocks'], event.target.checked)} className="accent-orange-500" />
+              </label>
+            ))}
+            <Field label="Beneficios, um por linha" value={config.benefits.join('\n')} onChange={(value) => updateList('benefits', value)} textarea />
+
+            {config.blocks.testimonials && (
+              <div className="mt-2 space-y-2">
+                <p className="text-xs font-semibold text-muted">Depoimentos ({config.testimonials.length} de 6)</p>
+                <TestimonialList items={config.testimonials} onChange={(items) => update('testimonials', items)} userId={userId} />
+              </div>
+            )}
+
+            {config.blocks.faq && (
+              <div className="mt-2 space-y-2">
+                <p className="text-xs font-semibold text-muted">FAQ ({config.faq.length} de 8)</p>
+                <FaqList items={config.faq} onChange={(items) => update('faq', items)} />
+              </div>
+            )}
+          </div>
+        )
+    }
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col gap-4 border-b border-border pb-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-orange-600">Checkout transparente</p>
@@ -184,135 +270,185 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
         </div>
       )}
 
-      <div className="grid gap-8 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="space-y-6 overflow-y-auto pr-2 sidebar-scrollbar xl:max-h-[calc(100vh-12rem)]">
-          <Panel title="Imagens">
-            <FileUpload mode="image" label="Banner desktop" hint="Imagem horizontal para o topo do checkout" dimensionsHint="Recomendado: 1280 × 320px" userId={userId} folder="checkout-assets" currentUrl={config.bannerImageUrl} onUpload={(url) => update('bannerImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('bannerImageUrl', '')} />
-            <FileUpload mode="image" label="Banner mobile" hint="Imagem para a versao mobile do checkout" dimensionsHint="Recomendado: 750 × 300px" userId={userId} folder="checkout-assets" currentUrl={config.bannerMobileImageUrl} onUpload={(url) => update('bannerMobileImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('bannerMobileImageUrl', '')} />
-            <FileUpload mode="image" label="Mockup do produto" hint="Arraste ou anexe uma imagem do produto" dimensionsHint="Recomendado: 400 × 400px (quadrado)" userId={userId} folder="checkout-assets" currentUrl={config.mockupImageUrl} onUpload={(url) => update('mockupImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('mockupImageUrl', '')} />
-            {orderBumpEnabled && (
-              <FileUpload mode="image" label="Imagem do order bump" hint="Imagem usada na oferta extra" dimensionsHint="Recomendado: 200 × 200px (quadrado)" userId={userId} folder="checkout-assets" currentUrl={config.orderBumpImageUrl} onUpload={(url) => update('orderBumpImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('orderBumpImageUrl', '')} />
-            )}
-          </Panel>
+      {/* Mobile: Tabs */}
+      <div className="xl:hidden">
+        <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-none">
+          {TABS.map(tab => {
+            const Icon = tab.icon
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                  activeTab === tab.id
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-surface text-muted hover:text-foreground'
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
-          <Panel title="Copy">
-            <Field label="Headline" value={config.headline} onChange={(value) => update('headline', value)} />
-            <Field label="Subheadline" value={config.subheadline} onChange={(value) => update('subheadline', value)} textarea />
-            <Field label="Texto do botao" value={config.buttonText} onChange={(value) => update('buttonText', value)} />
-            <Field label="Selo de seguranca" value={config.securityText} onChange={(value) => update('securityText', value)} />
-            <Field label="Garantia" value={config.guaranteeText} onChange={(value) => update('guaranteeText', value)} textarea />
-          </Panel>
+      {/* Desktop: Sticky sidebar + Preview | Mobile: Tabs content + Preview */}
+      <div className="flex flex-col gap-6 xl:flex-row">
+        {/* Editor Panel */}
+        <aside className="xl:w-[380px] xl:shrink-0">
+          {/* Desktop: always visible sidebar */}
+          <div className="hidden xl:block xl:sticky xl:top-4 xl:max-h-[calc(100vh-8rem)] xl:overflow-y-auto xl:pr-2 xl:sidebar-scrollbar">
+            <div className="space-y-6">
+              {TABS.map(tab => (
+                <div key={tab.id}>
+                  <h3 className="mb-3 text-sm font-bold text-foreground uppercase tracking-wide">{tab.label}</h3>
+                  {tab.id === 'images' && (
+                    <div className="space-y-4">
+                      <FileUpload mode="image" label="Banner desktop" hint="Imagem horizontal para o topo do checkout" dimensionsHint="Recomendado: 1280 × 320px" userId={userId} folder="checkout-assets" currentUrl={config.bannerImageUrl} onUpload={(url) => update('bannerImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('bannerImageUrl', '')} />
+                      <FileUpload mode="image" label="Banner mobile" hint="Imagem para a versao mobile do checkout" dimensionsHint="Recomendado: 750 × 300px" userId={userId} folder="checkout-assets" currentUrl={config.bannerMobileImageUrl} onUpload={(url) => update('bannerMobileImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('bannerMobileImageUrl', '')} />
+                      <FileUpload mode="image" label="Mockup do produto" hint="Arraste ou anexe uma imagem do produto" dimensionsHint="Recomendado: 400 × 400px (quadrado)" userId={userId} folder="checkout-assets" currentUrl={config.mockupImageUrl} onUpload={(url) => update('mockupImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('mockupImageUrl', '')} />
+                      {orderBumpEnabled && (
+                        <FileUpload mode="image" label="Imagem do order bump" hint="Imagem usada na oferta extra" dimensionsHint="Recomendado: 200 × 200px (quadrado)" userId={userId} folder="checkout-assets" currentUrl={config.orderBumpImageUrl} onUpload={(url) => update('orderBumpImageUrl', Array.isArray(url) ? url[0] : url)} onRemove={() => update('orderBumpImageUrl', '')} />
+                      )}
+                    </div>
+                  )}
+                  {tab.id === 'copy' && (
+                    <div className="space-y-4">
+                      <Field label="Headline" value={config.headline} onChange={(value) => update('headline', value)} />
+                      <Field label="Subheadline" value={config.subheadline} onChange={(value) => update('subheadline', value)} textarea />
+                      <Field label="Texto do botao" value={config.buttonText} onChange={(value) => update('buttonText', value)} />
+                      <Field label="Selo de seguranca" value={config.securityText} onChange={(value) => update('securityText', value)} />
+                      <Field label="Garantia" value={config.guaranteeText} onChange={(value) => update('guaranteeText', value)} textarea />
+                    </div>
+                  )}
+                  {tab.id === 'urgency' && (
+                    <div className="space-y-4">
+                      <label className="flex items-center justify-between rounded-xl bg-surface px-4 py-3 text-sm font-medium text-foreground">
+                        Mostrar faixa de urgencia
+                        <input type="checkbox" checked={config.blocks.urgency} onChange={(event) => updateBlock('urgency', event.target.checked)} className="accent-orange-500" />
+                      </label>
+                      {config.blocks.urgency && (
+                        <>
+                          <ColorField label="Cor da faixa" value={config.urgencyBarColor} onChange={(value) => update('urgencyBarColor', value)} />
+                          <Field label="Frases de urgencia (uma por linha)" value={config.urgencyPhrases.join('\n')} onChange={(value) => update('urgencyPhrases', value.split('\n').map(item => item.trim()).filter(Boolean))} textarea />
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {tab.id === 'style' && (
+                    <div className="space-y-4">
+                      <ColorField label="Cor primaria" value={config.primaryColor} onChange={(value) => update('primaryColor', value)} />
+                      <ColorField label="Fundo" value={config.backgroundColor} onChange={(value) => update('backgroundColor', value)} />
+                    </div>
+                  )}
+                  {tab.id === 'blocks' && (
+                    <div className="space-y-4">
+                      {Object.entries(config.blocks).filter(([key]) => key !== 'urgency').map(([key, value]) => (
+                        <label key={key} className="flex items-center justify-between rounded-xl bg-surface px-4 py-3 text-sm font-medium text-foreground">
+                          {blockLabel(key)}
+                          <input type="checkbox" checked={value} onChange={(event) => updateBlock(key as keyof CheckoutCustomizationConfig['blocks'], event.target.checked)} className="accent-orange-500" />
+                        </label>
+                      ))}
+                      <Field label="Beneficios, um por linha" value={config.benefits.join('\n')} onChange={(value) => updateList('benefits', value)} textarea />
 
-          <Panel title="Urgencia">
-            <label className="flex items-center justify-between rounded-xl bg-surface px-4 py-3 text-sm font-medium text-foreground">
-              Mostrar faixa de urgencia
-              <input type="checkbox" checked={config.blocks.urgency} onChange={(event) => updateBlock('urgency', event.target.checked)} className="accent-orange-500" />
-            </label>
-            {config.blocks.urgency && (
-              <>
-                <ColorField label="Cor da faixa" value={config.urgencyBarColor} onChange={(value) => update('urgencyBarColor', value)} />
-                <Field label="Frases de urgencia (uma por linha)" value={config.urgencyPhrases.join('\n')} onChange={(value) => update('urgencyPhrases', value.split('\n').map(item => item.trim()).filter(Boolean))} textarea />
-              </>
-            )}
-          </Panel>
+                      {config.blocks.testimonials && (
+                        <div className="mt-2 space-y-2">
+                          <p className="text-xs font-semibold text-muted">Depoimentos ({config.testimonials.length} de 6)</p>
+                          <TestimonialList items={config.testimonials} onChange={(items) => update('testimonials', items)} userId={userId} />
+                        </div>
+                      )}
 
-          <Panel title="Estilo">
-            <ColorField label="Cor primaria" value={config.primaryColor} onChange={(value) => update('primaryColor', value)} />
-            <ColorField label="Fundo" value={config.backgroundColor} onChange={(value) => update('backgroundColor', value)} />
-          </Panel>
-
-          <Panel title="Blocos">
-            {Object.entries(config.blocks).filter(([key]) => key !== 'urgency').map(([key, value]) => (
-              <label key={key} className="flex items-center justify-between rounded-xl bg-surface px-4 py-3 text-sm font-medium text-foreground">
-                {blockLabel(key)}
-                <input type="checkbox" checked={value} onChange={(event) => updateBlock(key as keyof CheckoutCustomizationConfig['blocks'], event.target.checked)} className="accent-orange-500" />
-              </label>
-            ))}
-            <Field label="Beneficios, um por linha" value={config.benefits.join('\n')} onChange={(value) => updateList('benefits', value)} textarea />
-
-            {config.blocks.testimonials && (
-              <div className="mt-2 space-y-2">
-                <p className="text-xs font-semibold text-muted">Depoimentos ({config.testimonials.length} de 6)</p>
-                <TestimonialList items={config.testimonials} onChange={(items) => update('testimonials', items)} userId={userId} />
-              </div>
-            )}
-
-            {config.blocks.faq && (
-              <div className="mt-2 space-y-2">
-                <p className="text-xs font-semibold text-muted">FAQ ({config.faq.length} de 8)</p>
-                <FaqList items={config.faq} onChange={(items) => update('faq', items)} />
-              </div>
-            )}
-          </Panel>
-        </aside>
-
-        <section className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface p-4 lg:p-6">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-sm font-semibold text-muted">
-              <Eye className="h-4 w-4 text-orange-600" />
-              Preview do checkout
-              {autoSaved && (
-                <span className="ml-2 inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700">
-                  <Check className="h-3 w-3" />
-                  Salvo
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {previewUrl && (
-                <>
-                  <button type="button" onClick={handleRefreshPreview} disabled={isPending} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-muted transition hover:bg-surface disabled:opacity-50" title="Salvar rascunho e atualizar preview">
-                    <RefreshCw className={`h-3.5 w-3.5 ${isPending ? 'animate-spin' : ''}`} />
-                    Atualizar
-                  </button>
-                  <a href={previewUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-muted transition hover:bg-surface">
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    Abrir
-                  </a>
-                </>
-              )}
+                      {config.blocks.faq && (
+                        <div className="mt-2 space-y-2">
+                          <p className="text-xs font-semibold text-muted">FAQ ({config.faq.length} de 8)</p>
+                          <FaqList items={config.faq} onChange={(items) => update('faq', items)} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className="mt-6 border-b border-border" />
+                </div>
+              ))}
             </div>
           </div>
 
-          {previewUrl ? (
-            <div ref={previewFrameRef} className={`relative mx-auto max-w-full overflow-hidden rounded-[24px] border border-border bg-card shadow-sm transition-all ${viewport === 'mobile' ? 'w-[390px]' : 'w-full'}`} style={{ height: previewHeight }}>
-              {previewLoading && (
-                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-card text-muted">
-                  <Loader2 className="h-6 w-6 animate-spin text-orange-600" />
-                  <p className="text-sm font-semibold">Carregando preview real...</p>
-                </div>
-              )}
-              {previewError && (
-                <div className="absolute inset-4 z-20 flex flex-col items-center justify-center rounded-3xl border border-amber-200 bg-amber-50 p-6 text-center text-amber-900">
-                  <AlertCircle className="mb-3 h-7 w-7" />
-                  <p className="text-sm font-black">Nao foi possivel carregar o preview dentro do editor.</p>
-                  <p className="mt-2 max-w-md text-xs leading-5 text-amber-800/75">Salve o rascunho e tente atualizar. Se continuar em branco, abra o preview real em outra aba.</p>
-                  <div className="mt-4 flex flex-wrap justify-center gap-2">
-                    <button onClick={handleRefreshPreview} className="rounded-xl bg-amber-900 px-4 py-2 text-xs font-black text-white">Salvar e recarregar</button>
-                    <a href={previewUrl} target="_blank" rel="noreferrer" className="rounded-xl border border-amber-300 px-4 py-2 text-xs font-black text-amber-950">Abrir preview real</a>
-                  </div>
-                </div>
-              )}
-              <div style={{ width: intrinsicPreviewWidth, height: intrinsicPreviewHeight, transform: `scale(${previewScale})`, transformOrigin: 'top left' }}>
-                <iframe
-                  key={previewUrl}
-                  src={previewUrl}
-                  title="Preview real do checkout"
-                  className="block h-full w-full border-0 bg-card"
-                  sandbox="allow-same-origin allow-scripts"
-                  onLoad={() => {
-                    if (previewTimeoutRef.current) window.clearTimeout(previewTimeoutRef.current)
-                    setPreviewLoading(false)
-                    setPreviewError(false)
-                  }}
-                />
+          {/* Mobile: active tab content */}
+          <div className="xl:hidden">
+            {renderTabContent()}
+          </div>
+        </aside>
+
+        {/* Preview Panel - Sticky on desktop */}
+        <section className="min-w-0 flex-1 xl:sticky xl:top-4 xl:self-start">
+          <div className="rounded-lg border border-border bg-surface p-4 lg:p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-muted">
+                <Eye className="h-4 w-4 text-orange-600" />
+                Preview do checkout
+                {autoSaved && (
+                  <span className="ml-2 inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700">
+                    <Check className="h-3 w-3" />
+                    Salvo
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {previewUrl && (
+                  <>
+                    <button type="button" onClick={handleRefreshPreview} disabled={isPending} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-muted transition hover:bg-surface disabled:opacity-50" title="Salvar rascunho e atualizar preview">
+                      <RefreshCw className={`h-3.5 w-3.5 ${isPending ? 'animate-spin' : ''}`} />
+                      Atualizar
+                    </button>
+                    <a href={previewUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-muted transition hover:bg-surface">
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Abrir
+                    </a>
+                  </>
+                )}
               </div>
             </div>
-          ) : (
-            <div className="rounded-lg border border-dashed border-border bg-card p-8 text-center text-sm font-semibold text-muted">
-              Crie um plano para visualizar o checkout real.
-            </div>
-          )}
+
+            {previewUrl ? (
+              <div ref={previewFrameRef} className={`relative mx-auto max-w-full overflow-hidden rounded-[24px] border border-border bg-card shadow-sm transition-all ${viewport === 'mobile' ? 'w-[390px]' : 'w-full'}`} style={{ height: previewHeight }}>
+                {previewLoading && (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-card text-muted">
+                    <Loader2 className="h-6 w-6 animate-spin text-orange-600" />
+                    <p className="text-sm font-semibold">Carregando preview real...</p>
+                  </div>
+                )}
+                {previewError && (
+                  <div className="absolute inset-4 z-20 flex flex-col items-center justify-center rounded-3xl border border-amber-200 bg-amber-50 p-6 text-center text-amber-900">
+                    <AlertCircle className="mb-3 h-7 w-7" />
+                    <p className="text-sm font-black">Nao foi possivel carregar o preview dentro do editor.</p>
+                    <p className="mt-2 max-w-md text-xs leading-5 text-amber-800/75">Salve o rascunho e tente atualizar. Se continuar em branco, abra o preview real em outra aba.</p>
+                    <div className="mt-4 flex flex-wrap justify-center gap-2">
+                      <button onClick={handleRefreshPreview} className="rounded-xl bg-amber-900 px-4 py-2 text-xs font-black text-white">Salvar e recarregar</button>
+                      <a href={previewUrl} target="_blank" rel="noreferrer" className="rounded-xl border border-amber-300 px-4 py-2 text-xs font-black text-amber-950">Abrir preview real</a>
+                    </div>
+                  </div>
+                )}
+                <div style={{ width: intrinsicPreviewWidth, height: intrinsicPreviewHeight, transform: `scale(${previewScale})`, transformOrigin: 'top left' }}>
+                  <iframe
+                    key={previewUrl}
+                    src={previewUrl}
+                    title="Preview real do checkout"
+                    className="block h-full w-full border-0 bg-card"
+                    sandbox="allow-same-origin allow-scripts"
+                    onLoad={() => {
+                      if (previewTimeoutRef.current) window.clearTimeout(previewTimeoutRef.current)
+                      setPreviewLoading(false)
+                      setPreviewError(false)
+                    }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-border bg-card p-8 text-center text-sm font-semibold text-muted">
+                Crie um plano para visualizar o checkout real.
+              </div>
+            )}
+          </div>
         </section>
       </div>
     </div>
@@ -414,15 +550,6 @@ function FaqList({ items, onChange }: { items: Array<{ question: string; answer:
           Adicionar pergunta
         </button>
       )}
-    </div>
-  )
-}
-
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-4 border-b border-border pb-6">
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      {children}
     </div>
   )
 }

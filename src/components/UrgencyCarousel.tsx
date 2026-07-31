@@ -16,8 +16,8 @@ export function UrgencyCarousel({ phrases, primaryColor }: { phrases: string[]; 
   if (phrases.length === 0) return null
 
   return (
-    <div className="h-10 overflow-hidden bg-gradient-to-r from-orange-500 to-amber-500"
-      style={{ backgroundColor: primaryColor }}
+    <div className="h-10 overflow-hidden"
+      style={{ backgroundColor: primaryColor || '#f97316' }}
     >
       <div className="flex h-full items-center justify-center text-center text-xs font-bold uppercase tracking-wider text-white">
         <span
