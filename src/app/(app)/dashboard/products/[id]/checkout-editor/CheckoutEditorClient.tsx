@@ -293,12 +293,12 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
         </div>
       </div>
 
-      {/* Desktop: Sticky sidebar + Preview | Mobile: Tabs content + Preview */}
+      {/* Desktop: Sidebar + Preview | Mobile: Tabs content + Preview */}
       <div className="flex flex-col gap-6 xl:flex-row">
         {/* Editor Panel */}
         <aside className="xl:w-[380px] xl:shrink-0">
-          {/* Desktop: always visible sidebar */}
-          <div className="hidden xl:block xl:sticky xl:top-4 xl:max-h-[calc(100vh-8rem)] xl:overflow-y-auto xl:pr-2 xl:sidebar-scrollbar">
+          {/* Desktop: all sections visible, page scrolls as one */}
+          <div className="hidden xl:block">
             <div className="space-y-6">
               {TABS.map(tab => (
                 <div key={tab.id}>
@@ -379,8 +379,8 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
           </div>
         </aside>
 
-        {/* Preview Panel - Sticky on desktop */}
-        <section className="min-w-0 flex-1 xl:sticky xl:top-4 xl:self-start">
+        {/* Preview Panel */}
+        <section className="min-w-0 flex-1">
           <div className="rounded-lg border border-border bg-surface p-4 lg:p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-muted">
