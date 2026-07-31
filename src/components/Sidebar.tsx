@@ -15,6 +15,7 @@ import {
   Settings,
   ShoppingBag,
   PlaySquare,
+  Trophy,
   Users,
   Wallet,
   type LucideIcon,
@@ -47,6 +48,7 @@ const sections: { label: string; items: NavItem[] }[] = [
       { href: '/dashboard/sales', label: 'Minhas Vendas', icon: ShoppingBag },
       { href: '/dashboard/ads', label: 'Meta Ads', icon: Megaphone },
       { href: '/dashboard/referrals', label: 'Indicar', icon: Users },
+      { href: '/dashboard/goals', label: 'Conquistas', icon: Trophy },
     ],
   },
   {

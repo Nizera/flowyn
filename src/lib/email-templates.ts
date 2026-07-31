@@ -192,6 +192,78 @@ export function learningNotificationEmail(opts: {
   return emailShell(content, opts.title)
 }
 
+export function firstSaleCertificateEmail(opts: {
+  producerName: string
+  certificateUrl: string
+  saleAmount: number
+}) {
+  const safeName = escapeHtml(opts.producerName)
+  const formattedAmount = opts.saleAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
+  const content = `
+          <!-- Trophy Icon -->
+          <tr>
+            <td align="center" style="padding:40px 40px 0;">
+              <table cellpadding="0" cellspacing="0" border="0"><tr>
+                <td align="center" valign="middle" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,rgba(249,115,22,0.2),rgba(245,158,11,0.2));border:2px solid rgba(249,115,22,0.4);font-size:36px;text-align:center;line-height:1;">
+                  &#127942;
+                </td>
+              </tr></table>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:24px 40px 32px;text-align:center;">
+              <h1 style="color:#fff;font-size:28px;font-weight:800;letter-spacing:-0.04em;margin:0 0 12px;">
+                Parab&eacute;ns, ${safeName}!
+              </h1>
+              <p style="color:rgba(255,255,255,0.55);font-size:16px;line-height:1.65;margin:0 0 8px;">
+                Voc&ecirc; realizou sua <strong style="color:#fff;">primeira venda</strong> na Flowyn!
+              </p>
+              <p style="color:rgba(255,255,255,0.55);font-size:16px;line-height:1.65;margin:0 0 24px;">
+                Valor: <strong style="color:${G};">${formattedAmount}</strong>
+              </p>
+
+              <!-- Certificate Card -->
+              <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:24px;margin:0 0 24px;border:1px solid rgba(255,255,255,0.08);">
+                <p style="color:rgba(255,255,255,0.4);font-size:12px;margin:0 0 8px;text-transform:uppercase;letter-spacing:1px;">Sua conquista</p>
+                <p style="color:#fff;font-size:20px;font-weight:800;margin:0 0 4px;">&#127919; Vendedor Iniciante</p>
+                <p style="color:rgba(255,255,255,0.5);font-size:14px;margin:0;">Badge conquistado com sucesso!</p>
+              </div>
+
+              <!-- CTA Button -->
+              <a href="${escapeHtml(opts.certificateUrl)}" style="display:inline-block;background:${G};color:#0a0a0a;font-weight:800;font-size:16px;padding:16px 40px;border-radius:14px;text-decoration:none;letter-spacing:-0.02em;">
+                Baixar Sua Placa
+              </a>
+
+              <p style="color:rgba(255,255,255,0.35);font-size:13px;line-height:1.6;margin:24px 0 0;">
+                Esta &eacute; s&oacute; o come&ccedil;o! Continue vendas para desbloquear novas conquistas e pr&ecirc;mios ainda melhores.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Progress Preview -->
+          <tr>
+            <td style="padding:0 40px 32px;">
+              <div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.06);">
+                <p style="color:rgba(255,255,255,0.4);font-size:11px;margin:0 0 12px;text-transform:uppercase;letter-spacing:1px;">Pr&oacute;xima conquista</p>
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <span style="font-size:24px;">&#11088;</span>
+                  <div style="flex:1;">
+                    <p style="color:#fff;font-size:14px;font-weight:700;margin:0;">Vendedor</p>
+                    <p style="color:rgba(255,255,255,0.4);font-size:12px;margin:4px 0 0;">Atingir R$ 10.000 em vendas</p>
+                  </div>
+                  <span style="color:${G};font-size:12px;font-weight:700;">Pulseira Flowyn</span>
+                </div>
+              </div>
+            </td>
+          </tr>
+          ${emailFooter()}`
+
+  return emailShell(content, 'Parabéns pela sua primeira venda!')
+}
+
 // ── Supabase Auth Email Templates ──
 
 export function supabaseConfirmSignup() {

@@ -4,6 +4,7 @@ import { deliveryEmail, studentPasswordEmail } from '@/lib/email-templates'
 import { getAppUrl } from '@/lib/app-url'
 import { createStudentPasswordSetupUrl, findAuthUserIdByEmail } from '@/lib/student-password-link'
 import { sendCapiEvent } from '@/lib/meta-capi'
+import { sendFirstSaleCertificateEmail } from '@/lib/certificate-email'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -398,6 +399,60 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
     } catch (referralError) {
       console.error('[Referral] Commission error (non-blocking):', referralError)
     }
+  }
+
+  // ── First Sale Achievement (Badge "Iniciante") ──
+  try {
+    const producerId = orderData.product?.owner_id
+    if (producerId) {
+      // Check if producer already has the "iniciante" badge
+      const { data: existingBadge } = await supabase
+        .from('user_achievements')
+        .select('id')
+        .eq('user_id', producerId)
+        .eq('badge_type', 'iniciante')
+        .maybeSingle()
+
+      if (!existingBadge) {
+        // Calculate total sales for this producer
+        const { data: allOrders } = await supabase
+          .from('orders')
+          .select('amount, product:products!inner(owner_id)')
+          .eq('product.owner_id', producerId)
+          .eq('status', 'paid')
+
+        const totalSales = (allOrders || []).reduce((sum: number, o: any) => sum + (o.amount || 0), 0)
+
+        // Insert the iniciante badge
+        await supabase.from('user_achievements').insert({
+          user_id: producerId,
+          badge_type: 'iniciante',
+          total_sales_at_achievement: totalSales,
+        })
+
+        console.log(`[Achievement] Iniciante badge unlocked for producer ${producerId}`)
+
+        // Send certificate email
+        const { data: producerProfile } = await supabase
+          .from('profiles')
+          .select('full_name, email')
+          .eq('id', producerId)
+          .maybeSingle()
+
+        if (producerProfile?.email) {
+          const certificateUrl = `${getAppUrl()}/api/goals/certificate?badge=iniciante`
+          await sendFirstSaleCertificateEmail({
+            producerEmail: producerProfile.email,
+            producerName: producerProfile.full_name || 'Produtor',
+            certificateUrl,
+            saleAmount: Number(orderData.amount) || 0,
+          })
+          console.log(`[Achievement] Certificate email sent to ${producerProfile.email}`)
+        }
+      }
+    }
+  } catch (achievementError) {
+    console.error('[Achievement] First sale badge error (non-blocking):', achievementError)
   }
 
   return { skipped: false }
