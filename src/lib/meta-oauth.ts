@@ -187,3 +187,23 @@ export async function getDecryptedToken(adAccountId: string, userId: string): Pr
     return null
   }
 }
+
+export async function getDecryptedTokenForSetup(userId: string): Promise<string | null> {
+  const supabase = createAdminClient()
+
+  const { data } = await supabase
+    .from('ad_accounts')
+    .select('access_token')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (!data?.access_token) return null
+
+  try {
+    return decryptApiKey(data.access_token)
+  } catch {
+    return null
+  }
+}

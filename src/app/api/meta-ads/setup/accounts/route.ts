@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { getDecryptedToken } from '@/lib/meta-oauth'
+import { getDecryptedTokenForSetup } from '@/lib/meta-oauth'
 
 export async function GET() {
   const supabase = await createClient()
@@ -15,23 +15,7 @@ export async function GET() {
     .select('ad_account_id, ad_account_name, sync_enabled')
     .eq('user_id', user.id)
 
-  const { data: accounts, error } = await supabase.auth.getUser()
-  if (error || !accounts?.user) {
-    return NextResponse.json({ accounts: [], existing: existingAccounts || [] })
-  }
-
-  const tokenRes = await supabase
-    .from('ad_accounts')
-    .select('access_token, ad_account_id')
-    .eq('user_id', user.id)
-    .limit(1)
-    .single()
-
-  if (!tokenRes.data?.access_token) {
-    return NextResponse.json({ accounts: [], existing: existingAccounts || [] })
-  }
-
-  const accessToken = await getDecryptedToken(tokenRes.data.ad_account_id, user.id)
+  const accessToken = await getDecryptedTokenForSetup(user.id)
   if (!accessToken) {
     return NextResponse.json({ accounts: [], existing: existingAccounts || [] })
   }
@@ -42,13 +26,19 @@ export async function GET() {
     )
     const metaData = await metaRes.json()
 
+    if (metaData.error) {
+      console.error('[Meta Setup] Graph API error:', metaData.error.message)
+      return NextResponse.json({ accounts: [], existing: existingAccounts || [] })
+    }
+
     const metaAccounts = (metaData.data || []).map((acc: { account_id: string; name: string }) => ({
       account_id: acc.account_id,
       name: acc.name,
     }))
 
     return NextResponse.json({ accounts: metaAccounts, existing: existingAccounts || [] })
-  } catch {
+  } catch (error) {
+    console.error('[Meta Setup] Failed to fetch ad accounts:', error)
     return NextResponse.json({ accounts: [], existing: existingAccounts || [] })
   }
 }
