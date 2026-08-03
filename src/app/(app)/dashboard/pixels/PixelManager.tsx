@@ -232,44 +232,84 @@ export function PixelManager({ initialPixels, appUrl }: { initialPixels: Pixel[]
             description="Rastrear page views na sua landing page externa."
           />
           <div className="py-6 md:pl-8">
-            <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-5">
-              <div className="mb-3 flex items-center gap-2">
-                <Globe className="h-4 w-4 text-blue-600" />
-                <h4 className="text-sm font-semibold text-blue-900">Rastrear visitas na sua landing page</h4>
-              </div>
-              <p className="mb-3 text-xs leading-6 text-blue-800/80">
-                Cole o snippet abaixo no <strong>{'<head>'}</strong> da sua landing page externa para rastrear visitantes
-                antes deles chegarem no checkout. Isso alimenta a aba <strong>Funil de Conversão</strong> do dashboard.
-              </p>
-              <div className="mb-3 rounded-lg bg-slate-900 p-3 font-mono text-xs text-slate-300">
-                {(() => {
-                  const meta = initialPixels.find(p => p.platform === 'meta' && p.public_token)
-                  if (!meta) return null
-                  return (
-                    <>
-                      <span className="text-slate-500">&lt;!-- FlowynPay tracker — cola no {'<head>'} da sua landing --&gt;</span>
+            {(() => {
+              const meta = initialPixels.find(p => p.platform === 'meta' && p.public_token)
+              if (!meta) return null
+              return (
+                <>
+                  {/* Passo 1: Snippet */}
+                  <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-5">
+                    <div className="mb-3 flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-blue-600" />
+                      <h4 className="text-sm font-semibold text-blue-900">Passo 1 — Rastrear visitas na landing</h4>
+                    </div>
+                    <p className="mb-3 text-xs leading-6 text-blue-800/80">
+                      Cole o snippet abaixo no <strong>{'<head>'}</strong> da sua landing page externa.
+                      Isso rastreia cada visita e alimenta a aba <strong>Funil de Conversão</strong> do dashboard.
+                    </p>
+                    <div className="mb-3 rounded-lg bg-slate-900 p-3 font-mono text-xs text-slate-300">
+                      <span className="text-slate-500">&lt;!-- FlowynPay tracker — cole no {'<head>'} da sua landing --&gt;</span>
                       <br />
                       &lt;script src=&quot;{appUrl}/t/<span className="text-emerald-400">{meta.public_token}</span>.js&quot; async&gt;&lt;/script&gt;
-                      <br />
-                      <span className="text-slate-500">
-                        {'<!-- Opcional: para rastrear clique em botão "Comprar" -->'}
-                      </span>
-                      <br />
-                      <span className="text-slate-500">&lt;script&gt;</span>
-                      <br />
-                      &nbsp;&nbsp;<span className="text-blue-400">window</span>.<span className="text-amber-300">__fl_product_id</span> = <span className="text-emerald-400">&quot;ID_DO_SEU_PRODUTO&quot;</span>;
-                      <br />
-                      <span className="text-slate-500">&lt;/script&gt;</span>
-                    </>
-                  )
-                })()}
-              </div>
-              <p className="text-xs text-blue-800/70">
-                <strong>Como funciona:</strong> O tracker grava UTMs em cookie first-party, dispara{' '}
-                <code className="rounded bg-blue-100 px-1 py-0.5">page_view</code> via beacon, e injeta UTMs no link do
-                checkout quando o visitante clica em "Comprar". Não bloqueia ad blockers.
-              </p>
-            </div>
+                    </div>
+                    <p className="text-xs text-blue-800/70">
+                      <strong>Como funciona:</strong> Gera um session ID, grava UTMs em cookie first-party, e dispara{' '}
+                      <code className="rounded bg-blue-100 px-1 py-0.5">page_view</code> via beacon server-side.
+                    </p>
+                  </div>
+
+                  {/* Passo 2: Botão Comprar */}
+                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/50 p-5">
+                    <div className="mb-3 flex items-center gap-2">
+                      <Code2 className="h-4 w-4 text-amber-600" />
+                      <h4 className="text-sm font-semibold text-amber-900">Passo 2 — Configurar o botão &quot;Comprar&quot;</h4>
+                    </div>
+                    <p className="mb-3 text-xs leading-6 text-amber-800/80">
+                      O snippet injeta UTMs automaticamente no link do checkout quando o visitante clica em &quot;Comprar&quot;.
+                      <strong> Mas isso só funciona se o botão for um {'<a href>'} real.</strong>
+                    </p>
+
+                    <div className="mb-3 grid gap-3 md:grid-cols-2">
+                      {/* Opção A */}
+                      <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+                        <p className="mb-1 text-xs font-bold text-green-800">Se o botão é {'<a href>'} ↓</p>
+                        <p className="mb-2 text-xs text-green-700">
+                          O snippet já intercepta o clique automaticamente.
+                          <strong> Não precisa mudar nada.</strong>
+                        </p>
+                        <div className="rounded bg-slate-900 p-2 font-mono text-[10px] text-slate-300">
+                          <span className="text-slate-500">&lt;a href=</span><span className="text-emerald-400">&quot;.../checkout/SEU_PLANO_ID&quot;</span><span className="text-slate-500">&gt;</span>
+                          <br />
+                          &nbsp;&nbsp;Comprar
+                          <br />
+                          <span className="text-slate-500">&lt;/a&gt;</span>
+                        </div>
+                      </div>
+
+                      {/* Opção B */}
+                      <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
+                        <p className="mb-1 text-xs font-bold text-orange-800">Se o botão NÃO é {'<a href>'} ↓</p>
+                        <p className="mb-2 text-xs text-orange-700">
+                          Se é {'<button>'}, SPA, ou construtor de página que não permite editar o href.
+                        </p>
+                        <div className="rounded bg-slate-900 p-2 font-mono text-[10px] text-slate-300">
+                          <span className="text-slate-500">&lt;a href=</span><span className="text-amber-300">{appUrl}/r/{meta.public_token}</span><span className="text-emerald-400">?dest=/checkout/SEU_PLANO_ID</span><span className="text-slate-500">&gt;</span>
+                          <br />
+                          &nbsp;&nbsp;Comprar
+                          <br />
+                          <span className="text-slate-500">&lt;/a&gt;</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-amber-800/70">
+                      <strong>Como funciona o {'/r/'}:</strong> Planta cookies first-party no domínio da Flowyn antes de redirecionar pro checkout.
+                      Assim as UTMs e o fbclid chegam certinho, mesmo que o construtor de página não permita edição de href.
+                    </p>
+                  </div>
+                </>
+              )
+            })()}
           </div>
         </div>
       )}
