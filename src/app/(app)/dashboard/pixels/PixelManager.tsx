@@ -116,110 +116,95 @@ export function PixelManager({ initialPixels, appUrl }: { initialPixels: Pixel[]
               <p className="mt-1 text-sm text-muted">Cadastre seu primeiro pixel para rastrear conversoes no checkout.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full min-w-[860px] text-left text-sm">
-                <thead className="border-b border-border text-sm font-medium text-foreground">
-                  <tr>
-                    <th className="px-5 py-4">Nome</th>
-                    <th className="px-5 py-4">Plataforma</th>
-                    <th className="px-5 py-4">ID do pixel</th>
-                    <th className="px-5 py-4 text-center">Status</th>
-                    <th className="px-5 py-4 text-center">CAPI Token</th>
-                    <th className="px-5 py-4 text-center">Snippet</th>
-                    <th className="px-5 py-4 text-right">Acoes</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {initialPixels.map(pixel => {
-                    const plat = getPlatform(pixel.platform)
-                    return (
-                      <tr key={pixel.id} className="transition hover:bg-surface">
-                        <td className="px-5 py-4 font-semibold text-foreground">{pixel.name}</td>
-                        <td className="px-5 py-4">
-                          <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium ${plat.color}`}>
-                            <img src={plat.icon} alt={plat.label} className="h-4 w-4 object-contain" />
-                            {plat.label}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 font-mono text-xs text-muted">{pixel.pixel_id}</td>
-                        <td className="px-5 py-4 text-center">
-                          <button onClick={() => handleToggle(pixel.id, pixel.is_active)} className="inline-flex items-center gap-1.5 transition-colors">
-                            {pixel.is_active ? (
-                              <>
-                                <ToggleRight className="h-5 w-5 text-emerald-600" />
-                                <span className="text-xs font-medium text-emerald-700">Ativo</span>
-                              </>
-                            ) : (
-                              <>
-                                <ToggleLeft className="h-5 w-5 text-muted" />
-                                <span className="text-xs font-medium text-muted">Inativo</span>
-                              </>
-                            )}
-                          </button>
-                        </td>
-                        <td className="px-5 py-4 text-center">
-                          {plat.supportsCapi ? (
-                            capiEditingId === pixel.id ? (
-                              <div className="flex flex-col gap-2">
-                                <input
-                                  type="password"
-                                  value={capiDraft}
-                                  onChange={(e) => setCapiDraft(e.target.value)}
-                                  placeholder="Cole aqui o Access Token da Conversions API"
-                                  className="h-10 w-full rounded-lg border border-border bg-surface px-3 text-xs font-mono"
-                                />
-                                <div className="flex gap-2 justify-center">
-                                  <button type="button" onClick={() => saveCapiToken(pixel.id)} className="rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-600">
-                                    Salvar
-                                  </button>
-                                  <button type="button" onClick={() => { setCapiEditingId(null); setCapiDraft('') }} className="rounded-lg px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface">
-                                    Cancelar
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <button onClick={() => openCapiEditor(pixel)} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs transition hover:bg-surface">
-                                <KeyRound className={`h-4 w-4 ${pixel.capi_access_token ? 'text-emerald-600' : 'text-muted'}`} />
-                                <span className={pixel.capi_access_token ? 'text-emerald-700 font-medium' : 'text-muted'}>
-                                  {capiStatus === 'token-definido' || pixel.capi_access_token ? 'Configurado' : 'Configurar'}
-                                </span>
+            <div className="space-y-3">
+              {initialPixels.map(pixel => {
+                const plat = getPlatform(pixel.platform)
+                return (
+                  <div key={pixel.id} className="rounded-xl border border-border bg-surface/50 p-4 transition hover:bg-surface">
+                    {/* Linha principal */}
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium ${plat.color}`}>
+                        <img src={plat.icon} alt={plat.label} className="h-4 w-4 object-contain" />
+                        {plat.label}
+                      </span>
+                      <h4 className="font-semibold text-foreground">{pixel.name}</h4>
+                      <button onClick={() => handleToggle(pixel.id, pixel.is_active)} className="inline-flex items-center gap-1.5 transition-colors">
+                        {pixel.is_active ? (
+                          <>
+                            <ToggleRight className="h-5 w-5 text-emerald-600" />
+                            <span className="text-xs font-medium text-emerald-700">Ativo</span>
+                          </>
+                        ) : (
+                          <>
+                            <ToggleLeft className="h-5 w-5 text-muted" />
+                            <span className="text-xs font-medium text-muted">Inativo</span>
+                          </>
+                        )}
+                      </button>
+                      <div className="ml-auto flex items-center gap-2">
+                        <button onClick={() => handleDelete(pixel.id)} className="rounded-lg p-2 text-muted transition hover:bg-red-50 hover:text-red-600">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Linha de detalhes */}
+                    <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-border/50 pt-3 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-muted">ID:</span>
+                        <code className="max-w-[160px] truncate font-mono text-muted" title={pixel.pixel_id}>{pixel.pixel_id}</code>
+                      </div>
+
+                      {plat.supportsCapi && (
+                        <div className="flex items-center gap-1.5">
+                          {capiEditingId === pixel.id ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="password"
+                                value={capiDraft}
+                                onChange={(e) => setCapiDraft(e.target.value)}
+                                placeholder="Access Token da Conversions API"
+                                className="h-8 w-48 rounded-lg border border-border bg-card px-2 text-xs font-mono"
+                              />
+                              <button type="button" onClick={() => saveCapiToken(pixel.id)} className="rounded-lg bg-orange-500 px-2.5 py-1 text-xs font-semibold text-white hover:bg-orange-600">
+                                Salvar
                               </button>
-                            )
+                              <button type="button" onClick={() => { setCapiEditingId(null); setCapiDraft('') }} className="rounded-lg px-2.5 py-1 text-xs font-medium text-muted hover:bg-card">
+                                Cancelar
+                              </button>
+                            </div>
                           ) : (
-                            <span className="text-xs text-muted opacity-60">N/A</span>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 text-center">
-                          {pixel.platform === 'meta' && pixel.public_token ? (
-                            <button
-                              onClick={() => {
-                                const snippet = `<script src="${appUrl}/t/${pixel.public_token}.js" async></script>`
-                                navigator.clipboard.writeText(snippet).then(() => {
-                                  setSnippetCopiedId(pixel.id)
-                                  setTimeout(() => setSnippetCopiedId(null), 2000)
-                                })
-                              }}
-                              className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs transition hover:bg-surface"
-                            >
-                              <Code2 className="h-4 w-4 text-blue-600" />
-                              <span className={snippetCopiedId === pixel.id ? 'font-medium text-blue-700' : 'text-muted'}>
-                                {snippetCopiedId === pixel.id ? 'Copiado!' : 'Copiar'}
+                            <button onClick={() => openCapiEditor(pixel)} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 transition hover:bg-card">
+                              <KeyRound className={`h-3.5 w-3.5 ${pixel.capi_access_token ? 'text-emerald-600' : 'text-muted'}`} />
+                              <span className={pixel.capi_access_token ? 'text-emerald-700 font-medium' : 'text-muted'}>
+                                CAPI: {capiStatus === 'token-definido' || pixel.capi_access_token ? 'Configurado' : 'Configurar'}
                               </span>
                             </button>
-                          ) : (
-                            <span className="text-xs text-muted opacity-60">N/A</span>
                           )}
-                        </td>
-                        <td className="px-5 py-4 text-right">
-                          <button onClick={() => handleDelete(pixel.id)} className="rounded-lg p-2 text-muted transition hover:bg-red-50 hover:text-red-600">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+                        </div>
+                      )}
+
+                      {pixel.platform === 'meta' && pixel.public_token && (
+                        <button
+                          onClick={() => {
+                            const snippet = `<script src="${appUrl}/t/${pixel.public_token}.js" async></script>`
+                            navigator.clipboard.writeText(snippet).then(() => {
+                              setSnippetCopiedId(pixel.id)
+                              setTimeout(() => setSnippetCopiedId(null), 2000)
+                            })
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 transition hover:bg-card"
+                        >
+                          <Code2 className="h-3.5 w-3.5 text-blue-600" />
+                          <span className={snippetCopiedId === pixel.id ? 'font-medium text-blue-700' : 'text-muted'}>
+                            {snippetCopiedId === pixel.id ? 'Copiado!' : 'Copiar Snippet'}
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
