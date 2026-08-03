@@ -43,9 +43,26 @@ export async function GET(
   const clickKeys = ['fbclid', 'ttclid', 'gclid']
 
   const trackingData: Record<string, string> = {}
+
+  // 1. Lê da query string (prioridade)
   for (const key of [...utmKeys, ...clickKeys]) {
     const val = searchParams.get(key)
     if (val) trackingData[key] = val
+  }
+
+  // 2. Fallback: lê do cookie _fl_utm (setado pelo tracker.js na landing)
+  if (Object.keys(trackingData).length === 0) {
+    const flUtmCookie = req.cookies.get('_fl_utm')?.value
+    if (flUtmCookie) {
+      try {
+        const parsed = JSON.parse(flUtmCookie) as Record<string, string>
+        for (const key of [...utmKeys, ...clickKeys]) {
+          if (parsed[key] && !trackingData[key]) {
+            trackingData[key] = parsed[key]
+          }
+        }
+      } catch {}
+    }
   }
 
   // Session ID
