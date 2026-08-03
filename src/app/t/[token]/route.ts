@@ -53,7 +53,7 @@ export async function GET(
     status: 200,
     headers: {
       'Content-Type': 'application/javascript; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600, must-revalidate',
+      'Cache-Control': 'public, max-age=60, must-revalidate',
       'X-Content-Type-Options': 'nosniff',
     },
   })
