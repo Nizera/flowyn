@@ -220,11 +220,19 @@ function buildTrackerJs(publicToken: string): string {
                        href.indexOf("/r/") !== -1;
       if (!isCheckout) return;
 
-      // Para links /r/ (redirect server-side), não precisa injetar UTMs
-      // (o endpoint /r/[token] já faz isso). Apenas garante fl_sid.
+      // Para links /r/ (redirect server-side), injeta UTMs como query params
+      // (o cookie _fl_utm está no domínio da landing, não do flowyn.com,
+      //  então o servidor não consegue ler — precisamos passar via URL)
       if (href.indexOf("/r/") !== -1) {
         try {
           var rUrl = new URL(href, window.location.origin);
+          var prop;
+          for (prop in trackingParams) {
+            if (!trackingParams.hasOwnProperty(prop)) continue;
+            if (!rUrl.searchParams.has(prop)) {
+              rUrl.searchParams.set(prop, trackingParams[prop]);
+            }
+          }
           if (!rUrl.searchParams.has("fl_sid")) rUrl.searchParams.set("fl_sid", SID);
           a.setAttribute("href", rUrl.toString());
         } catch(_) {}
