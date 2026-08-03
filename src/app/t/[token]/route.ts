@@ -29,6 +29,14 @@ export async function GET(
   }
 
   const supabase = createAdminClient()
+
+  // Debug: query without platform filter to see what exists
+  const { data: pixelDebug } = await supabase
+    .from('pixels')
+    .select('id, is_active, platform, public_token')
+    .eq('public_token', token)
+    .maybeSingle()
+
   const { data: pixel } = await supabase
     .from('pixels')
     .select('id, pixel_id, is_active, platform')
@@ -37,7 +45,10 @@ export async function GET(
     .maybeSingle()
 
   if (!pixel || !pixel.is_active) {
-    return new NextResponse('not found', { status: 404 })
+    const debug = pixelDebug
+      ? `found pixel but platform=${pixelDebug.platform}, is_active=${pixelDebug.is_active}`
+      : 'no pixel with this public_token'
+    return new NextResponse(`debug: ${debug}`, { status: 404 })
   }
 
   // pixel_id está encriptado no DB com AES-256-GCM — não expomos aqui. O tracker.js
