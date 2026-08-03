@@ -258,12 +258,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header with sync button */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-black text-foreground tracking-tight">Visão Geral</h1>
-          <p className="text-xs text-muted mt-0.5">Acompanhe sua operação de vendas.</p>
-        </div>
+      {/* Sync button */}
+      <div className="flex items-center justify-end">
         <button
           onClick={handleSyncAllActive}
           disabled={syncingAll}

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-import { Sidebar } from '@/components/Sidebar'
+import { Sidebar, SIDEBAR_STORAGE_KEY, SIDEBAR_WIDTH_EXPANDED, SIDEBAR_WIDTH_COLLAPSED } from '@/components/Sidebar'
 import Link from 'next/link'
 import { Bell, CalendarClock, DollarSign, Clock, AlertTriangle, Menu, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -115,10 +115,24 @@ export function AppLayoutUI({ children, profile, subscription, notifications }: 
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isNotifOpen, setIsNotifOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
   const unreadCount = notifications.filter(n => !n.read).length
   const page = pageTitles.find(item => pathname === item.match || pathname.startsWith(`${item.match}/`)) || pageTitles[pageTitles.length - 1]
   const isLearningExperience = pathname === '/learn' || pathname.startsWith('/learn/')
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY)
+      if (stored !== null) setSidebarCollapsed(stored === 'true')
+    } catch {}
+    const onSidebarToggle = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      setSidebarCollapsed(detail.collapsed)
+    }
+    window.addEventListener('sidebar-toggle', onSidebarToggle)
+    return () => window.removeEventListener('sidebar-toggle', onSidebarToggle)
+  }, [])
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -136,11 +150,13 @@ export function AppLayoutUI({ children, profile, subscription, notifications }: 
     )
   }
 
+  const sidebarWidth = sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED
+
   return (
     <div className="relative flex min-h-screen flex-col bg-background text-foreground md:flex-row">
-      <div className="hidden shrink-0 md:block w-64" />
+      <div className="hidden shrink-0 md:block" style={{ width: sidebarWidth }} />
 
-      <div className="fixed inset-y-0 left-0 z-40 hidden md:flex w-64">
+      <div className="fixed inset-y-0 left-0 z-40 hidden md:flex" style={{ width: sidebarWidth }}>
         <Sidebar profile={profile} />
       </div>
 
