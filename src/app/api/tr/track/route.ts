@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { getClientIp } from '@/lib/client-ip'
+import { sendCapiEvent } from '@/lib/meta-capi'
 
 // Tracking cross-domain: recebe page_view / view_content da landing externa do
 // produtor via tracker.js (snippet JS). O snippet carrega
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
       return new NextResponse('bad json', { status: 400, headers: corsHeaders })
     }
 
-    const { t, event_name, product_id, url, referrer, utm, fbclid, ttclid, gclid, session_id, fbp, fbc } = body
+    const { t, event_name, product_id, url, referrer, utm, fbclid, ttclid, gclid, session_id, fbp, fbc, event_id } = body
     if (!t || !event_name) {
       return new NextResponse('missing params', { status: 400, headers: corsHeaders })
     }
@@ -79,6 +80,34 @@ export async function POST(req: NextRequest) {
       console.error('[tracker] DB insert failed:', error.message)
     }
 
+    // CAPI server-side (não-bloqueante)
+    const capiEventName = event_name === 'page_view' ? 'PageView' as const : 'ViewContent' as const
+    const finalEventId = event_id || `${event_name}_${crypto.randomUUID()}`
+
+    const trackingParams: Record<string, string> = {}
+    if (utm?.utm_source) trackingParams.utm_source = utm.utm_source
+    if (utm?.utm_medium) trackingParams.utm_medium = utm.utm_medium
+    if (utm?.utm_campaign) trackingParams.utm_campaign = utm.utm_campaign
+    if (utm?.utm_content) trackingParams.utm_content = utm.utm_content
+    if (utm?.utm_term) trackingParams.utm_term = utm.utm_term
+    if (fbclid) trackingParams.fbclid = fbclid
+    if (fbp) trackingParams._fbp = fbp
+    if (fbc) trackingParams._fbc = fbc
+
+    sendCapiEvent({
+      eventId: finalEventId,
+      eventName: capiEventName,
+      pixelId: pixelRow.id,
+      productId: product_id || undefined,
+      producerId: pixelRow.user_id,
+      clientIp: ip,
+      userAgent,
+      eventSourceUrl: finalUrl,
+      trackingParams: Object.keys(trackingParams).length > 0 ? trackingParams : null,
+    }).catch(err => {
+      console.error(`[Tracker CAPI] ${capiEventName} failed (non-blocking):`, err)
+    })
+
     return new NextResponse(JSON.stringify({ sid: finalSessionId }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -106,6 +135,7 @@ interface TrackBody {
   fbp?: string | null
   fbc?: string | null
   session_id?: string | null
+  event_id?: string | null  // ID do evento para dedup com pixel client-side
 }
 
 const ALLOWED_ORIGINS = [

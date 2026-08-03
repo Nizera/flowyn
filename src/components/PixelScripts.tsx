@@ -59,11 +59,24 @@ export function PixelScripts({ pixels }: Props) {
 
   // Fire PageView on mount and register global purchase handler
   useEffect(() => {
-    // Meta PageView
+    // Meta PageView — gera event_id para dedup com CAPI server-side
     if (window.fbq) {
       metaPixels.forEach(p => {
         window.fbq!('init', p.pixel_id)
-        window.fbq!('track', 'PageView')
+        const pageViewId = `pv_${crypto.randomUUID()}`
+        window.fbq!('track', 'PageView', {}, { eventID: pageViewId })
+        // Envia ao backend para CAPI
+        try {
+          fetch('/api/checkout/funnel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              event_name: 'page_view',
+              event_id: pageViewId,
+              pixel_id: p.pixel_id,
+            }),
+          }).catch(() => {})
+        } catch {}
       })
     }
 
@@ -79,7 +92,8 @@ export function PixelScripts({ pixels }: Props) {
 
     // Register global purchase handler
     window.firePixelPurchase = (amount: number, eventId?: string) => {
-      const eventData = { value: amount, currency: 'BRL', ...(eventId ? { eventID: eventId } : {}) }
+      const finalEventId = eventId || `purchase_${crypto.randomUUID()}`
+      const eventData = { value: amount, currency: 'BRL', eventID: finalEventId }
 
       // Meta Purchase
       if (window.fbq) {
@@ -93,7 +107,7 @@ export function PixelScripts({ pixels }: Props) {
             send_to: p.pixel_id,
             value: amount,
             currency: 'BRL',
-            ...(eventId ? { transaction_id: eventId } : {}),
+            transaction_id: finalEventId,
           })
         })
       }

@@ -10,20 +10,37 @@ import { GRAPH_API } from '@/lib/meta-graph-api'
 // deve ter seu próprio capi_access_token (ou um ad_account access_token válido).
 const FALLBACK_CAPI_TOKEN = process.env.META_CAPI_ACCESS_TOKEN || ''
 
-export interface CapiOrderData {
-  orderId: string
-  planId: string
-  productId: string
+// Eventos suportados pela Meta Conversions API
+export type CapiEventName = 'PageView' | 'ViewContent' | 'InitiateCheckout' | 'Purchase'
+
+// Dados base para qualquer evento CAPI
+export interface CapiEventData {
+  eventId: string                    // ID do evento para dedup com pixel client-side
+  eventName: CapiEventName
+  pixelId?: string                   // Opcional: override do pixel (senão resolve via plan_id)
+  planId?: string                    // Usado para resolver pixel via plan_pixels
+  productId?: string
   producerId: string
+  clientIp: string
+  userAgent: string
+  eventSourceUrl: string
+  trackingParams?: Record<string, string> | null
+}
+
+// Dados específicos do evento Purchase (extende o base)
+export interface CapiOrderData extends CapiEventData {
+  eventName: 'Purchase'
+  orderId: string
   amount: number
   customerEmail: string
   customerPhone: string
   customerName: string
   customerDocument: string
-  clientIp: string
-  userAgent: string
-  eventSourceUrl: string
-  trackingParams?: Record<string, string> | null
+}
+
+// Dados para eventos de funil (PageView, ViewContent, InitiateCheckout)
+export interface CapiFunnelData extends CapiEventData {
+  eventName: 'PageView' | 'ViewContent' | 'InitiateCheckout'
 }
 
 function sha256(data: string): string {
@@ -95,86 +112,124 @@ async function resolveCapiAccessToken(
   return null
 }
 
-export async function sendCapiEvent(orderData: CapiOrderData) {
+/**
+ * Resolve o pixel_id e configuração a partir de plan_id ou pixel_id direto.
+ */
+async function resolvePixel(
+  supabase: ReturnType<typeof createAdminClient>,
+  planId?: string,
+  pixelIdOverride?: string
+) {
+  // Se pixelId foi passado diretamente, usa ele
+  if (pixelIdOverride) {
+    const { data: pixel } = await supabase
+      .from('pixels')
+      .select('id, pixel_id, platform, is_active, capi_access_token')
+      .eq('id', pixelIdOverride)
+      .maybeSingle()
+
+    if (pixel?.is_active && pixel.platform === 'meta') {
+      return pixel
+    }
+  }
+
+  // Resolve via plan_pixels
+  if (planId) {
+    const { data: planPixel } = await supabase
+      .from('plan_pixels')
+      .select('pixel:pixels(id, pixel_id, platform, is_active, capi_access_token)')
+      .eq('plan_id', planId)
+      .maybeSingle()
+
+    const pixelRow = (() => {
+      const raw = planPixel?.pixel
+      if (!raw) return null
+      return Array.isArray(raw) ? raw[0] : raw
+    })()
+
+    if (pixelRow?.is_active && pixelRow.platform === 'meta') {
+      return pixelRow
+    }
+  }
+
+  return null
+}
+
+/**
+ * Envia um evento CAPI para a Meta.
+ * Suporta PageView, ViewContent, InitiateCheckout e Purchase.
+ *
+ * Para Purchase, mantém compatibilidade com a interface CapiOrderData existente.
+ * Para eventos de funil, usa CapiFunnelData.
+ */
+export async function sendCapiEvent(data: CapiOrderData | CapiFunnelData) {
   const supabase = createAdminClient()
 
-  const { data: planPixel } = await supabase
-    .from('plan_pixels')
-    .select('pixel:pixels(id, pixel_id, platform, is_active, capi_access_token)')
-    .eq('plan_id', orderData.planId)
-    .maybeSingle()
+  const pixelRow = await resolvePixel(supabase, data.planId, data.pixelId)
 
-  const pixelRow = (() => {
-    const raw = planPixel?.pixel
-    if (!raw) return null
-    return Array.isArray(raw) ? raw[0] : raw
-  })()
-  if (!pixelRow?.is_active || pixelRow.platform !== 'meta') {
-    console.warn('[Meta CAPI] No active Meta pixel linked to this plan — skipping')
+  if (!pixelRow) {
+    console.warn(`[Meta CAPI] No active Meta pixel linked to this event — skipping`)
     return
   }
 
   const pixelId = decryptApiKey(pixelRow.pixel_id)
 
-  // CORREÇÃO issue #2/#3 (auditoria tracking): usa token do próprio pixel,
-  // fallback token do ad_account do produtor, fallback token global.
   const accessToken = await resolveCapiAccessToken(
     supabase,
     pixelRow.id,
-    orderData.producerId,
+    data.producerId,
     pixelRow.capi_access_token
   )
 
   if (!accessToken) {
-    console.warn('[Meta CAPI] Nenhum access token disponível para o pixel — skipping. Configure capi_access_token no painel Pixels, conecte uma conta Meta Ads, ou defina META_CAPI_ACCESS_TOKEN global.')
-    await supabase.from('tracking_events').insert({
-      order_id: orderData.orderId,
-      product_id: orderData.productId,
-      producer_id: orderData.producerId,
-      platform: 'meta',
-      event_name: 'Purchase',
-      event_id: `order_${orderData.orderId}`,
-      status: 'skipped',
-      error_message: 'No CAPI access token available (pixel.capi_access_token empty, producer has no active ad_account, and no global fallback).',
-    })
+    console.warn('[Meta CAPI] Nenhum access token disponível para o pixel — skipping')
+    await logTrackingEvent(supabase, data, 'skipped', 'No CAPI access token available')
     return
   }
 
-  const eventId = `order_${orderData.orderId}`
-
-  const cleanPhone = normalizePhone(orderData.customerPhone)
-  const cleanName = normalizeName(orderData.customerName)
-  const nameParts = cleanName.split(/\s+/)
-
+  // Monta user_data (PII hash)
   const userData: Record<string, unknown> = {
-    em: [sha256(orderData.customerEmail)],
-    ...(cleanPhone ? { ph: [sha256(cleanPhone)] } : {}),
-    ...(nameParts[0] ? { fn: [sha256(nameParts[0])] } : {}),
-    ...(nameParts.slice(1).join(' ') ? { ln: [sha256(nameParts.slice(1).join(' '))] } : {}),
-    client_ip_address: orderData.clientIp,
-    client_user_agent: orderData.userAgent,
+    client_ip_address: data.clientIp,
+    client_user_agent: data.userAgent,
   }
 
-  if (orderData.trackingParams?._fbp) userData.fbp = orderData.trackingParams._fbp
-  if (orderData.trackingParams?._fbc) {
-    userData.fbc = orderData.trackingParams._fbc
-  } else if (orderData.trackingParams?.fbclid) {
+  // Para Purchase, inclui PII completa
+  if (data.eventName === 'Purchase' && 'customerEmail' in data) {
+    const purchaseData = data as CapiOrderData
+    const cleanPhone = normalizePhone(purchaseData.customerPhone)
+    const cleanName = normalizeName(purchaseData.customerName)
+    const nameParts = cleanName.split(/\s+/)
+
+    if (purchaseData.customerEmail) userData.em = [sha256(purchaseData.customerEmail)]
+    if (cleanPhone) userData.ph = [sha256(cleanPhone)]
+    if (nameParts[0]) userData.fn = [sha256(nameParts[0])]
+    if (nameParts.slice(1).join(' ')) userData.ln = [sha256(nameParts.slice(1).join(' '))]
+  }
+
+  // fbp/fbc para matching
+  if (data.trackingParams?._fbp) userData.fbp = data.trackingParams._fbp
+  if (data.trackingParams?._fbc) {
+    userData.fbc = data.trackingParams._fbc
+  } else if (data.trackingParams?.fbclid) {
     const ts = Math.floor(Date.now() / 1000)
-    userData.fbc = `fb.1.${ts}.${orderData.trackingParams.fbclid}`
+    userData.fbc = `fb.1.${ts}.${data.trackingParams.fbclid}`
   }
 
-  const customData: Record<string, unknown> = {
-    value: orderData.amount,
-    currency: 'BRL',
-    order_id: orderData.orderId,
-    content_type: 'product',
+  // Monta custom_data
+  const customData: Record<string, unknown> = {}
+
+  // Purchase tem dados monetários
+  if (data.eventName === 'Purchase' && 'amount' in data) {
+    const purchaseData = data as CapiOrderData
+    customData.value = purchaseData.amount
+    customData.currency = 'BRL'
+    customData.order_id = purchaseData.orderId
+    customData.content_type = 'product'
   }
 
-  // Enviar UTMs no custom_data para matching avançado no Meta
-  // (Meta usa click IDs como matching primário, mas UTMs ajudam em
-  // cenários onde click IDs não estão disponíveis)
-  if (orderData.trackingParams) {
-    const tp = orderData.trackingParams
+  // UTMs para matching avançado
+  if (data.trackingParams) {
+    const tp = data.trackingParams
     if (tp.utm_source) customData.utm_source = tp.utm_source
     if (tp.utm_medium) customData.utm_medium = tp.utm_medium
     if (tp.utm_campaign) customData.utm_campaign = tp.utm_campaign
@@ -185,13 +240,13 @@ export async function sendCapiEvent(orderData: CapiOrderData) {
   const payload = {
     data: [
       {
-        event_name: 'Purchase',
+        event_name: data.eventName,
         event_time: Math.floor(Date.now() / 1000),
-        event_id: eventId,
+        event_id: data.eventId,
         action_source: 'website',
-        event_source_url: orderData.eventSourceUrl,
+        event_source_url: data.eventSourceUrl,
         user_data: userData,
-        custom_data: customData,
+        custom_data: Object.keys(customData).length > 0 ? customData : undefined,
       },
     ],
     access_token: accessToken,
@@ -205,38 +260,46 @@ export async function sendCapiEvent(orderData: CapiOrderData) {
     })
 
     const result = await response.json()
-
     const ok = Boolean(result.events_received)
-    await supabase.from('tracking_events').insert({
-      order_id: orderData.orderId,
-      product_id: orderData.productId,
-      producer_id: orderData.producerId,
-      platform: 'meta',
-      event_name: 'Purchase',
-      event_id: eventId,
-      status: ok ? 'sent' : 'failed',
-      response: result,
-      error_message: !ok ? (result.error?.message ?? JSON.stringify(result)) : null,
-    })
+
+    await logTrackingEvent(supabase, data, ok ? 'sent' : 'failed', ok ? null : (result.error?.message ?? JSON.stringify(result)), result)
 
     if (!ok) {
-      console.error('[Meta CAPI] Send failed:', result)
+      console.error(`[Meta CAPI] ${data.eventName} send failed:`, result)
     }
 
     return result
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    await supabase.from('tracking_events').insert({
-      order_id: orderData.orderId,
-      product_id: orderData.productId,
-      producer_id: orderData.producerId,
-      platform: 'meta',
-      event_name: 'Purchase',
-      event_id: eventId,
-      status: 'failed',
-      error_message: message.slice(0, 500),
-    })
-    console.error('[Meta CAPI] Send error:', message)
+    await logTrackingEvent(supabase, data, 'failed', message.slice(0, 500))
+    console.error(`[Meta CAPI] ${data.eventName} send error:`, message)
     return null
   }
 }
+
+async function logTrackingEvent(
+  supabase: ReturnType<typeof createAdminClient>,
+  data: CapiEventData,
+  status: string,
+  errorMessage: string | null,
+  response?: unknown
+) {
+  try {
+    await supabase.from('tracking_events').insert({
+      order_id: 'orderId' in data ? (data as CapiOrderData).orderId : null,
+      product_id: data.productId || null,
+      producer_id: data.producerId,
+      platform: 'meta',
+      event_name: data.eventName,
+      event_id: data.eventId,
+      status,
+      response: response || null,
+      error_message: errorMessage,
+    })
+  } catch (err) {
+    console.warn('[Meta CAPI] Failed to log tracking event:', err)
+  }
+}
+
+// Re-export para compatibilidade com código existente
+export type { CapiOrderData as CapiPurchaseData }

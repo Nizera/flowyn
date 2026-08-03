@@ -149,11 +149,14 @@ function buildTrackerJs(publicToken: string): string {
   var productId = window.__fl_product_id || null;
 
   // Dispara evento server-side via fetch no-cors (bypass ad blockers)
+  // Gera event_id único para dedup com pixel client-side (CAPI)
   function sendTrack(eventName){
     try {
+      var eventId = eventName + "_" + uuidv4();
       var payload = {
         t: TOKEN,
         event_name: eventName,
+        event_id: eventId,
         product_id: productId,
         url: window.location.href,
         referrer: document.referrer || null,
@@ -181,14 +184,52 @@ function buildTrackerJs(publicToken: string): string {
 
   sendTrack("page_view");
 
+  // Configuração de seletores CSS para capturar cliques (configurável pelo produtor)
+  // Ex: window.__fl_checkout_selectors = ".btn-comprar, [data-checkout]"
+  var CUSTOM_SELECTORS = window.__fl_checkout_selectors || null;
+
   // Intercepta clicks em links para o checkout da Flowyn (/checkout/...)
   // e injeta UTMs + session_id para preservar attribution cross-domain.
+  // Suporta: <a href>, <button data-href>, e seletores customizados.
   function inject(e){
     try {
-      var a = e.target.closest ? e.target.closest("a[href]") : null;
+      var target = e.target;
+
+      // 1. Tenta encontrar <a href> mais próximo
+      var a = target.closest ? target.closest("a[href]") : null;
+
+      // 2. Se não encontrou, tenta seletores customizados
+      if (!a && CUSTOM_SELECTORS && target.closest) {
+        a = target.closest(CUSTOM_SELECTORS);
+      }
+
+      // 3. Se não encontrou, tenta <button data-href>
+      if (!a && target.closest) {
+        a = target.closest("[data-href]");
+      }
+
       if (!a) return;
-      var href = a.getAttribute("href");
-      if (!href || (href.indexOf("flowyn.com/checkout/") === -1 && href.indexOf("/checkout/") === -1)) return;
+
+      // Obtém o href (de <a href> ou <button data-href>)
+      var href = a.getAttribute("href") || a.getAttribute("data-href");
+      if (!href) return;
+
+      // Verifica se é link para checkout
+      var isCheckout = href.indexOf("flowyn.com/checkout/") !== -1 ||
+                       href.indexOf("/checkout/") !== -1 ||
+                       href.indexOf("/r/") !== -1;
+      if (!isCheckout) return;
+
+      // Para links /r/ (redirect server-side), não precisa injetar UTMs
+      // (o endpoint /r/[token] já faz isso). Apenas garante fl_sid.
+      if (href.indexOf("/r/") !== -1) {
+        try {
+          var rUrl = new URL(href, window.location.origin);
+          if (!rUrl.searchParams.has("fl_sid")) rUrl.searchParams.set("fl_sid", SID);
+          a.setAttribute("href", rUrl.toString());
+        } catch(_) {}
+        return;
+      }
 
       var url;
       try { url = new URL(href, window.location.origin); }

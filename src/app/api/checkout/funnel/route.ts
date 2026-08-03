@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { getClientIp } from '@/lib/client-ip'
+import { sendCapiEvent } from '@/lib/meta-capi'
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,7 +10,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Request too large' }, { status: 413 })
     }
     const body = JSON.parse(rawBody)
-    const { plan_id, event_name, tracking_params, session_id } = body
+    const { plan_id, event_name, tracking_params, session_id, event_id, pixel_id } = body
 
     if (!plan_id || !event_name) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 })
@@ -83,6 +84,38 @@ export async function POST(req: NextRequest) {
     if (insertError) {
       console.error('Error inserting funnel event:', insertError)
       return NextResponse.json({ error: 'Failed to record event' }, { status: 500 })
+    }
+
+    // CAPI server-side (não-bloqueante)
+    const capiEventName = event_name === 'page_view' ? 'PageView' as const : 'InitiateCheckout' as const
+    const finalEventId = event_id || `${event_name}_${crypto.randomUUID()}`
+
+    // Resolve producer_id do produto
+    const { data: product } = await supabase
+      .from('products')
+      .select('owner_id')
+      .eq('id', plan.product_id)
+      .maybeSingle()
+
+    if (product?.owner_id) {
+      const userAgent = req.headers.get('user-agent') || ''
+      const eventSourceUrl = req.headers.get('referer') || `${req.nextUrl.origin}/checkout/${plan_id}`
+
+      // Envia CAPI de forma não-bloqueante
+      sendCapiEvent({
+        eventId: finalEventId,
+        eventName: capiEventName,
+        planId: plan_id,
+        pixelId: pixel_id,
+        productId: plan.product_id,
+        producerId: product.owner_id,
+        clientIp: ip,
+        userAgent,
+        eventSourceUrl,
+        trackingParams: tracking_params,
+      }).catch(err => {
+        console.error(`[Funnel CAPI] ${capiEventName} failed (non-blocking):`, err)
+      })
     }
 
     return NextResponse.json({ success: true })

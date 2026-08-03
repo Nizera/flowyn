@@ -204,6 +204,8 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
   // ── Meta CAPI (server-side) ──
   try {
     await sendCapiEvent({
+      eventId: `order_${orderId}`,
+      eventName: 'Purchase',
       orderId,
       planId: orderData.plan_id,
       productId: orderData.product_id,
