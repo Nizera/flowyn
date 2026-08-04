@@ -52,6 +52,7 @@ export default function DiagnosticsPage() {
   })
   const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [selectedCampaign, setSelectedCampaign] = useState<string>('')
+  const [selectedStatus, setSelectedStatus] = useState<string>('')
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
@@ -143,6 +144,18 @@ export default function DiagnosticsPage() {
               ))}
             </select>
           </div>
+          <div>
+            <label className="block text-xs text-white/40 mb-1">Status</label>
+            <select
+              value={selectedStatus}
+              onChange={e => setSelectedStatus(e.target.value)}
+              className="bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white"
+            >
+              <option value="">Todos</option>
+              <option value="paid">Pagos</option>
+              <option value="pending">Pendentes</option>
+            </select>
+          </div>
           <button
             onClick={fetchData}
             className="px-4 py-2 bg-[#7b3fff] text-white text-sm font-medium rounded hover:bg-[#6a2fe0] transition"
@@ -153,16 +166,21 @@ export default function DiagnosticsPage() {
 
         {/* KPI Cards */}
         {data && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <KpiCard
               label="Total de Pedidos"
               value={data.total_orders}
               color="text-white"
             />
             <KpiCard
+              label="Pagos"
+              value={data.untracked_list.filter(o => o.status === 'paid').length + data.tracked_orders}
+              color="text-green-400"
+            />
+            <KpiCard
               label="Rastreados"
               value={data.tracked_orders}
-              color="text-green-400"
+              color="text-emerald-400"
               sub={`${data.tracking_rate}%`}
             />
             <KpiCard
@@ -276,13 +294,18 @@ export default function DiagnosticsPage() {
         )}
 
         {/* Untracked Orders List */}
-        {data && data.untracked_list.length > 0 && (
+        {data && (() => {
+          const filtered = selectedStatus
+            ? data.untracked_list.filter(o => o.status === selectedStatus)
+            : data.untracked_list
+          if (filtered.length === 0) return null
+          return (
           <div className="space-y-3">
             <h2 className="text-lg font-semibold text-[#f5ecd0]">
-              Pedidos Não Rastreados ({data.untracked_list.length})
+              Pedidos Não Rastreados ({filtered.length}{selectedStatus ? ` de ${data.untracked_list.length}` : ''})
             </h2>
             <div className="space-y-1">
-              {data.untracked_list.map(order => (
+              {filtered.map(order => (
                 <div
                   key={order.order_id}
                   className="p-3 bg-white/5 border border-white/10 rounded cursor-pointer hover:bg-white/8 transition"
@@ -298,6 +321,15 @@ export default function DiagnosticsPage() {
                         R$ {order.amount.toFixed(2)}
                       </div>
                       <div className="text-xs text-white/40">{order.customer_name}</div>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                        order.status === 'paid'
+                          ? 'bg-green-500/20 text-green-300'
+                          : order.status === 'pending'
+                          ? 'bg-yellow-500/20 text-yellow-300'
+                          : 'bg-white/10 text-white/40'
+                      }`}>
+                        {order.status === 'paid' ? 'PAGO' : order.status === 'pending' ? 'PENDENTE' : order.status}
+                      </span>
                     </div>
                     <div className="text-right">
                       <div className="text-xs px-2 py-0.5 bg-red-500/20 text-red-300 rounded">
@@ -327,7 +359,8 @@ export default function DiagnosticsPage() {
               ))}
             </div>
           </div>
-        )}
+          )
+        })()}
 
         {/* Empty state */}
         {data && data.total_orders === 0 && (
