@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { sendCapiEvent } from '@/lib/meta-capi'
 
 // Redirect server-side: resolve public_token → pixel config, seta cookies
 // first-party no domínio da Flowyn com UTMs/click IDs, e redireciona pro checkout.
 //
-// Uso pelo produtor na landing externa em vez de link direto pro checkout:
-//   <a href="https://flowyn.com/r/PUBLIC_TOKEN?dest=/checkout/PLAN_ID&utm_source=...">
-//
-// Vantagens sobre a interceptação de clique no DOM (tracker.js inject()):
-// 1. Funciona com qualquer tipo de botão (<a>, <button>, SPA routing, etc.)
-// 2. Não depende de DOMContentLoaded ou captura de eventos
-// 3. Cookies são plantados no domínio Flowyn (first-party) antes do redirect
-// 4. Funciona mesmo se o tracker.js não estiver instalado na landing
+// Além do redirect, este endpoint também grava page_view em tracking_external_events
+// e dispara CAPI PageView server-side. Isso garante rastreamento mesmo que o beacon
+// do tracker.js seja bloqueado por Cloudflare/ad blockers no browser do visitante.
 
 export async function GET(
   req: NextRequest,
@@ -131,6 +127,78 @@ export async function GET(
       httpOnly: false,
     })
   }
+
+  // ── Server-side tracking (bypass Cloudflare) ──
+  // Grava page_view em tracking_external_events e dispara CAPI PageView.
+  // Isso garante rastreamento mesmo que o beacon do tracker.js seja bloqueado.
+  // Executa de forma não-bloqueante para não atrasar o redirect.
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || req.headers.get('x-real-ip')
+    || ''
+  const userAgent = req.headers.get('user-agent') || ''
+  const eventSourceUrl = req.headers.get('referer') || req.url
+
+  // Extrai product_id do dest (ex: /checkout/PLAN_UUID → plan UUID)
+  let productId: string | null = null
+  const destMatch = dest.match(/\/checkout\/([0-9a-f-]{36})/i)
+  if (destMatch) {
+    // Resolve plan → product_id
+    try {
+      const { data: plan } = await supabase
+        .from('plans')
+        .select('product_id')
+        .eq('id', destMatch[1])
+        .maybeSingle()
+      if (plan?.product_id) productId = plan.product_id
+    } catch {}
+  }
+
+  // Insert tracking_external_events (não-bloqueante)
+  supabase.from('tracking_external_events').insert({
+    user_id: pixel.user_id,
+    pixel_id: pixel.id,
+    product_id: productId,
+    event_name: 'page_view',
+    url: eventSourceUrl.slice(0, 2000),
+    referrer: req.headers.get('referer')?.slice(0, 2000) || null,
+    utm_source: trackingData.utm_source || null,
+    utm_medium: trackingData.utm_medium || null,
+    utm_campaign: trackingData.utm_campaign || null,
+    utm_content: trackingData.utm_content || null,
+    utm_term: trackingData.utm_term || null,
+    fbclid: trackingData.fbclid || null,
+    ttclid: trackingData.ttclid || null,
+    gclid: trackingData.gclid || null,
+    _fbp: fbp || null,
+    _fbc: fbc || null,
+    client_ip: ip,
+    user_agent: userAgent.slice(0, 500),
+    session_id: sid,
+  }).then(({ error }) => {
+    if (error) console.error('[/r/] tracking_external_events insert failed:', error.message)
+  })
+
+  // CAPI PageView (não-bloqueante)
+  const trackingParams: Record<string, string> = {}
+  for (const key of [...utmKeys, ...clickKeys]) {
+    if (trackingData[key]) trackingParams[key] = trackingData[key]
+  }
+  if (fbp) trackingParams._fbp = fbp
+  if (fbc) trackingParams._fbc = fbc
+
+  sendCapiEvent({
+    eventId: `pv_r_${crypto.randomUUID()}`,
+    eventName: 'PageView',
+    pixelId: pixel.id,
+    productId: productId || undefined,
+    producerId: pixel.user_id,
+    clientIp: ip,
+    userAgent,
+    eventSourceUrl,
+    trackingParams: Object.keys(trackingParams).length > 0 ? trackingParams : null,
+  }).catch(err => {
+    console.error('[/r/] CAPI PageView failed (non-blocking):', err)
+  })
 
   return response
 }
