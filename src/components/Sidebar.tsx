@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { ThemeToggle } from './ThemeToggle'
 import { Logo } from './Logo'
+import { FlowynIcon } from './FlowynIcon'
 
 type NavItem = {
   href: string
