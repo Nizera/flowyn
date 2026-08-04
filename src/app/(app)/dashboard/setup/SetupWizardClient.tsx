@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, Circle, ArrowRight, ArrowLeft, ExternalLink, Copy, Check, AlertTriangle, Loader2 } from 'lucide-react'
 
@@ -18,19 +18,40 @@ const STEPS: Step[] = [
   { id: 'verify', title: 'Verificar', description: 'Teste se o rastreamento está funcionando' },
 ]
 
+const STORAGE_KEY = 'flowyn_setup_wizard'
+
+function loadPersisted() {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
+function persist(data: Record<string, string>) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) } catch {}
+}
+
 export default function SetupWizardPage() {
   const router = useRouter()
-  const [currentStep, setCurrentStep] = useState(0)
-  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
+  const persisted = useMemo(() => loadPersisted(), [])
+  const [currentStep, setCurrentStep] = useState(persisted?.step ? Number(persisted.step) : 0)
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(() => {
+    if (persisted?.completed) return new Set(persisted.completed.map(Number))
+    return new Set()
+  })
   const [loading, setLoading] = useState(true)
 
   // Step data
   const [hasMetaConnection, setHasMetaConnection] = useState(false)
   const [accounts, setAccounts] = useState<Array<{ account_id: string; name: string }>>([])
-  const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(new Set())
-  const [pixelId, setPixelId] = useState('')
-  const [pixelName, setPixelName] = useState('')
-  const [capiToken, setCapiToken] = useState('')
+  const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(() => {
+    if (persisted?.accounts) return new Set(persisted.accounts)
+    return new Set()
+  })
+  const [pixelId, setPixelId] = useState(persisted?.pixelId || '')
+  const [pixelName, setPixelName] = useState(persisted?.pixelName || '')
+  const [capiToken, setCapiToken] = useState(persisted?.capiToken || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -62,6 +83,18 @@ export default function SetupWizardPage() {
     }
     checkConnection()
   }, [])
+
+  // Persist wizard state
+  useEffect(() => {
+    persist({
+      step: String(currentStep),
+      completed: Array.from(completedSteps).map(String),
+      accounts: Array.from(selectedAccounts),
+      pixelId,
+      pixelName,
+      capiToken,
+    })
+  }, [currentStep, completedSteps, selectedAccounts, pixelId, pixelName, capiToken])
 
   function goNext() {
     if (currentStep < STEPS.length - 1) {
@@ -488,7 +521,7 @@ export default function SetupWizardPage() {
                 <ArrowLeft className="h-4 w-4" /> Voltar
               </button>
               <button
-                onClick={() => router.push('/dashboard/diagnostics')}
+                onClick={() => { try { localStorage.removeItem(STORAGE_KEY) } catch {} ; router.push('/dashboard/diagnostics') }}
                 className="flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white transition hover:bg-primary/90"
               >
                 Ver Diagnóstico <ArrowRight className="h-4 w-4" />

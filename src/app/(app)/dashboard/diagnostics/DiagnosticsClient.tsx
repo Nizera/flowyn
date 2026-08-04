@@ -134,9 +134,9 @@ export default function DiagnosticsPage() {
             <select
               value={selectedCampaign}
               onChange={e => setSelectedCampaign(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white"
+              className="bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white appearance-none cursor-pointer"
             >
-              <option value="">Todas as campanhas</option>
+              <option value="" className="bg-[#1a1035] text-white">Todas as campanhas</option>
               {data?.by_campaign.map(c => (
                 <option key={c.campaign_id} value={c.campaign_id}>
                   {c.campaign_name}
@@ -149,11 +149,11 @@ export default function DiagnosticsPage() {
             <select
               value={selectedStatus}
               onChange={e => setSelectedStatus(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white"
+              className="bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white appearance-none cursor-pointer"
             >
-              <option value="">Todos</option>
-              <option value="paid">Pagos</option>
-              <option value="pending">Pendentes</option>
+              <option value="" className="bg-[#1a1035] text-white">Todos</option>
+              <option value="paid" className="bg-[#1a1035] text-white">Pagos</option>
+              <option value="pending" className="bg-[#1a1035] text-white">Pendentes</option>
             </select>
           </div>
           <button
