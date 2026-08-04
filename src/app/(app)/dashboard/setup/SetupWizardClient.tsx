@@ -47,7 +47,11 @@ export default function SetupWizardPage() {
           const existing = data.existing || []
           if (existing.length > 0) {
             setSelectedAccounts(new Set(existing.map((e: any) => e.ad_account_id)))
-            setCompletedSteps(prev => new Set([...prev, 0, 1]))
+            const completed = new Set([0, 1])
+            setCompletedSteps(completed)
+            // Auto-skip to first incomplete step
+            const firstIncomplete = STEPS.findIndex((_, i) => !completed.has(i))
+            if (firstIncomplete >= 0) setCurrentStep(firstIncomplete)
           }
         }
       } catch {

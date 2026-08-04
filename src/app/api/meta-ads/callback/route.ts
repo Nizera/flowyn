@@ -101,6 +101,6 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.redirect(
-    new URL('/dashboard/ads/setup', req.url)
+    new URL('/dashboard/setup', req.url)
   )
 }
