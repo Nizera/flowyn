@@ -71,6 +71,7 @@ interface DashboardData {
   recent_sales?: Sale[]
   spend_over_time: Array<{ date: string; spend: number; revenue: number }>
   payment_breakdown?: PaymentBreakdown[]
+  campaigns?: Array<{ campaign_id: string; campaign_name: string; spend: number; impressions: number; clicks: number; cpc: number; cpm: number }>
 }
 
 const EMPTY_SUMMARY: Summary = {
