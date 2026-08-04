@@ -112,7 +112,7 @@ export async function GET(req: NextRequest) {
         let metaUrl: string | null = `${GRAPH_API}/act_${firstAccountId}/insights?fields=campaign_id,clicks,actions&level=campaign&time_increment=1&time_range={'since':'${startDate}','until':'${endDate}'}&limit=500&access_token=${accessToken}`
 
         while (metaUrl) {
-          const metaRes = await fetch(metaUrl)
+          const metaRes: Response = await fetch(metaUrl)
           const metaData = await metaRes.json()
           if (metaData.error) break
           if (metaData.data) {
