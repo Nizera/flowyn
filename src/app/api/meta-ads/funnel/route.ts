@@ -262,14 +262,35 @@ export async function GET(req: NextRequest) {
       .gte('created_at', startDateTs)
       .lte('created_at', endDateTs)
 
+    // Also fetch campaign names to match utm_campaign (name) against selected IDs
+    const { data: campNames } = await admin
+      .from('campaigns')
+      .select('campaign_id, name')
+      .eq('user_id', user.id)
+      .in('campaign_id', campaignIdsFilter || [])
+
     const selectedSet = new Set(campaignIdsFilter)
-    const matched = (filteredOrders || []).filter(o => {
-      const tp = o.tracking_params as Record<string, string> | null
+    const nameToId = new Map<string, string>()
+    for (const c of campNames || []) {
+      if (c.name && c.campaign_id) nameToId.set(c.name.toLowerCase().trim(), c.campaign_id)
+    }
+
+    function matchFunnelOrder(tp: Record<string, string> | null): boolean {
       if (!tp) return false
-      if (tp.utm_campaign && selectedSet.has(tp.utm_campaign)) return true
+      if (tp.utm_campaign) {
+        if (selectedSet.has(tp.utm_campaign)) return true
+        const byName = nameToId.get(tp.utm_campaign.toLowerCase().trim())
+        if (byName && selectedSet.has(byName)) return true
+      }
       if (tp.src && selectedSet.has(tp.src)) return true
       if (tp.utm_source && tp.utm_medium && selectedSet.has(`${tp.utm_source}_${tp.utm_medium}`)) return true
+      if ((tp.fbclid || tp._fbc) && selectedSet.size > 0) return true
       return false
+    }
+
+    const matched = (filteredOrders || []).filter(o => {
+      const tp = o.tracking_params as Record<string, string> | null
+      return matchFunnelOrder(tp)
     })
 
     filteredSalesInitiated = matched.length
