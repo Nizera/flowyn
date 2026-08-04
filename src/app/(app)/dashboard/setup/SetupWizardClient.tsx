@@ -28,7 +28,7 @@ function loadPersisted() {
   } catch { return null }
 }
 
-function persist(data: Record<string, string>) {
+function persist(data: Record<string, unknown>) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) } catch {}
 }
 

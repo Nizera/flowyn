@@ -292,6 +292,27 @@ export function PixelManager({ initialPixels, appUrl }: { initialPixels: Pixel[]
                       Assim as UTMs e o fbclid chegam certinho, mesmo que o construtor de página não permita edição de href.
                     </p>
                   </div>
+
+                  {/* Passo 3: Producer Script */}
+                  <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/50 p-5">
+                    <div className="mb-3 flex items-center gap-2">
+                      <Code2 className="h-4 w-4 text-emerald-600" />
+                      <h4 className="text-sm font-semibold text-emerald-900">Passo 3 — Injetar UTMs automaticamente na landing</h4>
+                    </div>
+                    <p className="mb-3 text-xs leading-6 text-emerald-800/80">
+                      Adicione este script na <strong>{'<head>'}</strong> da sua landing page.
+                      Ele lê as UTMs da URL e injeta nos links que levam ao checkout, garantindo rastreamento mesmo se o visitante navegar entre páginas.
+                    </p>
+                    <div className="mb-3 rounded-lg bg-slate-900 p-3 font-mono text-xs text-slate-300">
+                      <span className="text-slate-500">&lt;!-- FlowynPay producer script — injeta UTMs nos CTAs --&gt;</span>
+                      <br />
+                      &lt;script src=&quot;{appUrl}/api/producer-script&quot; defer&gt;&lt;/script&gt;
+                    </div>
+                    <p className="text-xs text-emerald-800/70">
+                      <strong>Como funciona:</strong> Lê UTMs da URL ou cookie, e injeta em todos os links {'<a href="/r/...">'} da página.
+                      Funciona com links adicionados dinamicamente (MutationObserver). Cookie dura 30 dias.
+                    </p>
+                  </div>
                 </>
               )
             })()}
