@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
       .map(c => c.campaign_id)
   )
 
-  // 2. Get total clicks from ad_insights_cache (campaign level)
+  // 2. Get total clicks + landing_page_views from ad_insights_cache or Meta API
   const insightsQuery = supabase
     .from('ad_insights_cache')
     .select('clicks, campaign_id')
@@ -98,38 +98,44 @@ export async function GET(req: NextRequest) {
 
   let totalClicks = insights.reduce((sum: number, i: { clicks?: number }) => sum + (i.clicks || 0), 0)
 
-  // Fallback: if cache is empty, fetch clicks from Meta API
-  if (totalClicks === 0 && ownedAccountIds.length > 0) {
+  // Landing page views from Meta API (sempre buscar, não só como fallback)
+  let metaLandingPageViews = 0
+
+  if (ownedAccountIds.length > 0) {
     try {
       const { getDecryptedToken } = await import('@/lib/meta-oauth')
       const { GRAPH_API } = await import('@/lib/meta-graph-api')
       const firstAccountId = ownedAccountIds[0]
       const accessToken = await getDecryptedToken(firstAccountId, user.id)
       if (accessToken) {
-        const metaRes = await fetch(
-          `${GRAPH_API}/act_${firstAccountId}/insights?fields=clicks,impressions,spend&level=campaign&time_increment=1&time_range={'since':'${startDate}','until':'${endDate}'}&limit=500&access_token=${accessToken}`
-        )
-        const metaData = await metaRes.json()
-        if (metaData.data) {
-          const filtered = campaignIdsFilter && campaignIdsFilter.length > 0
-            ? metaData.data.filter((r: any) => campaignIdsFilter.includes(r.campaign_id))
-            : metaData.data
-          const metaClicks = filtered.reduce((sum: number, r: any) => sum + (parseInt(r.clicks || '0') || 0), 0)
-          if (metaClicks > 0) {
-            totalClicks = metaClicks
-          } else {
-            // Try ad-level without time_increment
-            const adRes = await fetch(
-              `${GRAPH_API}/act_${firstAccountId}/insights?fields=clicks,impressions,spend&level=ad&time_range={'since':'${startDate}','until':'${endDate}'}&limit=500&access_token=${accessToken}`
-            )
-            const adData = await adRes.json()
-            if (adData.data) {
-              const adFiltered = campaignIdsFilter && campaignIdsFilter.length > 0
-                ? adData.data.filter((r: any) => campaignIdsFilter.includes(r.campaign_id))
-                : adData.data
-              totalClicks = adFiltered.reduce((sum: number, r: any) => sum + (parseInt(r.clicks || '0') || 0), 0)
+        // Buscar insights com actions para extrair landing_page_view
+        let metaUrl: string | null = `${GRAPH_API}/act_${firstAccountId}/insights?fields=campaign_id,clicks,actions&level=campaign&time_increment=1&time_range={'since':'${startDate}','until':'${endDate}'}&limit=500&access_token=${accessToken}`
+
+        while (metaUrl) {
+          const metaRes = await fetch(metaUrl)
+          const metaData = await metaRes.json()
+          if (metaData.error) break
+          if (metaData.data) {
+            const filtered = campaignIdsFilter && campaignIdsFilter.length > 0
+              ? metaData.data.filter((r: any) => campaignIdsFilter.includes(r.campaign_id))
+              : metaData.data
+            for (const row of filtered) {
+              // Extrair landing_page_view do array actions
+              if (row.actions && Array.isArray(row.actions)) {
+                for (const action of row.actions) {
+                  if (action.action_type === 'landing_page_view') {
+                    metaLandingPageViews += parseInt(action.value || '0') || 0
+                  }
+                }
+              }
+              // clicks fallback (se cache estiver vazio)
+              if (totalClicks === 0) {
+                totalClicks += parseInt(row.clicks || '0') || 0
+              }
             }
           }
+          metaUrl = metaData.paging?.next || null
+          if (metaUrl) await new Promise(r => setTimeout(r, 200))
         }
       }
     } catch {
@@ -158,14 +164,11 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  // 4. Get funnel_events counts (page_view, initiate_checkout)
-  // CORREÇÃO (tracking cross-domain + bug #28/#29):
-  // - tracking_external_events agora filtra por product_id (antes filtrava por user_id, inflando métrica)
-  // - tracking_external_events filtra session_id NOT IN (sessions que já tiveram funnel_events.page_view
-  //   no mesmo período) para evitar dupla contagem (landing externa + checkout Flowyn = mesmo visitor)
+  // 4. Get landing page views: preferir Meta API (mais preciso), fallback para tracking próprio
   const startDateTs = `${startDate}T00:00:00`
   const endDateTs = `${endDate}T23:59:59`
 
+  // Fallback: contar de tracking_external_events + funnel_events (se Meta API não retornar)
   const { count: pageViewsCount } = await supabase
     .from('funnel_events')
     .select('*', { count: 'exact', head: true })
@@ -174,10 +177,6 @@ export async function GET(req: NextRequest) {
     .gte('created_at', startDateTs)
     .lte('created_at', endDateTs)
 
-  // PageView externos (landing do produtor via tracker.js) — filtrados por product_id
-  // para não inflar com eventos de outros produtos do mesmo produtor.
-  // Para evitar dupla contagem: contamos todos os externos e subtraímos os que
-  // já têm page_view correspondente em funnel_events (mesmo session_id).
   const { count: externalPageViewsCount } = await supabase
     .from('tracking_external_events')
     .select('*', { count: 'exact', head: true })
@@ -187,7 +186,6 @@ export async function GET(req: NextRequest) {
     .gte('created_at', startDateTs)
     .lte('created_at', endDateTs)
 
-  // Sessions que já dispararam page_view em funnel_events (checkout Flowyn)
   const { data: checkoutSessions } = await supabase
     .from('funnel_events')
     .select('session_id')
@@ -201,7 +199,6 @@ export async function GET(req: NextRequest) {
     (checkoutSessions || []).map((s: { session_id: string }) => s.session_id).filter(Boolean)
   )
 
-  // Conta externos sem session_id duplicado no checkout
   let externalUniqueCount = 0
   if (externalPageViewsCount && externalPageViewsCount > 0) {
     const { data: externalEvents } = await supabase
@@ -218,6 +215,11 @@ export async function GET(req: NextRequest) {
     ).length
   }
 
+  const ownTrackingPageViews = (pageViewsCount || 0) + externalUniqueCount
+
+  // Usar Meta API landing_page_view se disponível (mais preciso), senão fallback
+  const pageViews = metaLandingPageViews > 0 ? metaLandingPageViews : ownTrackingPageViews
+
   const { count: initiateCheckoutsCount } = await supabase
     .from('funnel_events')
     .select('*', { count: 'exact', head: true })
@@ -226,7 +228,6 @@ export async function GET(req: NextRequest) {
     .gte('created_at', startDateTs)
     .lte('created_at', endDateTs)
 
-  const pageViews = (pageViewsCount || 0) + externalUniqueCount
   const initiateCheckouts = initiateCheckoutsCount || 0
 
   // 5. Get orders count (pending + paid = sales_initiated, only paid = sales_approved)
