@@ -170,7 +170,7 @@ export async function GET(req: NextRequest) {
     .from('funnel_events')
     .select('*', { count: 'exact', head: true })
     .eq('event_name', 'page_view')
-    .in('product_id', productIds)
+    .or(`product_id.in.(${productIds.join(',')}),product_id.is.null`)
     .gte('created_at', startDateTs)
     .lte('created_at', endDateTs)
 
@@ -183,7 +183,7 @@ export async function GET(req: NextRequest) {
     .select('*', { count: 'exact', head: true })
     .eq('event_name', 'page_view')
     .eq('user_id', user.id)
-    .in('product_id', productIds)
+    .or(`product_id.in.(${productIds.join(',')}),product_id.is.null`)
     .gte('created_at', startDateTs)
     .lte('created_at', endDateTs)
 
@@ -192,7 +192,7 @@ export async function GET(req: NextRequest) {
     .from('funnel_events')
     .select('session_id')
     .eq('event_name', 'page_view')
-    .in('product_id', productIds)
+    .or(`product_id.in.(${productIds.join(',')}),product_id.is.null`)
     .gte('created_at', startDateTs)
     .lte('created_at', endDateTs)
     .not('session_id', 'is', null)
@@ -209,7 +209,7 @@ export async function GET(req: NextRequest) {
       .select('session_id')
       .eq('event_name', 'page_view')
       .eq('user_id', user.id)
-      .in('product_id', productIds)
+      .or(`product_id.in.(${productIds.join(',')}),product_id.is.null`)
       .gte('created_at', startDateTs)
       .lte('created_at', endDateTs)
 
@@ -222,7 +222,7 @@ export async function GET(req: NextRequest) {
     .from('funnel_events')
     .select('*', { count: 'exact', head: true })
     .eq('event_name', 'initiate_checkout')
-    .in('product_id', productIds)
+    .or(`product_id.in.(${productIds.join(',')}),product_id.is.null`)
     .gte('created_at', startDateTs)
     .lte('created_at', endDateTs)
 

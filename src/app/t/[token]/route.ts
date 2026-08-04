@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { getAppUrl } from '@/lib/app-url'
 
 // Serve o tracker.js customizado para cada pixel (lookup pelo public_token).
 // URL publica: https://flowyn.com/t/PUBLIC_TOKEN.js
@@ -50,7 +51,8 @@ export async function GET(
   // também o snippet oficial `<!-- Meta Pixel Code -->` da Meta diretamente no HTML.
   // Escopo dessa entrega: tracking server-side + UTM preservation.
 
-  const js = buildTrackerJs(token)
+  const appUrl = getAppUrl()
+  const js = buildTrackerJs(token, appUrl)
 
   return new NextResponse(js, {
     status: 200,
@@ -62,7 +64,7 @@ export async function GET(
   })
 }
 
-function buildTrackerJs(publicToken: string): string {
+function buildTrackerJs(publicToken: string, appUrl: string): string {
   return `/* FlowynPay cross-domain tracker v1 — public_token=${publicToken} */
 (function(){
   "use strict";
@@ -70,8 +72,8 @@ function buildTrackerJs(publicToken: string): string {
   window.__fl_tracker = true;
 
   var TOKEN = ${JSON.stringify(publicToken)};
-  var ENDPOINT = "https://flowyn.com/api/tr/track";
-  var APP_ORIGIN = "https://flowyn.com";
+  var ENDPOINT = ${JSON.stringify(appUrl)} + "/api/tr/track";
+  var APP_ORIGIN = ${JSON.stringify(appUrl)};
 
   var UTM_KEYS = ["utm_source","utm_medium","utm_campaign","utm_content","utm_term","src","sck"];
   var CLICK_KEYS = ["fbclid","ttclid","gclid"];
@@ -236,6 +238,9 @@ function buildTrackerJs(publicToken: string): string {
               rUrl.searchParams.set(prop, trackingParams[prop]);
             }
           }
+          // Injeta _fbp/_fbc cross-domain (cookies ficam no domínio da landing)
+          if (fbp && !rUrl.searchParams.has("_fbp")) rUrl.searchParams.set("_fbp", fbp);
+          if (fbc && !rUrl.searchParams.has("_fbc")) rUrl.searchParams.set("_fbc", fbc);
           if (!rUrl.searchParams.has("fl_sid")) rUrl.searchParams.set("fl_sid", SID);
           a.setAttribute("href", rUrl.toString());
         } catch(_) {}

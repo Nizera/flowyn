@@ -110,5 +110,27 @@ export async function GET(
     })
   }
 
+  // Planta _fbp/_fbc no domínio Flowyn (recebidos via query params do tracker.js)
+  const fbp = searchParams.get('_fbp')
+  const fbc = searchParams.get('_fbc')
+  if (fbp) {
+    response.cookies.set('_fbp', fbp, {
+      path: '/',
+      maxAge: 90 * 24 * 60 * 60,
+      sameSite: 'lax',
+      secure: true,
+      httpOnly: false,
+    })
+  }
+  if (fbc) {
+    response.cookies.set('_fbc', fbc, {
+      path: '/',
+      maxAge: 90 * 24 * 60 * 60,
+      sameSite: 'lax',
+      secure: true,
+      httpOnly: false,
+    })
+  }
+
   return response
 }
