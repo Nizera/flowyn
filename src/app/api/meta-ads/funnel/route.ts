@@ -78,10 +78,10 @@ export async function GET(req: NextRequest) {
       .map(c => c.campaign_id)
   )
 
-  // 2. Get total clicks + landing_page_views from ad_insights_cache or Meta API
+  // 2. Get clicks + landing_page_views from ad_insights_cache (sync already stores landing_page_views)
   const insightsQuery = supabase
     .from('ad_insights_cache')
-    .select('clicks, campaign_id')
+    .select('clicks, landing_page_views, campaign_id')
     .eq('insight_level', 'campaign')
     .gte('date', startDate)
     .lte('date', endDate)
@@ -97,54 +97,7 @@ export async function GET(req: NextRequest) {
   }
 
   let totalClicks = insights.reduce((sum: number, i: { clicks?: number }) => sum + (i.clicks || 0), 0)
-
-  // Landing page views from Meta API (sempre buscar, não só como fallback)
-  let metaLandingPageViews = 0
-
-  if (ownedAccountIds.length > 0) {
-    try {
-      const { getDecryptedToken } = await import('@/lib/meta-oauth')
-      const { GRAPH_API } = await import('@/lib/meta-graph-api')
-      const firstAccountId = ownedAccountIds[0]
-      const accessToken = await getDecryptedToken(firstAccountId, user.id)
-      if (accessToken) {
-        // Buscar insights em nível de anúncio (landing_page_view só existe em level=ad)
-        const baseParams = `time_increment=1&time_range={'since':'${startDate}','until':'${endDate}'}&limit=500&access_token=${accessToken}`
-        const campaignParam = campaignIdsFilter && campaignIdsFilter.length > 0 ? `&campaign_ids=[${campaignIdsFilter.map(id => `"${id}"`).join(',')}]` : ''
-
-        let metaUrl: string | null = `${GRAPH_API}/act_${firstAccountId}/insights?fields=campaign_id,clicks,actions&level=ad&${baseParams}${campaignParam}`
-
-        while (metaUrl) {
-          const metaRes: Response = await fetch(metaUrl)
-          const metaData = await metaRes.json()
-          if (metaData.error) {
-            console.error('[funnel] Meta API error:', JSON.stringify(metaData.error))
-            break
-          }
-          if (metaData.data) {
-            for (const row of metaData.data) {
-              if (row.actions && Array.isArray(row.actions)) {
-                for (const action of row.actions) {
-                  if (action.action_type === 'landing_page_view') {
-                    metaLandingPageViews += parseInt(action.value || '0') || 0
-                  }
-                }
-              }
-              if (totalClicks === 0) {
-                totalClicks += parseInt(row.clicks || '0') || 0
-              }
-            }
-          }
-          metaUrl = metaData.paging?.next || null
-          if (metaUrl) await new Promise(r => setTimeout(r, 200))
-        }
-
-        console.log('[funnel] Meta API landing_page_view:', metaLandingPageViews, 'clicks:', totalClicks)
-      }
-    } catch (e) {
-      console.error('[funnel] Meta API exception:', e)
-    }
-  }
+  const cachedLandingPageViews = insights.reduce((sum: number, i: { landing_page_views?: number }) => sum + (i.landing_page_views || 0), 0)
 
   // 3. Get user's products
   const { data: products } = await supabase
@@ -220,8 +173,8 @@ export async function GET(req: NextRequest) {
 
   const ownTrackingPageViews = (pageViewsCount || 0) + externalUniqueCount
 
-  // Usar Meta API landing_page_view se disponível (mais preciso), senão fallback
-  const pageViews = metaLandingPageViews > 0 ? metaLandingPageViews : ownTrackingPageViews
+  // Usar landing_page_views do cache (sync já busca da Meta API), senão fallback para tracking próprio
+  const pageViews = cachedLandingPageViews > 0 ? cachedLandingPageViews : ownTrackingPageViews
 
   const { count: initiateCheckoutsCount } = await supabase
     .from('funnel_events')
