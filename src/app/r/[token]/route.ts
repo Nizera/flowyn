@@ -61,6 +61,25 @@ export async function GET(
     }
   }
 
+  // 3. Fallback: extrai UTMs do header Referer (landing page URL com UTMs)
+  //    Quando tracker.js é bloqueado (ad blocker/JS error), o inject() não roda
+  //    e as UTMs não chegam via query string. O Referer ainda contém a URL
+  //    original da landing com os UTMs do Meta Ads.
+  if (Object.keys(trackingData).length === 0) {
+    const referer = req.headers.get('referer')
+    if (referer) {
+      try {
+        const refererUrl = new URL(referer)
+        for (const key of [...utmKeys, ...clickKeys]) {
+          const val = refererUrl.searchParams.get(key)
+          if (val && !trackingData[key]) {
+            trackingData[key] = val
+          }
+        }
+      } catch {}
+    }
+  }
+
   // Session ID
   const existingSid = req.cookies.get('_fl_sid')?.value
   const sid = existingSid || crypto.randomUUID()
