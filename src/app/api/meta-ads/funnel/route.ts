@@ -111,7 +111,7 @@ export async function GET(req: NextRequest) {
           metaUrl += `&campaign_ids=[${campaignIdsFilter.map(id => `"${id}"`).join(',')}]`
         }
         while (metaUrl) {
-          const res = await fetch(metaUrl)
+          const res: Response = await fetch(metaUrl)
           const data = await res.json()
           if (data.error) break
           if (data.data) {
