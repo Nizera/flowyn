@@ -41,6 +41,9 @@ export interface CapiOrderData extends CapiEventData {
 // Dados para eventos de funil (PageView, ViewContent, InitiateCheckout)
 export interface CapiFunnelData extends CapiEventData {
   eventName: 'PageView' | 'ViewContent' | 'InitiateCheckout'
+  customerEmail?: string
+  customerPhone?: string
+  customerName?: string
 }
 
 function sha256(data: string): string {
@@ -187,21 +190,36 @@ export async function sendCapiEvent(data: CapiOrderData | CapiFunnelData) {
     return
   }
 
-  // Monta user_data (PII hash)
+  // Monta user_data (PII hash) — Advanced Matching para todos os eventos
   const userData: Record<string, unknown> = {
     client_ip_address: data.clientIp,
     client_user_agent: data.userAgent,
   }
 
-  // Para Purchase, inclui PII completa
+  // Extrair dados do cliente (Purchase ou funnel com dados opcionais)
+  let customerEmail = ''
+  let customerPhone = ''
+  let customerName = ''
+
   if (data.eventName === 'Purchase' && 'customerEmail' in data) {
     const purchaseData = data as CapiOrderData
-    const cleanPhone = normalizePhone(purchaseData.customerPhone)
-    const cleanName = normalizeName(purchaseData.customerName)
-    const nameParts = cleanName.split(/\s+/)
+    customerEmail = purchaseData.customerEmail || ''
+    customerPhone = purchaseData.customerPhone || ''
+    customerName = purchaseData.customerName || ''
+  } else if ('customerEmail' in data) {
+    const funnelData = data as CapiFunnelData
+    customerEmail = funnelData.customerEmail || ''
+    customerPhone = funnelData.customerPhone || ''
+    customerName = funnelData.customerName || ''
+  }
 
-    if (purchaseData.customerEmail) userData.em = [sha256(purchaseData.customerEmail)]
-    if (cleanPhone) userData.ph = [sha256(cleanPhone)]
+  // Advanced Matching: incluir PII em TODOS os eventos quando disponível
+  if (customerEmail) userData.em = [sha256(customerEmail)]
+  const cleanPhone = normalizePhone(customerPhone)
+  if (cleanPhone) userData.ph = [sha256(cleanPhone)]
+  const cleanName = normalizeName(customerName)
+  if (cleanName) {
+    const nameParts = cleanName.split(/\s+/)
     if (nameParts[0]) userData.fn = [sha256(nameParts[0])]
     if (nameParts.slice(1).join(' ')) userData.ln = [sha256(nameParts.slice(1).join(' '))]
   }

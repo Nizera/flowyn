@@ -22,6 +22,7 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith('/t/') && pathname.endsWith('.js')) return NextResponse.next()
   if (pathname.startsWith('/r/')) return NextResponse.next()
   if (pathname === '/api/tr/track') return NextResponse.next()
+  if (pathname === '/api/producer-script') return NextResponse.next()
 
   const supabaseResponse = NextResponse.next({ request: req })
 
