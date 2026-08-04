@@ -77,6 +77,14 @@ export function FunnelChart({ adAccountId, dateRange, selectedCampaigns }: { adA
         <div className="py-8 text-center text-sm text-muted">
           {error || 'Nenhum dado de funil disponível'}
         </div>
+        {error && (
+          <button
+            onClick={() => { setError(null); setLoading(true); window.location.reload() }}
+            className="mx-auto block text-xs font-bold text-primary hover:underline"
+          >
+            Tentar novamente
+          </button>
+        )}
       </div>
     )
   }
@@ -129,6 +137,9 @@ export function FunnelChart({ adAccountId, dateRange, selectedCampaigns }: { adA
                     {stage.icon}
                   </div>
                   <span className="text-[11px] font-bold text-foreground">{stage.name}</span>
+                {i === stages.length - 1 && stage.value === 0 && stages.some(s => s.value > 0) && (
+                  <span className="text-[9px] text-muted ml-1">— aguardando confirmações</span>
+                )}
                 </div>
 
                 <span className="text-xs font-black relative z-10 text-foreground font-mono">

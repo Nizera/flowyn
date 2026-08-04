@@ -99,6 +99,40 @@ export async function GET(req: NextRequest) {
   let totalClicks = insights.reduce((sum: number, i: { clicks?: number }) => sum + (i.clicks || 0), 0)
   const cachedLandingPageViews = insights.reduce((sum: number, i: { landing_page_views?: number }) => sum + (i.landing_page_views || 0), 0)
 
+  // Fallback: if cache is empty (sync hasn't run), fetch clicks from Meta API
+  if (totalClicks === 0 && cachedLandingPageViews === 0 && ownedAccountIds.length > 0) {
+    try {
+      const { getDecryptedToken } = await import('@/lib/meta-oauth')
+      const { GRAPH_API } = await import('@/lib/meta-graph-api')
+      const accessToken = await getDecryptedToken(ownedAccountIds[0], user.id)
+      if (accessToken) {
+        let metaUrl: string | null = `${GRAPH_API}/act_${ownedAccountIds[0]}/insights?fields=campaign_id,clicks,actions&level=campaign&time_increment=1&time_range={'since':'${startDate}','until':'${endDate}'}&limit=500&access_token=${accessToken}`
+        if (campaignIdsFilter && campaignIdsFilter.length > 0) {
+          metaUrl += `&campaign_ids=[${campaignIdsFilter.map(id => `"${id}"`).join(',')}]`
+        }
+        while (metaUrl) {
+          const res = await fetch(metaUrl)
+          const data = await res.json()
+          if (data.error) break
+          if (data.data) {
+            for (const row of data.data) {
+              totalClicks += parseInt(row.clicks || '0') || 0
+              if (row.actions && Array.isArray(row.actions)) {
+                for (const action of row.actions) {
+                  if (action.action_type === 'landing_page_view') {
+                    cachedLandingPageViews += parseInt(action.value || '0') || 0
+                  }
+                }
+              }
+            }
+          }
+          metaUrl = data.paging?.next || null
+          if (metaUrl) await new Promise(r => setTimeout(r, 200))
+        }
+      }
+    } catch {}
+  }
+
   // 3. Get user's products
   const { data: products } = await supabase
     .from('products')
@@ -129,7 +163,7 @@ export async function GET(req: NextRequest) {
     .from('funnel_events')
     .select('*', { count: 'exact', head: true })
     .eq('event_name', 'page_view')
-    .or(`product_id.in.(${productIds.join(',')}),product_id.is.null`)
+    .in('product_id', productIds)
     .gte('created_at', startDateTs)
     .lte('created_at', endDateTs)
 
@@ -138,7 +172,7 @@ export async function GET(req: NextRequest) {
     .select('*', { count: 'exact', head: true })
     .eq('event_name', 'page_view')
     .eq('user_id', user.id)
-    .or(`product_id.in.(${productIds.join(',')}),product_id.is.null`)
+    .in('product_id', productIds)
     .gte('created_at', startDateTs)
     .lte('created_at', endDateTs)
 
@@ -146,7 +180,7 @@ export async function GET(req: NextRequest) {
     .from('funnel_events')
     .select('session_id')
     .eq('event_name', 'page_view')
-    .or(`product_id.in.(${productIds.join(',')}),product_id.is.null`)
+    .in('product_id', productIds)
     .gte('created_at', startDateTs)
     .lte('created_at', endDateTs)
     .not('session_id', 'is', null)
@@ -162,7 +196,7 @@ export async function GET(req: NextRequest) {
       .select('session_id')
       .eq('event_name', 'page_view')
       .eq('user_id', user.id)
-      .or(`product_id.in.(${productIds.join(',')}),product_id.is.null`)
+      .in('product_id', productIds)
       .gte('created_at', startDateTs)
       .lte('created_at', endDateTs)
 
@@ -176,15 +210,42 @@ export async function GET(req: NextRequest) {
   // Usar landing_page_views do cache (sync já busca da Meta API), senão fallback para tracking próprio
   const pageViews = cachedLandingPageViews > 0 ? cachedLandingPageViews : ownTrackingPageViews
 
-  const { count: initiateCheckoutsCount } = await supabase
-    .from('funnel_events')
-    .select('*', { count: 'exact', head: true })
-    .eq('event_name', 'initiate_checkout')
-    .or(`product_id.in.(${productIds.join(',')}),product_id.is.null`)
-    .gte('created_at', startDateTs)
-    .lte('created_at', endDateTs)
+  // 4. Initiate checkouts: filter by campaign when filter is active
+  let initiateCheckouts = 0
+  if (hasCampaignFilter && campaignIdsFilter) {
+    // Find session_ids that have matching utm_campaign in tracking_external_events
+    const { data: matchingSessions } = await supabase
+      .from('tracking_external_events')
+      .select('session_id')
+      .eq('event_name', 'page_view')
+      .eq('user_id', user.id)
+      .in('utm_campaign', campaignIdsFilter)
+      .gte('created_at', startDateTs)
+      .lte('created_at', endDateTs)
 
-  const initiateCheckouts = initiateCheckoutsCount || 0
+    const sessionIds = [...new Set((matchingSessions || []).map((s: { session_id: string }) => s.session_id).filter(Boolean))]
+
+    if (sessionIds.length > 0) {
+      const { count } = await supabase
+        .from('funnel_events')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_name', 'initiate_checkout')
+        .in('product_id', productIds)
+        .in('session_id', sessionIds)
+        .gte('created_at', startDateTs)
+        .lte('created_at', endDateTs)
+      initiateCheckouts = count || 0
+    }
+  } else {
+    const { count } = await supabase
+      .from('funnel_events')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_name', 'initiate_checkout')
+      .in('product_id', productIds)
+      .gte('created_at', startDateTs)
+      .lte('created_at', endDateTs)
+    initiateCheckouts = count || 0
+  }
 
   // 5. Get orders count (pending + paid = sales_initiated, only paid = sales_approved)
   const { count: initiatedCount } = await supabase

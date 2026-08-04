@@ -349,67 +349,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 
-  // 5. Build payment breakdown for donut chart
-  // When campaign filter is active, only include orders attributed to selected campaigns
-  const paymentBreakdown: Record<string, { count: number; total: number }> = {}
-
-  // Build a set of order IDs that match the campaign filter for payment_breakdown and recent_sales
-  let filteredOrdersForDisplay = orders || []
-  if (hasCampaignFilter) {
-    filteredOrdersForDisplay = (orders || []).filter(order => {
-      if (order.status !== 'paid' && order.status !== 'pending') return false
-      const trackingParams = order.tracking_params as Record<string, string> | null
-      if (!trackingParams) return false
-      // Check if this order's utm_campaign or src matches any of the selected campaigns
-      const utmCampaign = trackingParams.utm_campaign
-      const src = trackingParams.src
-      const utmSource = trackingParams.utm_source
-      const utmMedium = trackingParams.utm_medium
-      if (utmCampaign && campaignIdsFilter.includes(utmCampaign)) return true
-      if (src && campaignIdsFilter.includes(src)) return true
-      if (utmSource && utmMedium) {
-        const compositeKey = `${utmSource}_${utmMedium}`
-        if (campaignIdsFilter.includes(compositeKey)) return true
-      }
-      return false
-    })
-  }
-
-  for (const order of filteredOrdersForDisplay) {
-    const status = order.status || 'unknown'
-    if (!paymentBreakdown[status]) {
-      paymentBreakdown[status] = { count: 0, total: 0 }
-    }
-    paymentBreakdown[status].count++
-    paymentBreakdown[status].total += parseFloat(order.amount) || 0
-  }
-
-  // 6. Attribute orders to campaigns via multi-field matching
-  let totalAttributedRevenue = 0
-  let totalAttributedOrders = 0
+  // 5. Build matchOrder helper and campaignNameLookup BEFORE payment breakdown
+  //    so filteredOrdersForDisplay uses the same logic as attribution
 
   // Normaliza string para comparação: lowercase, trim, espaços extras
   function norm(s: string): string {
     return s.toLowerCase().trim().replace(/\s+/g, ' ')
   }
 
-  // CORREÇÃO W7 (auditoria tracking): pré-build do name → campaignId Map para evitar
-  // scan O(n×m) a cada order.
   const campaignNameLookup = new Map<string, string>()
   for (const camp of Object.values(campaignSpendMap)) {
     if (camp.campaign_name) campaignNameLookup.set(norm(camp.campaign_name), camp.campaign_id)
   }
-
-  // CORREÇÃO W8 (auditoria tracking): per-product production cost lookup.
-  const productCostMap = new Map<string, number>()
-  for (const item of (productCosts || [])) {
-    const pid = (item as { product_id?: string }).product_id
-    const cost = parseFloat(String(item.cost)) || 0
-    if (pid) productCostMap.set(pid, (productCostMap.get(pid) || 0) + cost)
-  }
-  const fallbackFlatProductionCost = (productCosts || [])
-    .filter((item: { product_id?: string }) => !item.product_id)
-    .reduce((sum: number, item: { cost?: string | number }) => sum + (parseFloat(String(item.cost)) || 0), 0)
 
   /** Tenta matchar uma order a uma campanha usando múltiplos campos */
   function matchOrder(params: Record<string, string> | null): boolean {
@@ -434,10 +385,47 @@ export async function GET(req: NextRequest) {
       if (campaignNameLookup.has(norm(compositeKey))) return true
     }
     // 5. Fallback: fbclid/fbc presentes → atribui a qualquer campanha Meta ativa
-    //    (sem API de atribuição do Meta, não sabemos qual campanha específica)
     if ((fbclid || fbc) && Object.keys(campaignSpendMap).length > 0) return true
     return false
   }
+
+  // Per-product production cost lookup.
+  const productCostMap = new Map<string, number>()
+  for (const item of (productCosts || [])) {
+    const pid = (item as { product_id?: string }).product_id
+    const cost = parseFloat(String(item.cost)) || 0
+    if (pid) productCostMap.set(pid, (productCostMap.get(pid) || 0) + cost)
+  }
+  const fallbackFlatProductionCost = (productCosts || [])
+    .filter((item: { product_id?: string }) => !item.product_id)
+    .reduce((sum: number, item: { cost?: string | number }) => sum + (parseFloat(String(item.cost)) || 0), 0)
+
+  // 6. Build payment breakdown for donut chart
+  // When campaign filter is active, only include orders attributed to selected campaigns
+  const paymentBreakdown: Record<string, { count: number; total: number }> = {}
+
+  // Use matchOrder (same logic as attribution) for filtered display
+  let filteredOrdersForDisplay = orders || []
+  if (hasCampaignFilter) {
+    filteredOrdersForDisplay = (orders || []).filter(order => {
+      if (order.status !== 'paid' && order.status !== 'pending') return false
+      const trackingParams = order.tracking_params as Record<string, string> | null
+      return matchOrder(trackingParams)
+    })
+  }
+
+  for (const order of filteredOrdersForDisplay) {
+    const status = order.status || 'unknown'
+    if (!paymentBreakdown[status]) {
+      paymentBreakdown[status] = { count: 0, total: 0 }
+    }
+    paymentBreakdown[status].count++
+    paymentBreakdown[status].total += parseFloat(order.amount) || 0
+  }
+
+  // 7. Attribute orders to campaigns via multi-field matching
+  let totalAttributedRevenue = 0
+  let totalAttributedOrders = 0
 
   for (const order of orders || []) {
     if (order.status !== 'paid') continue
@@ -485,10 +473,13 @@ export async function GET(req: NextRequest) {
   const pendingRevenue = safeOrders.filter(o => o.status === 'pending').reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0)
   const refundedRevenue = safeOrders.filter(o => o.status === 'refunded').reduce((sum, o) => sum + (parseFloat(o.net_value ?? o.amount) || 0), 0)
   const profitMargin = totalSalesAllOrders > 0 ? (netProfit / totalSalesAllOrders) * 100 : 0
-  const arpu = totalPaidOrders > 0 ? totalSalesAllOrders / totalPaidOrders : 0
+  // ARPU: when campaign filter is active, use attributed orders for consistency
+  const arpu = hasCampaignFilter
+    ? (totalAttributedOrders > 0 ? totalAttributedRevenue / totalAttributedOrders : 0)
+    : (totalPaidOrders > 0 ? totalSalesAllOrders / totalPaidOrders : 0)
   const chargebackCount = safeOrders.filter(o => o.status === 'chargeback').length
   const chargebackRevenue = safeOrders.filter(o => o.status === 'chargeback').reduce((sum, o) => sum + (parseFloat(o.net_value ?? o.amount) || 0), 0)
-  const chargebackRate = safeOrders.length > 0 ? ((safeOrders.filter(o => o.status === 'refunded').length + chargebackCount) / safeOrders.length) * 100 : 0
+  const chargebackRate = safeOrders.length > 0 ? (chargebackCount / safeOrders.length) * 100 : 0
 
   // Aggregate impressions, clicks for CTR/CPC/CPM
   const totalImpressions = Object.values(campaignSpendMap).reduce((sum, c) => sum + c.impressions, 0)

@@ -5,7 +5,7 @@ import { Calendar, ChevronDown, Check, X } from 'lucide-react'
 
 function getDefaultDateRange() {
   const now = new Date()
-  const from = new Date(now.getTime() - 30 * 86400000)
+  const from = new Date(now.getTime() - 7 * 86400000)
   return { from: from.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) }
 }
 

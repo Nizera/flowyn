@@ -200,7 +200,7 @@ export default function DashboardPage() {
 
   const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string; value: string } | null>(null)
 
-  // Sparkline data sampling (Proportional & Monotone Curve Ready)
+  // Sparkline data: use actual daily revenue/spend from API
   const spendOverTime = data?.spend_over_time || []
   
   const getSparklinePoints = (type: 'orders' | 'aov' | 'customers' | 'roas' | 'profit' | 'refunds') => {
@@ -209,32 +209,39 @@ export default function DashboardPage() {
     return spendOverTime.map(d => {
       const rev = d.revenue || 0
       const spd = d.spend || 0
-      const prof = rev - spd
       
       switch (type) {
-        case 'orders':
-          return rev > 0 ? Math.max(1, Math.round((rev / (s.total_revenue || 1)) * s.total_orders)) : 0
-        case 'aov':
-          return spd > 0 ? rev / Math.max(1, Math.round((rev / (s.total_revenue || 1)) * s.total_orders)) : 0
-        case 'customers':
-          return rev > 0 ? Math.max(1, Math.round((rev / (s.total_revenue || 1)) * s.total_sales)) : 0
         case 'roas':
           return spd > 0 ? rev / spd : 0
         case 'profit':
-          return prof
+          return rev - spd
+        case 'orders':
+        case 'aov':
+        case 'customers':
         case 'refunds':
-          return Math.max(0, Math.round(rev * (s.refunded_revenue / (s.total_revenue || 1))))
+        default:
+          return rev
       }
     })
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin" />
-          <p className="text-sm text-muted font-medium">Carregando painel...</p>
+      <div className="space-y-6 animate-pulse">
+        <div className="flex items-center justify-end"><div className="h-10 w-32 rounded-xl bg-surface" /></div>
+        <div className="flex gap-2">{[...Array(7)].map((_, i) => <div key={i} className="h-9 w-20 rounded-lg bg-surface" />)}</div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <section className="lg:col-span-8 bg-card rounded-2xl p-6 border border-border min-h-[220px]">
+            <div className="h-3 w-32 bg-surface rounded mb-2" />
+            <div className="h-10 w-48 bg-surface rounded mb-4" />
+            <div className="grid grid-cols-3 gap-4 pt-4">{[...Array(3)].map((_, i) => <div key={i}><div className="h-3 w-20 bg-surface rounded mb-1" /><div className="h-6 w-16 bg-surface rounded" /></div>)}</div>
+          </section>
+          <div className="lg:col-span-4 bg-card rounded-2xl p-6 border border-border min-h-[220px]">
+            <div className="h-3 w-24 bg-surface rounded mb-2" /><div className="h-10 w-32 bg-surface rounded mb-4" /><div className="h-3 w-20 bg-surface rounded" />
+          </div>
         </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">{[...Array(6)].map((_, i) => <div key={i} className="bg-card rounded-2xl p-4 border border-border h-28"><div className="h-3 w-20 bg-surface rounded mb-2" /><div className="h-7 w-16 bg-surface rounded" /></div>)}</div>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">{[...Array(4)].map((_, i) => <div key={i} className="bg-card rounded-2xl p-5 border border-border h-64"><div className="h-4 w-32 bg-surface rounded mb-4" /><div className="space-y-3">{[...Array(5)].map((_, j) => <div key={j} className="h-8 bg-surface rounded" />)}</div></div>)}</div>
       </div>
     )
   }
@@ -296,7 +303,7 @@ export default function DashboardPage() {
               {s.tracked_orders > 0 && (
                 <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-2 flex items-center gap-1 bg-emerald-500/10 px-2.5 py-0.5 rounded-full w-fit">
                   <span>↗</span>
-                  <span>{s.tracked_orders} vendas via campanhas Meta Ads</span>
+                  <span>{s.tracked_orders} vendas via campanhas Meta Ads{!selectedCampaigns?.size && s.untracked_orders > 0 ? ' (inclui matching por pixel)' : ''}</span>
                 </p>
               )}
             </div>
@@ -330,7 +337,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <KpiCard
           label="Não Rastreados"
-          subtitle="Vendas orgânicas/diretas"
+          subtitle={selectedCampaigns && selectedCampaigns.size > 0 ? "Não atribuídas a esta campanha" : "Vendas orgânicas/diretas"}
           value={s.untracked_orders.toLocaleString('pt-BR')}
           sparklineData={getSparklinePoints('orders')}
           sparklineColor="#f97316"
@@ -523,8 +530,9 @@ export default function DashboardPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4} className="py-8 text-center text-[11px] text-muted">
-                      Nenhuma venda recente
+                    <td colSpan={4} className="py-8 text-center">
+                      <p className="text-[11px] text-muted mb-1">Nenhuma venda recente</p>
+                      <p className="text-[9px] text-subtle">Vendas aparecerão aqui após o primeiro pagamento</p>
                     </td>
                   </tr>
                 )}
@@ -534,6 +542,39 @@ export default function DashboardPage() {
         </section>
       </div>
 
+      {/* Campaign Breakdown Table */}
+      {data?.campaigns && data.campaigns.length > 0 && (
+        <section className="bg-card rounded-2xl p-5 border border-border shadow-sm">
+          <h4 className="text-sm font-bold text-foreground mb-4">Desempenho por Campanha</h4>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-border text-muted">
+                  <th className="py-2 px-3 text-[10px] font-bold uppercase tracking-wider">Campanha</th>
+                  <th className="py-2 px-3 text-[10px] font-bold uppercase tracking-wider text-right">Investimento</th>
+                  <th className="py-2 px-3 text-[10px] font-bold uppercase tracking-wider text-right">Cliques</th>
+                  <th className="py-2 px-3 text-[10px] font-bold uppercase tracking-wider text-right">Impressões</th>
+                  <th className="py-2 px-3 text-[10px] font-bold uppercase tracking-wider text-right">CPC</th>
+                  <th className="py-2 px-3 text-[10px] font-bold uppercase tracking-wider text-right">CPM</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.campaigns.map((c: any) => (
+                  <tr key={c.campaign_id} className="border-b border-border/50 hover:bg-surface/50 transition-colors">
+                    <td className="py-2.5 px-3 text-[11px] font-semibold text-foreground truncate max-w-[200px]">{c.campaign_name || c.campaign_id}</td>
+                    <td className="py-2.5 px-3 text-[11px] font-black text-foreground text-right">{currency(c.spend)}</td>
+                    <td className="py-2.5 px-3 text-[11px] font-bold text-foreground text-right">{c.clicks.toLocaleString('pt-BR')}</td>
+                    <td className="py-2.5 px-3 text-[11px] font-bold text-foreground text-right">{c.impressions.toLocaleString('pt-BR')}</td>
+                    <td className="py-2.5 px-3 text-[11px] font-bold text-muted text-right">{currency(c.cpc)}</td>
+                    <td className="py-2.5 px-3 text-[11px] font-bold text-muted text-right">{currency(c.cpm)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       {/* KPI Summary Footer Bar (Nexora Style) */}
       <div className="bg-card rounded-2xl p-4 sm:p-5 border border-border shadow-sm grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-center items-center">
         <div>
@@ -541,7 +582,7 @@ export default function DashboardPage() {
           <p className="text-xs sm:text-sm font-black text-foreground mt-0.5">{currency(s.total_sales)}</p>
         </div>
         <div>
-          <p className="text-[10px] font-bold text-muted uppercase tracking-wider">Total Pedidos</p>
+          <p className="text-[10px] font-bold text-muted uppercase tracking-wider">Pedidos Pagos</p>
           <p className="text-xs sm:text-sm font-black text-foreground mt-0.5">{s.total_paid.toLocaleString('pt-BR')}</p>
         </div>
         <div>
