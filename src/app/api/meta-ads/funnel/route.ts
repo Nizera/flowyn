@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
   }
 
   let totalClicks = insights.reduce((sum: number, i: { clicks?: number }) => sum + (i.clicks || 0), 0)
-  const cachedLandingPageViews = insights.reduce((sum: number, i: { landing_page_views?: number }) => sum + (i.landing_page_views || 0), 0)
+  let cachedLandingPageViews = insights.reduce((sum: number, i: { landing_page_views?: number }) => sum + (i.landing_page_views || 0), 0)
 
   // Fallback: if cache is empty (sync hasn't run), fetch clicks from Meta API
   if (totalClicks === 0 && cachedLandingPageViews === 0 && ownedAccountIds.length > 0) {
