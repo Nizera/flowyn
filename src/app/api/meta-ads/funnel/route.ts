@@ -108,19 +108,21 @@ export async function GET(req: NextRequest) {
       const firstAccountId = ownedAccountIds[0]
       const accessToken = await getDecryptedToken(firstAccountId, user.id)
       if (accessToken) {
-        // Buscar insights com actions para extrair landing_page_view
-        let metaUrl: string | null = `${GRAPH_API}/act_${firstAccountId}/insights?fields=campaign_id,clicks,actions&level=campaign&time_increment=1&time_range={'since':'${startDate}','until':'${endDate}'}&limit=500&access_token=${accessToken}`
+        // Buscar insights em nível de anúncio (landing_page_view só existe em level=ad)
+        const baseParams = `time_increment=1&time_range={'since':'${startDate}','until':'${endDate}'}&limit=500&access_token=${accessToken}`
+        const campaignParam = campaignIdsFilter && campaignIdsFilter.length > 0 ? `&campaign_ids=[${campaignIdsFilter.map(id => `"${id}"`).join(',')}]` : ''
+
+        let metaUrl: string | null = `${GRAPH_API}/act_${firstAccountId}/insights?fields=campaign_id,clicks,actions&level=ad&${baseParams}${campaignParam}`
 
         while (metaUrl) {
           const metaRes: Response = await fetch(metaUrl)
           const metaData = await metaRes.json()
-          if (metaData.error) break
+          if (metaData.error) {
+            console.error('[funnel] Meta API error:', JSON.stringify(metaData.error))
+            break
+          }
           if (metaData.data) {
-            const filtered = campaignIdsFilter && campaignIdsFilter.length > 0
-              ? metaData.data.filter((r: any) => campaignIdsFilter.includes(r.campaign_id))
-              : metaData.data
-            for (const row of filtered) {
-              // Extrair landing_page_view do array actions
+            for (const row of metaData.data) {
               if (row.actions && Array.isArray(row.actions)) {
                 for (const action of row.actions) {
                   if (action.action_type === 'landing_page_view') {
@@ -128,7 +130,6 @@ export async function GET(req: NextRequest) {
                   }
                 }
               }
-              // clicks fallback (se cache estiver vazio)
               if (totalClicks === 0) {
                 totalClicks += parseInt(row.clicks || '0') || 0
               }
@@ -137,9 +138,11 @@ export async function GET(req: NextRequest) {
           metaUrl = metaData.paging?.next || null
           if (metaUrl) await new Promise(r => setTimeout(r, 200))
         }
+
+        console.log('[funnel] Meta API landing_page_view:', metaLandingPageViews, 'clicks:', totalClicks)
       }
-    } catch {
-      // Silently fall through
+    } catch (e) {
+      console.error('[funnel] Meta API exception:', e)
     }
   }
 
