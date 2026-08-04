@@ -388,11 +388,16 @@ export async function GET(req: NextRequest) {
   let totalAttributedRevenue = 0
   let totalAttributedOrders = 0
 
+  // Normaliza string para comparação: lowercase, trim, espaços extras
+  function norm(s: string): string {
+    return s.toLowerCase().trim().replace(/\s+/g, ' ')
+  }
+
   // CORREÇÃO W7 (auditoria tracking): pré-build do name → campaignId Map para evitar
   // scan O(n×m) a cada order.
   const campaignNameLookup = new Map<string, string>()
   for (const camp of Object.values(campaignSpendMap)) {
-    if (camp.campaign_name) campaignNameLookup.set(camp.campaign_name.toLowerCase(), camp.campaign_id)
+    if (camp.campaign_name) campaignNameLookup.set(norm(camp.campaign_name), camp.campaign_id)
   }
 
   // CORREÇÃO W8 (auditoria tracking): per-product production cost lookup.
@@ -412,18 +417,25 @@ export async function GET(req: NextRequest) {
     const utmCampaign = params.utm_campaign
     const utmSource = params.utm_source
     const src = params.src
+    const fbclid = params.fbclid
+    const fbc = params._fbc
 
+    // 1. Match por utm_campaign → campaign_id direto
     if (utmCampaign) {
       if (campaignSpendMap[utmCampaign]) return true
-      if (campaignNameLookup.has(utmCampaign.toLowerCase())) return true
+      // 2. Match por utm_campaign → campaign name (case-insensitive, normalize)
+      if (campaignNameLookup.has(norm(utmCampaign))) return true
     }
-    // Fallback: src como campaign name
-    if (src && campaignNameLookup.has(src.toLowerCase())) return true
-    // Fallback: utm_source + utm_medium como composite
+    // 3. Fallback: src como campaign name
+    if (src && campaignNameLookup.has(norm(src))) return true
+    // 4. Fallback: utm_source + utm_medium como composite
     if (utmSource && params.utm_medium) {
       const compositeKey = `${utmSource}_${params.utm_medium}`
-      if (campaignNameLookup.has(compositeKey.toLowerCase())) return true
+      if (campaignNameLookup.has(norm(compositeKey))) return true
     }
+    // 5. Fallback: fbclid/fbc presentes → atribui a qualquer campanha Meta ativa
+    //    (sem API de atribuição do Meta, não sabemos qual campanha específica)
+    if ((fbclid || fbc) && Object.keys(campaignSpendMap).length > 0) return true
     return false
   }
 

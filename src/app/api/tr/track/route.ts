@@ -141,6 +141,7 @@ interface TrackBody {
 const ALLOWED_ORIGINS = [
   'https://www.flowyn.com.br',
   'https://flowyn.com.br',
+  'https://despertarnosonho.vercel.app',
   'http://localhost:3000',
 ]
 
