@@ -386,7 +386,7 @@ export function PixelManager({ initialPixels, appUrl }: { initialPixels: Pixel[]
                       Copie o prompt abaixo e cole no seu ChatGPT, Claude, Gemini ou outro LLM. Ele vai atualizar sua landing page com o rastreamento correto.
                     </p>
                     <div className="rounded-lg bg-slate-900 p-4 font-mono text-[11px] leading-5 text-slate-300 max-h-[300px] overflow-y-auto whitespace-pre-wrap">
-{buildLlmPrompt(appUrl, meta.public_token, pixelId)}
+{buildLlmPrompt(appUrl, meta.public_token || '', pixelId || '')}
                     </div>
                     <p className="mt-3 text-xs text-muted">
                       <strong>Dica:</strong> Se você usa construtor de páginas (Hotmart, Kiwify, etc.), cole o prompt no LLM e ele vai adaptar automaticamente para o construtor que você utiliza.
