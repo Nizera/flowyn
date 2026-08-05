@@ -564,7 +564,6 @@ fbq('track', 'PageView');
                   <p className="font-bold text-foreground">Configuração completa!</p>
                   <p className="text-sm text-muted mt-1">
                     Após adicionar os snippets, suas vendas serão rastreadas automaticamente.
-                    Acesse <strong>Diagnóstico</strong> para verificar se tudo está funcionando.
                   </p>
                 </div>
               </div>
@@ -578,10 +577,10 @@ fbq('track', 'PageView');
                 <ArrowLeft className="h-4 w-4" /> Voltar
               </button>
               <button
-                onClick={() => { try { localStorage.removeItem(STORAGE_KEY) } catch {} ; router.push('/dashboard/diagnostics') }}
+                onClick={() => { try { localStorage.removeItem(STORAGE_KEY) } catch {} ; router.push('/dashboard/products') }}
                 className="flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white transition hover:bg-primary/90"
               >
-                Ver Diagnóstico <ArrowRight className="h-4 w-4" />
+                Ver Produtos <ArrowRight className="h-4 w-4" />
               </button>
             </div>
           </div>

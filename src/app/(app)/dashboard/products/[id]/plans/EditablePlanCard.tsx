@@ -11,6 +11,23 @@ interface Plan {
   price: number
   plan_identifier: string | null
   billing_type?: string | null
+  billing_cycle?: string | null
+}
+
+const BILLING_CYCLES = [
+  { value: 'MONTHLY', label: 'Mensal' },
+  { value: 'QUARTERLY', label: 'Trimestral' },
+  { value: 'SEMIANNUALLY', label: 'Semestral' },
+  { value: 'ANNUALLY', label: 'Anual' },
+]
+
+function getCycleLabel(cycle: string | null | undefined) {
+  return BILLING_CYCLES.find(c => c.value === cycle)?.label || 'Mensal'
+}
+
+function getCycleSuffix(cycle: string | null | undefined) {
+  if (!cycle || cycle === 'MONTHLY') return '/mes'
+  return `/ ${getCycleLabel(cycle).toLowerCase()}`
 }
 
 const inputClass = 'w-full rounded-lg border-0 bg-card px-3 py-2 text-sm text-foreground outline-none ring-1 ring-border focus:ring-2 focus:ring-orange-500/20'
@@ -23,6 +40,7 @@ export function EditablePlanCard({ plan, productId }: { plan: Plan; productId: s
     price: plan.price.toString(),
     plan_identifier: plan.plan_identifier || '',
     billing_type: plan.billing_type === 'recurring' ? 'recurring' : 'one_time',
+    billing_cycle: plan.billing_cycle || 'MONTHLY',
   })
   const router = useRouter()
 
@@ -35,6 +53,7 @@ export function EditablePlanCard({ plan, productId }: { plan: Plan; productId: s
     form.append('price', formData.price)
     form.append('plan_identifier', formData.plan_identifier)
     form.append('billing_type', formData.billing_type)
+    form.append('billing_cycle', formData.billing_cycle)
 
     try {
       const res = await updatePlanAction(productId, plan.id, form)
@@ -56,7 +75,7 @@ export function EditablePlanCard({ plan, productId }: { plan: Plan; productId: s
     return (
       <div className="border-b border-orange-100 bg-orange-50/40 p-5">
         <form onSubmit={handleUpdate} className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
             <EditField label="Nome do plano">
               <input className={inputClass} type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
             </EditField>
@@ -66,9 +85,18 @@ export function EditablePlanCard({ plan, productId }: { plan: Plan; productId: s
             <EditField label="Tipo">
               <select className={inputClass} value={formData.billing_type} onChange={e => setFormData({ ...formData, billing_type: e.target.value })}>
                 <option value="one_time">Preco unico</option>
-                <option value="recurring">Recorrente mensal</option>
+                <option value="recurring">Recorrente</option>
               </select>
             </EditField>
+            {formData.billing_type === 'recurring' && (
+              <EditField label="Ciclo">
+                <select className={inputClass} value={formData.billing_cycle} onChange={e => setFormData({ ...formData, billing_cycle: e.target.value })}>
+                  {BILLING_CYCLES.map(c => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </select>
+              </EditField>
+            )}
             <EditField label="Identificador externo">
               <input className={inputClass} type="text" value={formData.plan_identifier} onChange={e => setFormData({ ...formData, plan_identifier: e.target.value })} placeholder="Opcional" />
             </EditField>
@@ -113,7 +141,7 @@ export function EditablePlanCard({ plan, productId }: { plan: Plan; productId: s
           <span className="text-xl font-extrabold text-foreground">
             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(plan.price)}
           </span>
-          <span className="ml-1 text-xs font-medium text-muted">{plan.billing_type === 'recurring' ? '/mes' : 'unico'}</span>
+          <span className="ml-1 text-xs font-medium text-muted">{plan.billing_type === 'recurring' ? getCycleSuffix(plan.billing_cycle) : 'unico'}</span>
         </div>
 
         <div className="flex items-center gap-2">

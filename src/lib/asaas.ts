@@ -204,13 +204,50 @@ export async function createCreditCardPayment(
   })
 }
 
+export async function createCreditCardInstallment(
+  payload: {
+    customer: string
+    billingType: 'CREDIT_CARD'
+    value: number
+    totalValue?: number
+    installmentCount: number
+    installmentValue?: number
+    dueDate: string
+    description?: string
+    externalReference?: string
+    split?: Array<{ walletId: string; percentualValue?: number; fixedValue?: number }>
+    creditCard: AsaasCreditCardPayload
+    creditCardHolderInfo: AsaasCreditCardHolderInfo
+    remoteIp: string
+  },
+  apiKey: string
+) {
+  return asaasRequest<{
+    id: string
+    status: string
+    value: number
+    netValue?: number
+    invoiceUrl?: string
+    installment?: string
+    installmentNumber?: number
+    creditCard?: { creditCardNumber?: string; creditCardBrand?: string }
+    creditCardToken?: string
+  }>('/payments', {
+    apiKey,
+    method: 'POST',
+    body: payload,
+  })
+}
+
+export type SubscriptionCycle = 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUALLY' | 'ANNUALLY'
+
 export async function createCreditCardSubscription(
   payload: {
     customer: string
     billingType: 'CREDIT_CARD'
     value: number
     nextDueDate: string
-    cycle: 'MONTHLY'
+    cycle: SubscriptionCycle
     description?: string
     externalReference?: string
     creditCard: AsaasCreditCardPayload

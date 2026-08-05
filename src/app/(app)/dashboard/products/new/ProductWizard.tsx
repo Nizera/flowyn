@@ -26,10 +26,13 @@ const CATEGORIES = [
   'Outros',
 ]
 
+type BillingCycle = 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUALLY' | 'ANNUALLY'
+
 interface Plan {
   name: string
   price: string
   billing_type: 'one_time' | 'recurring'
+  billing_cycle: BillingCycle
 }
 
 interface ProductDraft {
@@ -38,6 +41,7 @@ interface ProductDraft {
   category: string
   price: string
   billing_type: 'one_time' | 'recurring'
+  billing_cycle: BillingCycle
   short_description: string
 }
 
@@ -61,12 +65,34 @@ interface ProductPayload extends ProductDraft {
   is_public: boolean
 }
 
+const BILLING_CYCLES: { value: BillingCycle; label: string; months: number; planSuffix: string }[] = [
+  { value: 'MONTHLY', label: 'Mensal', months: 1, planSuffix: 'Mensal' },
+  { value: 'QUARTERLY', label: 'Trimestral', months: 3, planSuffix: 'Trimestral' },
+  { value: 'SEMIANNUALLY', label: 'Semestral', months: 6, planSuffix: 'Semestral' },
+  { value: 'ANNUALLY', label: 'Anual', months: 12, planSuffix: 'Anual' },
+]
+
+function getCycleLabel(cycle: BillingCycle) {
+  return BILLING_CYCLES.find(c => c.value === cycle)?.label || 'Mensal'
+}
+
+function getCycleMonths(cycle: BillingCycle) {
+  return BILLING_CYCLES.find(c => c.value === cycle)?.months || 1
+}
+
+function getPlanName(billingType: string, cycle: BillingCycle) {
+  if (billingType === 'one_time') return 'Acesso Completo'
+  const suffix = BILLING_CYCLES.find(c => c.value === cycle)?.planSuffix || 'Mensal'
+  return `Assinatura ${suffix}`
+}
+
 const INITIAL: ProductDraft = {
   product_type: '',
   name: '',
   category: '',
   price: '',
   billing_type: 'one_time',
+  billing_cycle: 'MONTHLY',
   short_description: '',
 }
 
@@ -103,6 +129,11 @@ export function ProductWizard({
     setError(null)
   }
 
+  function setBillingCycle(value: BillingCycle) {
+    setDraft(current => ({ ...current, billing_cycle: value }))
+    setError(null)
+  }
+
   async function submit() {
     if (missingFields.length > 0) {
       setError(`Preencha: ${missingFields.join(', ')}.`)
@@ -120,7 +151,7 @@ export function ProductWizard({
       logo_url: '',
       checkout_banner_url: '',
       checkout_video_url: '',
-      plans: [{ name: draft.billing_type === 'recurring' ? 'Assinatura Mensal' : 'Acesso Completo', price: draft.price, billing_type: draft.billing_type }],
+      plans: [{ name: getPlanName(draft.billing_type, draft.billing_cycle), price: draft.price, billing_type: draft.billing_type, billing_cycle: draft.billing_cycle }],
       order_bump_enabled: false,
       order_bump_title: '',
       order_bump_description: '',
@@ -231,12 +262,40 @@ export function ProductWizard({
                 onClick={() => setBillingType('recurring')}
                 className={`h-10 flex-1 rounded-lg text-sm font-semibold transition ${draft.billing_type === 'recurring' ? 'bg-card text-orange-600 shadow-sm' : 'text-muted hover:text-foreground'}`}
               >
-                Recorrente mensal
+                Recorrente
               </button>
             </div>
 
+            {draft.billing_type === 'recurring' && (
+              <div className="flex max-w-lg gap-2">
+                {BILLING_CYCLES.map(cycle => (
+                  <button
+                    key={cycle.value}
+                    type="button"
+                    onClick={() => setBillingCycle(cycle.value)}
+                    className={`flex-1 rounded-lg border px-3 py-2.5 text-sm font-semibold transition ${
+                      draft.billing_cycle === cycle.value
+                        ? 'border-orange-500 bg-orange-50 text-orange-600'
+                        : 'border-border bg-surface text-muted hover:border-orange-200 hover:text-foreground'
+                    }`}
+                  >
+                    {cycle.label}
+                    <span className="mt-0.5 block text-[10px] font-normal text-muted">
+                      {cycle.months === 1 ? 'todo mes' : `a cada ${cycle.months} meses`}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <Field label={draft.billing_type === 'recurring' ? 'Valor mensal' : 'Preco inicial'} required hint={draft.billing_type === 'recurring' ? 'Cobrado todo mes enquanto a assinatura estiver ativa.' : 'Voce pode ajustar planos e ofertas dentro do produto.'}>
+              <Field
+                label={draft.billing_type === 'recurring' ? `Valor ${getCycleLabel(draft.billing_cycle).toLowerCase()}` : 'Preco inicial'}
+                required
+                hint={draft.billing_type === 'recurring'
+                  ? `Cobrado a cada ${getCycleMonths(draft.billing_cycle)} ${getCycleMonths(draft.billing_cycle) === 1 ? 'mes' : 'meses'}.`
+                  : 'Voce pode ajustar planos e ofertas dentro do produto.'}
+              >
                 <input
                   data-tour="tour-price"
                   className={`${fieldClass} max-w-sm`}
@@ -249,7 +308,9 @@ export function ProductWizard({
                 />
               </Field>
               <span className="pb-4 text-sm font-medium text-muted">
-                {draft.billing_type === 'recurring' ? '/ mes' : 'pagamento unico'}
+                {draft.billing_type === 'recurring'
+                  ? `/ ${getCycleLabel(draft.billing_cycle).toLowerCase()}`
+                  : 'pagamento unico'}
               </span>
             </div>
           </div>

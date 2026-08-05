@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createCreditCardPayment, createCreditCardSubscription, createCustomer, createPixAutomaticAuthorization, createPixPayment, getPixQrCode, normalizeAsaasError, onlyDigits } from '@/lib/asaas'
+import { createCreditCardPayment, createCreditCardInstallment, createCreditCardSubscription, createCustomer, createPixAutomaticAuthorization, createPixPayment, getPixQrCode, normalizeAsaasError, onlyDigits, type SubscriptionCycle } from '@/lib/asaas'
 import { fulfillPaidOrder } from '@/lib/order-fulfillment'
 import { getPlatformAccess } from '@/lib/platform-access'
 import { createAdminClient } from '@/utils/supabase/admin'
@@ -21,6 +21,7 @@ type PlanRow = {
   name: string
   price: number
   billing_type: string
+  billing_cycle: string | null
   product: PlanProduct
 }
 
@@ -324,9 +325,10 @@ export async function POST(req: NextRequest) {
 
     if (billingType === 'PIX') {
       if (plan.billing_type === 'recurring') {
+        const planCycle = (plan.billing_cycle || 'MONTHLY') as 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUALLY' | 'ANNUALLY'
         const authorization = await createPixAutomaticAuthorization({
           customerId: asaasCustomer.id,
-          frequency: 'MONTHLY',
+          frequency: planCycle,
           contractId: order.id,
           startDate: today(),
           value: totalAmount,
@@ -359,7 +361,7 @@ export async function POST(req: NextRequest) {
             buyer_email: customerEmail,
             buyer_name: customerName,
             status: authorization.status,
-            frequency: 'MONTHLY',
+            frequency: planCycle,
             value: totalAmount,
             start_date: today(),
             asaas_account_id: product.owner_id,
@@ -425,12 +427,73 @@ export async function POST(req: NextRequest) {
     step = 'credit_card_payment'
 
     if (plan.billing_type === 'recurring') {
+      const planCycle = (plan.billing_cycle || 'MONTHLY') as SubscriptionCycle
+      const installmentCount = Number(body.installment_count) || 0
+
+      if (installmentCount >= 2 && planCycle !== 'MONTHLY') {
+        const installmentPayment = await createCreditCardInstallment({
+          customer: asaasCustomer.id,
+          billingType: 'CREDIT_CARD',
+          value: totalAmount,
+          totalValue: totalAmount,
+          installmentCount,
+          dueDate: today(),
+          description: `${product.name} - ${plan.name}`,
+          externalReference: order.id,
+          ...(split.length > 0 ? { split } : {}),
+          creditCard: {
+            holderName: cardHolderName,
+            number: cardNumber,
+            expiryMonth: cardExpiryMonth,
+            expiryYear: cardExpiryYear,
+            ccv: cardCcv,
+          },
+          creditCardHolderInfo: {
+            name: String((body.holder as Record<string, unknown> | undefined)?.name || customerName).trim(),
+            email: String((body.holder as Record<string, unknown> | undefined)?.email || customerEmail).trim(),
+            cpfCnpj: onlyDigits(String((body.holder as Record<string, unknown> | undefined)?.cpfCnpj || customerDocument)),
+            postalCode: holderPostalCode,
+            addressNumber: holderAddressNumber,
+            addressComplement: String((body.holder as Record<string, unknown> | undefined)?.addressComplement || '').trim() || null,
+            mobilePhone: onlyDigits(String((body.holder as Record<string, unknown> | undefined)?.mobilePhone || customerPhone)),
+          },
+          remoteIp: clientIp,
+        }, asaasApiKey)
+
+        await supabase
+          .from('orders')
+          .update({
+            asaas_payment_id: installmentPayment.id,
+            asaas_status: installmentPayment.status,
+            net_value: typeof installmentPayment.netValue === 'number' ? installmentPayment.netValue : null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', order.id)
+
+        const isPaid = PAID_STATUSES.has(installmentPayment.status)
+        if (isPaid) {
+          await fulfillPaidOrder(supabase, order.id, installmentPayment.status)
+        }
+
+        return NextResponse.json({
+          success: isPaid,
+          order_id: order.id,
+          payment_id: installmentPayment.id,
+          status: installmentPayment.status,
+          recurring: true,
+          installment: true,
+          installment_count: installmentCount,
+          installment_value: totalAmount / installmentCount,
+          invoice_url: installmentPayment.invoiceUrl,
+        }, { headers: { 'Cache-Control': 'no-store, private', Pragma: 'no-cache' } })
+      }
+
       const subscription = await createCreditCardSubscription({
         customer: asaasCustomer.id,
         billingType: 'CREDIT_CARD',
         value: totalAmount,
         nextDueDate: today(),
-        cycle: 'MONTHLY',
+        cycle: planCycle,
         description: `${product.name} - ${plan.name}`,
         externalReference: order.id,
         creditCard: {

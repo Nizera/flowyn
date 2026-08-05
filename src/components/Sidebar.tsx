@@ -21,6 +21,7 @@ import {
   Trophy,
   Users,
   Wallet,
+  Webhook,
   type LucideIcon,
 } from 'lucide-react'
 import { ThemeToggle } from './ThemeToggle'
@@ -51,7 +52,6 @@ const sections: { label: string; items: NavItem[] }[] = [
       { href: '/dashboard/products', label: 'Meus Produtos', icon: Box, exclude: '/dashboard/products/new' },
       { href: '/dashboard/sales', label: 'Minhas Vendas', icon: ShoppingBag },
       { href: '/dashboard/ads', label: 'Meta Ads', icon: Megaphone },
-      { href: '/dashboard/diagnostics', label: 'Diagnóstico', icon: ScanLine },
       { href: '/dashboard/referrals', label: 'Indicar', icon: Users },
       { href: '/dashboard/goals', label: 'Conquistas', icon: Trophy },
     ],
@@ -61,6 +61,7 @@ const sections: { label: string; items: NavItem[] }[] = [
     items: [
       { href: '/dashboard/pixels', label: 'Pixels', icon: ScanLine },
       { href: '/dashboard/settings/payments', label: 'Pagamentos', icon: CreditCard },
+      { href: '/dashboard/settings/webhooks', label: 'Webhooks', icon: Webhook },
       { href: '/dashboard/settings/subscription', label: 'Assinatura', icon: BadgeCheck },
       { href: '/dashboard/settings/profile', label: 'Minha Conta', icon: Settings },
     ],

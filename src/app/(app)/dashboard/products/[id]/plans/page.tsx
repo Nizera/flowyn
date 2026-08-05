@@ -13,6 +13,7 @@ type PlanRow = {
   name: string
   price: number
   billing_type: string
+  billing_cycle: string | null
   plan_identifier: string | null
 }
 
@@ -43,9 +44,9 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
 
   const { data: plans } = await supabase
     .from('plans')
-    .select('id, product_id, name, description, price, currency, billing_type, plan_identifier, interval, interval_count, trial_days, sort_order, asaas_plan_id, created_at')
+    .select('id, product_id, name, description, price, currency, billing_type, billing_cycle, plan_identifier, interval, interval_count, trial_days, sort_order, asaas_plan_id, created_at')
     .eq('product_id', productId)
-    .order('created_at', { ascending: true })
+    .order('created_at', { ascending: true }) as { data: PlanRow[] | null }
 
   const { data: userPixelsData } = await supabase
     .from('pixels')
@@ -68,6 +69,7 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
     const name = formData.get('name') as string
     const price = formData.get('price') as string
     const billingType = formData.get('billing_type') as string
+    const billingCycle = formData.get('billing_cycle') as string || 'MONTHLY'
 
     if (!name || !price) return
 
@@ -87,6 +89,7 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
         name,
         price: priceNum,
         billing_type: billingType === 'recurring' ? 'recurring' : 'one_time',
+        billing_cycle: billingType === 'recurring' ? billingCycle : 'MONTHLY',
       })
 
     revalidatePath(`/dashboard/products/${productId}/plans`)
@@ -111,7 +114,7 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
       <div className="mt-10 max-w-6xl">
         <div className="grid border-y border-border md:grid-cols-[240px_1fr]">
           <RowTitle title="Novo plano" description="Adicione uma oferta de pagamento." />
-          <form action={createPlan} className="grid gap-5 py-6 md:pl-8 lg:grid-cols-[1fr_180px_220px_auto] lg:items-end">
+          <form action={createPlan} className="grid gap-5 py-6 md:pl-8 lg:grid-cols-[1fr_180px_150px_150px_auto] lg:items-end">
             <Field label="Nome do plano">
               <input name="name" required className={inputClass} placeholder="Acesso Completo" />
             </Field>
@@ -121,7 +124,15 @@ export default async function PlansPage(props: { params: Promise<{ id: string }>
             <Field label="Tipo">
               <select name="billing_type" className={inputClass} defaultValue="one_time">
                 <option value="one_time">Preco unico</option>
-                <option value="recurring">Recorrente mensal</option>
+                <option value="recurring">Recorrente</option>
+              </select>
+            </Field>
+            <Field label="Ciclo">
+              <select name="billing_cycle" className={inputClass} defaultValue="MONTHLY">
+                <option value="MONTHLY">Mensal</option>
+                <option value="QUARTERLY">Trimestral</option>
+                <option value="SEMIANNUALLY">Semestral</option>
+                <option value="ANNUALLY">Anual</option>
               </select>
             </Field>
             <button type="submit" disabled={!access.allowed} className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 text-sm font-semibold text-white transition hover:from-orange-600 hover:to-amber-600 disabled:cursor-not-allowed disabled:opacity-50">

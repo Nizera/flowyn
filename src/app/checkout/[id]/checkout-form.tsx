@@ -22,6 +22,7 @@ interface CheckoutFormProps {
   primaryColor?: string
   previewMode?: boolean
   recurring?: boolean
+  billingCycle?: string
 }
 
 function money(value: number) {
@@ -40,8 +41,10 @@ export function CheckoutForm({
   primaryColor = '#059669',
   previewMode = false,
   recurring = false,
+  billingCycle = 'MONTHLY',
 }: CheckoutFormProps) {
   const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix'>(recurring ? 'credit_card' : 'pix')
+  const [installmentCount, setInstallmentCount] = useState(1)
   const [selectedBumpIds, setSelectedBumpIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -193,6 +196,11 @@ export function CheckoutForm({
 
   const totalAmount = amount + bumpPrice
 
+  const cycleMonths = billingCycle === 'QUARTERLY' ? 3 : billingCycle === 'SEMIANNUALLY' ? 6 : billingCycle === 'ANNUALLY' ? 12 : 1
+  const maxInstallments = cycleMonths > 1 ? Math.min(cycleMonths, 12) : 1
+  const showInstallments = recurring && cycleMonths > 1 && paymentMethod === 'credit_card'
+  const installmentValue = showInstallments && installmentCount > 1 ? totalAmount / installmentCount : totalAmount
+
   // TODO(M9): This DOM manipulation is an anti-pattern. The totalAmount should
   // be lifted to the parent page via props/callback instead of mutating the DOM.
   useEffect(() => {
@@ -272,6 +280,7 @@ export function CheckoutForm({
         selected_order_bump_ids: Array.from(selectedBumpIds),
         billing_type: paymentMethod === 'pix' ? 'PIX' : 'CREDIT_CARD',
         tracking_params: trackingParams,
+        installment_count: showInstallments && installmentCount > 1 ? installmentCount : undefined,
       }
 
       if (paymentMethod === 'credit_card') {
@@ -468,7 +477,9 @@ export function CheckoutForm({
 
       {recurring && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-700">
-          Para assinaturas mensais, o pagamento via PIX requer o Pix Automatico, que ainda nao esta disponivel. Utilize cartao de credito para assinar.
+          {cycleMonths > 1
+            ? `Para assinaturas ${billingCycle === 'QUARTERLY' ? 'trimestrais' : billingCycle === 'SEMIANNUALLY' ? 'semestrais' : 'anuais'}, o pagamento via PIX requer o Pix Automatico, que ainda nao esta disponivel. Utilize cartao de credito para assinar.`
+            : 'Para assinaturas mensais, o pagamento via PIX requer o Pix Automatico, que ainda nao esta disponivel. Utilize cartao de credito para assinar.'}
         </div>
       )}
 
@@ -713,6 +724,40 @@ export function CheckoutForm({
           )}
 
           <input value={addressComplement} onChange={e => setAddressComplement(e.target.value)} placeholder="Complemento (opcional)" className={plainInputClass} style={focusStyle} />
+
+          {showInstallments && (
+            <div className="rounded-xl border border-border bg-background p-4">
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-muted">
+                Parcelamento no cartao
+              </label>
+              <div className="relative">
+                <select
+                  value={installmentCount}
+                  onChange={e => setInstallmentCount(Number(e.target.value))}
+                  className="h-12 w-full appearance-none rounded-xl border border-border bg-card px-4 pr-10 text-sm font-semibold text-foreground outline-none transition focus:ring-2 focus:ring-orange-500/20"
+                >
+                  {Array.from({ length: maxInstallments }, (_, i) => i + 1).map(count => {
+                    const value = totalAmount / count
+                    return (
+                      <option key={count} value={count}>
+                        {count}x de R$ {money(value)}{count === 1 ? ' (a vista)' : ''}
+                      </option>
+                    )
+                  })}
+                </select>
+                <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] text-muted">
+                {installmentCount === 1
+                  ? `Pagamento a vista de R$ ${money(totalAmount)}`
+                  : `${installmentCount}x de R$ ${money(installmentValue)} = R$ ${money(totalAmount)} sem juros`}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -748,7 +793,9 @@ export function CheckoutForm({
         ) : (
           <>
             <Lock className="h-5 w-5" />
-            {paymentMethod === 'pix' ? 'Gerar QR Code PIX' : `Finalizar compra R$ ${money(totalAmount)}`}
+            {paymentMethod === 'pix' ? 'Gerar QR Code PIX' : showInstallments && installmentCount > 1
+              ? `Finalizar compra ${installmentCount}x R$ ${money(installmentValue)}`
+              : `Finalizar compra R$ ${money(totalAmount)}`}
           </>
         )}
       </button>

@@ -10,6 +10,7 @@ type CreateProductPlan = {
   name: string
   price: string | number
   billing_type: 'one_time' | 'recurring'
+  billing_cycle: string
 }
 
 type CreateProductActionInput = {
@@ -98,6 +99,7 @@ async function createProductAction(data: CreateProductActionInput): Promise<{ pr
         name: p.name,
         price: typeof p.price === 'string' ? parseFloat(p.price) || 0 : p.price,
         billing_type: p.billing_type === 'recurring' ? 'recurring' : 'one_time',
+        billing_cycle: p.billing_type === 'recurring' ? (p.billing_cycle || 'MONTHLY') : 'MONTHLY',
       }))
 
       const invalidPlan = plans.find(p => !Number.isFinite(p.price) || p.price < 5)

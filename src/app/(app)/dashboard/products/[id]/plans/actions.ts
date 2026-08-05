@@ -23,6 +23,7 @@ export async function updatePlanAction(productId: string, planId: string, formDa
   const price = formData.get('price') as string
   const plan_identifier = formData.get('plan_identifier') as string
   const billing_type = formData.get('billing_type') as string
+  const billing_cycle = formData.get('billing_cycle') as string || 'MONTHLY'
 
   if (!name || !price) return { success: false, error: 'Missing required fields' }
 
@@ -36,6 +37,7 @@ export async function updatePlanAction(productId: string, planId: string, formDa
       price: priceNum,
       plan_identifier: plan_identifier || null,
       billing_type: billing_type === 'recurring' ? 'recurring' : 'one_time',
+      billing_cycle: billing_type === 'recurring' ? billing_cycle : 'MONTHLY',
     })
     .eq('id', planId)
     .eq('product_id', productId)
