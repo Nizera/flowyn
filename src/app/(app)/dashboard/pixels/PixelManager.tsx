@@ -368,7 +368,7 @@ export function PixelManager({ initialPixels, appUrl }: { initialPixels: Pixel[]
                       <h4 className="text-sm font-semibold text-foreground">Prompt para seu LLM</h4>
                       <button
                         onClick={() => {
-                          const prompt = buildLlmPrompt(appUrl, meta.public_token, meta.pixel_id)
+                          const prompt = buildLlmPrompt(appUrl, meta.public_token || '', meta.pixel_id || '')
                           navigator.clipboard.writeText(prompt)
                           setSnippetCopiedId('llm-prompt')
                           setTimeout(() => setSnippetCopiedId(null), 2000)
