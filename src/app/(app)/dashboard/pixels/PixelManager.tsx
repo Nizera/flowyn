@@ -301,7 +301,7 @@ export function PixelManager({ initialPixels, appUrl }: { initialPixels: Pixel[]
                     </div>
                     <p className="mb-3 text-xs leading-6 text-emerald-800/80">
                       Adicione este script na <strong>{'<head>'}</strong> da sua landing page.
-                      Ele lê as UTMs da URL e injeta nos links que levam ao checkout, garantindo rastreamento mesmo se o visitante navegar entre páginas.
+                      Ele lê as UTMs da URL e injeta nos links que levam ao checkout, garantindo rastreamento mesmo se o visitante navegue entre páginas.
                     </p>
                     <div className="mb-3 rounded-lg bg-slate-900 p-3 font-mono text-xs text-slate-300">
                       <span className="text-slate-500">&lt;!-- FlowynPay producer script — injeta UTMs nos CTAs --&gt;</span>
@@ -311,6 +311,48 @@ export function PixelManager({ initialPixels, appUrl }: { initialPixels: Pixel[]
                     <p className="text-xs text-emerald-800/70">
                       <strong>Como funciona:</strong> Lê UTMs da URL ou cookie, e injeta em todos os links {'<a href="/r/...">'} da página.
                       Funciona com links adicionados dinamicamente (MutationObserver). Cookie dura 30 dias.
+                    </p>
+                  </div>
+
+                  {/* Resumo: Como deve ficar o head */}
+                  <div className="mt-4 rounded-xl border border-border bg-card p-5">
+                    <h4 className="mb-3 text-sm font-semibold text-foreground">Resumo — Como deve ficar no {'<head>'} da landing</h4>
+                    <p className="mb-3 text-xs text-muted">
+                      Copie e cole na ordem correta. Todos os três snippets são necessários para rastreamento completo:
+                    </p>
+                    <div className="rounded-lg bg-slate-900 p-4 font-mono text-[11px] leading-5 text-slate-300">
+                      <span className="text-slate-500">&lt;!-- 1. Meta Pixel — dispara PageView/ViewContent no browser --&gt;</span>
+                      <br />
+                      <span className="text-slate-500">&lt;script&gt;</span>
+                      <br />
+                      &nbsp;&nbsp;!function(f,b,e,v,n,t,s){"{"}if(f.fbq)return;n=f.fbq=function(){"{"}n.callMethod?
+                      <br />
+                      &nbsp;&nbsp;n.callMethod.apply(n,arguments):n.queue.push(arguments){"}"};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version=&apos;2.0&apos;;
+                      <br />
+                      &nbsp;&nbsp;n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];
+                      <br />
+                      &nbsp;&nbsp;s.parentNode.insertBefore(t,s){"}"}(window,document,&apos;script&apos;,
+                      <br />
+                      &nbsp;&nbsp;&apos;https://connect.facebook.net/en_US/fbevents.js&apos;);
+                      <br />
+                      &nbsp;&nbsp;fbq(&apos;init&apos;, <span className="text-emerald-400">SEU_PIXEL_ID</span>);
+                      <br />
+                      &nbsp;&nbsp;fbq(&apos;track&apos;, &apos;PageView&apos;);
+                      <br />
+                      <span className="text-slate-500">&lt;/script&gt;</span>
+                      <br />
+                      <br />
+                      <span className="text-slate-500">&lt;!-- 2. Producer Script — injeta UTMs nos CTAs --&gt;</span>
+                      <br />
+                      &lt;script src=&quot;<span className="text-emerald-400">{appUrl}/api/producer-script</span>&quot; defer&gt;&lt;/script&gt;
+                      <br />
+                      <br />
+                      <span className="text-slate-500">&lt;!-- 3. Tracker.js — rastreia visitas e dispara CAPI --&gt;</span>
+                      <br />
+                      &lt;script src=&quot;<span className="text-emerald-400">{appUrl}/t/{meta.public_token}.js</span>&quot; async&gt;&lt;/script&gt;
+                    </div>
+                    <p className="mt-3 text-xs text-muted">
+                      <strong>Dica:</strong> Se você usa construtor de páginas (Hotmart, Kiwify, etc.), cole o Meta Pixel e o Producer Script no {'<head>'} global. O tracker.js já é injetado automaticamente pelo checkout.
                     </p>
                   </div>
                 </>

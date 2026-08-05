@@ -39,7 +39,6 @@ const pageTitles: { match: string; title: string; subtitle: string }[] = [
   { match: '/dashboard/sales', title: 'Vendas', subtitle: 'Pedidos, pagamentos e liberacao de acesso.' },
   { match: '/dashboard/wallet', title: 'Carteira', subtitle: 'Saldo e recebiveis via Asaas.' },
   { match: '/dashboard/diagnostics', title: 'Diagnóstico', subtitle: 'Identifique vendas não rastreadas e os motivos.' },
-  { match: '/dashboard/setup', title: 'Setup Wizard', subtitle: 'Configure rastreamento e Meta Ads passo a passo.' },
   { match: '/dashboard/pixels', title: 'Pixels', subtitle: 'Rastreamento e conversoes dos checkouts.' },
   { match: '/dashboard/settings/subscription', title: 'Assinatura', subtitle: 'Plano Flowyn e cobranca mensal.' },
   { match: '/dashboard/settings/profile', title: 'Minha conta', subtitle: 'Dados do usuario e preferencias.' },

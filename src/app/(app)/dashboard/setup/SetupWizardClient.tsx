@@ -55,6 +55,7 @@ export default function SetupWizardPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [publicToken, setPublicToken] = useState<string | null>(persisted?.publicToken || null)
 
   // Check Meta connection status
   useEffect(() => {
@@ -93,8 +94,25 @@ export default function SetupWizardPage() {
       pixelId,
       pixelName,
       capiToken,
+      publicToken,
     })
-  }, [currentStep, completedSteps, selectedAccounts, pixelId, pixelName, capiToken])
+  }, [currentStep, completedSteps, selectedAccounts, pixelId, pixelName, capiToken, publicToken])
+
+  // Fetch pixel public_token when reaching step 4
+  useEffect(() => {
+    if (currentStep !== 4 || publicToken) return
+    fetch('/api/pixels')
+      .then(async (res) => {
+        if (!res.ok) return
+        const data = await res.json()
+        const meta = (data.pixels || []).find((p: any) => p.platform === 'meta' && p.public_token)
+        if (meta?.public_token) {
+          setPublicToken(meta.public_token)
+          persist({ step: String(currentStep), completed: Array.from(completedSteps).map(String), accounts: Array.from(selectedAccounts), pixelId, pixelName, capiToken, publicToken: meta.public_token })
+        }
+      })
+      .catch(() => {})
+  }, [currentStep, publicToken])
 
   function goNext() {
     if (currentStep < STEPS.length - 1) {
@@ -468,21 +486,33 @@ export default function SetupWizardPage() {
             <div>
               <h2 className="text-xl font-bold text-foreground">Verificar rastreamento</h2>
               <p className="text-sm text-muted mt-1">
-                Teste se tudo está funcionando antes de criar suas campanhas.
+                Adicione os snippets abaixo na {'<head>'} da sua landing page, na ordem correta.
               </p>
             </div>
 
             <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-              <h3 className="font-semibold text-foreground">Snippet de rastreamento</h3>
+              <h3 className="font-semibold text-foreground">1. Meta Pixel</h3>
               <p className="text-sm text-muted">
-                Adicione este snippet na &lt;head&gt; da sua landing page:
+                Dispara <strong>PageView</strong> e <strong>ViewContent</strong> no browser. Necessário para remarketing.
               </p>
               <div className="relative">
                 <pre className="rounded-lg bg-[#0a0a0f] p-4 text-xs text-green-400 overflow-x-auto">
-{`<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://www.flowyn.com.br'}/t/YOUR_PUBLIC_TOKEN.js" async defer></script>`}
+{`<!-- Meta Pixel — dispara PageView/ViewContent no browser -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window,document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '${pixelId || 'SEU_PIXEL_ID'}');
+fbq('track', 'PageView');
+</script>`}
                 </pre>
                 <button
-                  onClick={copySnippet}
+                  onClick={() => { navigator.clipboard.writeText(document.querySelector('pre')?.textContent || ''); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
                   className="absolute right-2 top-2 rounded-lg bg-white/10 p-2 text-muted hover:text-foreground transition"
                 >
                   {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
@@ -491,13 +521,40 @@ export default function SetupWizardPage() {
             </div>
 
             <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-              <h3 className="font-semibold text-foreground">Script de UTM (recomendado)</h3>
+              <h3 className="font-semibold text-foreground">2. Producer Script</h3>
               <p className="text-sm text-muted">
-                Para rastrear UTMs da landing page, adicione também:
+                Lê UTMs da URL e injeta nos links do checkout. <strong>Essencial para atribuição.</strong>
               </p>
               <pre className="rounded-lg bg-[#0a0a0f] p-4 text-xs text-green-400 overflow-x-auto">
-{`<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://www.flowyn.com.br'}/api/producer-script" async defer></script>`}
+{`<!-- Producer Script — injeta UTMs nos CTAs -->
+<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://www.flowyn.com.br'}/api/producer-script" defer></script>`}
               </pre>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+              <h3 className="font-semibold text-foreground">3. Tracker.js</h3>
+              <p className="text-sm text-muted">
+                Rastreia visitas e dispara eventos CAPI server-side. <strong>Já injetado automaticamente pelo checkout.</strong>
+              </p>
+              <pre className="rounded-lg bg-[#0a0a0f] p-4 text-xs text-green-400 overflow-x-auto">
+{`<!-- Tracker.js — rastreia visitas e dispara CAPI -->
+<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://www.flowyn.com.br'}/t/${publicToken || 'SEU_PUBLIC_TOKEN'}.js" async></script>`}
+              </pre>
+              {publicToken && (
+                <p className="text-xs text-muted">
+                  <strong>Seu public token:</strong> <code className="rounded bg-white/10 px-1.5 py-0.5">{publicToken}</code>
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-border bg-card p-6 space-y-3">
+              <h3 className="font-semibold text-foreground">Ordem no {'<head>'}</h3>
+              <p className="text-sm text-muted">Cole todos os snippets nesta ordem:</p>
+              <div className="rounded-lg bg-[#0a0a0f] p-4 font-mono text-[11px] text-slate-300 space-y-1">
+                <div><span className="text-slate-500">&lt;!-- 1. Meta Pixel --&gt;</span></div>
+                <div><span className="text-slate-500">&lt;!-- 2. Producer Script (defer) --&gt;</span></div>
+                <div><span className="text-slate-500">&lt;!-- 3. Tracker.js (async) --&gt;</span></div>
+              </div>
             </div>
 
             <div className="rounded-xl border border-green-500/30 bg-green-500/10 p-6">

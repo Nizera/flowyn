@@ -60,7 +60,6 @@ const sections: { label: string; items: NavItem[] }[] = [
     label: 'Configuracoes',
     items: [
       { href: '/dashboard/pixels', label: 'Pixels', icon: ScanLine },
-      { href: '/dashboard/setup', label: 'Setup Wizard', icon: Settings },
       { href: '/dashboard/settings/payments', label: 'Pagamentos', icon: CreditCard },
       { href: '/dashboard/settings/subscription', label: 'Assinatura', icon: BadgeCheck },
       { href: '/dashboard/settings/profile', label: 'Minha Conta', icon: Settings },

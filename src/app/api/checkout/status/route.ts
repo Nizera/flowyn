@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { retrievePayment } from '@/lib/asaas'
 import { hashIdentifier } from '@/lib/hash'
-import { fulfillPaidOrder } from '@/lib/order-fulfillment'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { decryptApiKey } from '@/lib/encryption'
 import { getClientIp } from '@/lib/client-ip'
@@ -108,8 +107,6 @@ export async function GET(req: NextRequest) {
             updated_at: new Date().toISOString(),
           })
           .eq('id', orderId)
-
-        await fulfillPaidOrder(supabase, orderId, payment.status)
       }
       return NextResponse.json({ paid: true, status: payment.status })
     }
