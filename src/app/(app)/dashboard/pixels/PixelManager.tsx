@@ -4,12 +4,14 @@ import { useState, useTransition } from 'react'
 import { Loader2, Plus, Trash2, ToggleLeft, ToggleRight, X, KeyRound, Code2, Globe, Copy, Check } from 'lucide-react'
 import { createPixel, deletePixel, togglePixel, updatePixelCapiToken } from './actions'
 
-function buildLlmPrompt(appUrl: string, publicToken: string): string {
+function buildLlmPrompt(appUrl: string): string {
   return `Analise minha landing page e adicione os scripts de rastreamento Meta Ads no <head>. NÃO remova nenhum script existente. Apenas ADICIONE os 3 scripts abaixo na ordem correta.
 
 REGRA CRÍTICA: Os links de compra (CTAs) devem usar <a href> com o formato:
-<a href="${appUrl}/r/${publicToken}?dest=/checkout/SEU_PLANO_ID">
-Onde SEU_PLANO_ID é o ID do plano no Flowyn (ex: 8927dbb7-5bd0-444d-a8f3-a45c13d5ab23).
+<a href="${appUrl}/r/SEU_TOKEN_PUBLICO?dest=/checkout/SEU_PLANO_ID">
+Onde:
+- SEU_TOKEN_PUBLICO é o token público do seu produto no Flowyn (ex: 395f65d1-8327-4ada-8707-036d31af523a)
+- SEU_PLANO_ID é o ID do plano no Flowyn (ex: 8927dbb7-5bd0-444d-a8f3-a45c13d5ab23)
 
 Se o CTA atual já é um <a href> apontando para /checkout/, substitua o href pelo formato /r/ acima.
 Se o CTA é um <button> ou não permite editar o href, mantenha como está (o producer script injeta as UTMs automaticamente).
@@ -40,16 +42,17 @@ SCRIPT 2 — Producer Script (injeta UTMs nos CTAs automaticamente):
 
 SCRIPT 3 — Tracker.js (rastreia visitas e dispara CAPI server-side):
 <!-- FlowynPay Tracker -->
-<script src="${appUrl}/t/${publicToken}.js" async></script>
+<script src="${appUrl}/t/SEU_TOKEN_PUBLICO.js" async></script>
 
 INSTRUÇÕES:
 1. Adicione os 3 scripts no <head> da landing page, NESTA ordem
 2. NÃO remova scripts existentes (Google Analytics, outros pixels, etc)
 3. Substitua SEU_PIXEL_ID pelo seu pixel ID do Meta Ads (ex: 1234567890123456)
-4. NÃO altere as URLs dos scripts da Flowyn
-5. Se já existe um Meta Pixel na página com outro ID, mantenha ambos (pode haver mais de um)
-6. Verifique se os CTAs de compra usam <a href="${appUrl}/r/${publicToken}?dest=/checkout/SEU_PLANO_ID">
-7. Teste: after updating, open the page and check the browser console for errors`
+4. Substitua SEU_TOKEN_PUBLICO pelo token público do seu produto no Flowyn
+5. Substitua SEU_PLANO_ID pelo ID do plano que será vendido
+6. Se já existe um Meta Pixel na página com outro ID, mantenha ambos (pode haver mais de um)
+7. Verifique se os CTAs de compra usam o formato /r/SEU_TOKEN_PUBLICO?dest=/checkout/SEU_PLANO_ID
+8. Teste: after updating, open the page and check the browser console for errors`
 }
 
 const PLATFORMS = [
@@ -368,7 +371,7 @@ export function PixelManager({ initialPixels, appUrl }: { initialPixels: Pixel[]
                       <h4 className="text-sm font-semibold text-foreground">Prompt para seu LLM</h4>
                       <button
                         onClick={() => {
-                          const prompt = buildLlmPrompt(appUrl, meta.public_token || '')
+                          const prompt = buildLlmPrompt(appUrl)
                           navigator.clipboard.writeText(prompt)
                           setSnippetCopiedId('llm-prompt')
                           setTimeout(() => setSnippetCopiedId(null), 2000)
@@ -386,7 +389,7 @@ export function PixelManager({ initialPixels, appUrl }: { initialPixels: Pixel[]
                       Copie o prompt abaixo e cole no seu ChatGPT, Claude, Gemini ou outro LLM. Ele vai atualizar sua landing page com o rastreamento correto.
                     </p>
                     <div className="rounded-lg bg-slate-900 p-4 font-mono text-[11px] leading-5 text-slate-300 max-h-[300px] overflow-y-auto whitespace-pre-wrap">
-{buildLlmPrompt(appUrl, meta.public_token || '')}
+{buildLlmPrompt(appUrl)}
                     </div>
                     <p className="mt-3 text-xs text-muted">
                       <strong>Dica:</strong> Se você usa construtor de páginas (Hotmart, Kiwify, etc.), cole o prompt no LLM e ele vai adaptar automaticamente para o construtor que você utiliza.
