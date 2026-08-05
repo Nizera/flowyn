@@ -1,8 +1,56 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Loader2, Plus, Trash2, ToggleLeft, ToggleRight, X, KeyRound, Code2, Globe } from 'lucide-react'
+import { Loader2, Plus, Trash2, ToggleLeft, ToggleRight, X, KeyRound, Code2, Globe, Copy, Check } from 'lucide-react'
 import { createPixel, deletePixel, togglePixel, updatePixelCapiToken } from './actions'
+
+function buildLlmPrompt(appUrl: string, publicToken: string, pixelId: string): string {
+  return `Analise minha landing page e adicione os scripts de rastreamento Meta Ads no <head>. NÃO remova nenhum script existente. Apenas ADICIONE os 3 scripts abaixo na ordem correta.
+
+REGRA CRÍTICA: Os links de compra (CTAs) devem usar <a href> com o formato:
+<a href="${appUrl}/r/${publicToken}?dest=/checkout/SEU_PLANO_ID">
+Onde SEU_PLANO_ID é o ID do plano no Flowyn (ex: 8927dbb7-5bd0-444d-a8f3-a45c13d5ab23).
+
+Se o CTA atual já é um <a href> apontando para /checkout/, substitua o href pelo formato /r/ acima.
+Se o CTA é um <button> ou não permite editar o href, mantenha como está (o producer script injeta as UTMs automaticamente).
+
+SCRIPT 1 — Meta Pixel (dispara PageView e ViewContent no browser):
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '${pixelId}');
+fbq('track', 'PageView');
+fbq('track', 'ViewContent');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
+
+SCRIPT 2 — Producer Script (injeta UTMs nos CTAs automaticamente):
+<!-- FlowynPay Producer Script -->
+<script src="${appUrl}/api/producer-script" defer></script>
+
+SCRIPT 3 — Tracker.js (rastreia visitas e dispara CAPI server-side):
+<!-- FlowynPay Tracker -->
+<script src="${appUrl}/t/${publicToken}.js" async></script>
+
+INSTRUÇÕES:
+1. Adicione os 3 scripts no <head> da landing page, NESTA ordem
+2. NÃO remova scripts existentes (Google Analytics, outros pixels, etc)
+3. NÃO altere o Meta Pixel ID — use exatamente ${pixelId}
+4. NÃO altere as URLs dos scripts da Flowyn
+5. Se já existe um Meta Pixel na página com outro ID, mantenha ambos (pode haver mais de um)
+6. Verifique se os CTAs de compra usam <a href="${appUrl}/r/${publicToken}?dest=/checkout/SEU_PLANO_ID">
+7. Teste: after updating, open the page and check the browser console for errors`
+}
 
 const PLATFORMS = [
   { id: 'meta', label: 'Meta Ads', sublabel: 'Facebook & Instagram', icon: '/meta.png', color: 'bg-orange-50 border-orange-100 text-orange-600', hint: 'Ex: 1234567890123456', supportsCapi: true },
@@ -314,45 +362,34 @@ export function PixelManager({ initialPixels, appUrl }: { initialPixels: Pixel[]
                     </p>
                   </div>
 
-                  {/* Resumo: Como deve ficar o head */}
+                  {/* Prompt para LLM */}
                   <div className="mt-4 rounded-xl border border-border bg-card p-5">
-                    <h4 className="mb-3 text-sm font-semibold text-foreground">Resumo — Como deve ficar no {'<head>'} da landing</h4>
+                    <div className="mb-3 flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-foreground">Prompt para seu LLM</h4>
+                      <button
+                        onClick={() => {
+                          const prompt = buildLlmPrompt(appUrl, meta.public_token, meta.pixel_id)
+                          navigator.clipboard.writeText(prompt)
+                          setSnippetCopiedId('llm-prompt')
+                          setTimeout(() => setSnippetCopiedId(null), 2000)
+                        }}
+                        className="flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground hover:bg-white/10 transition"
+                      >
+                        {snippetCopiedId === 'llm-prompt' ? (
+                          <><Check className="h-3.5 w-3.5 text-green-400" /> Copiado!</>
+                        ) : (
+                          <><Copy className="h-3.5 w-3.5" /> Copiar prompt</>
+                        )}
+                      </button>
+                    </div>
                     <p className="mb-3 text-xs text-muted">
-                      Copie e cole na ordem correta. Todos os três snippets são necessários para rastreamento completo:
+                      Copie o prompt abaixo e cole no seu ChatGPT, Claude, Gemini ou outro LLM. Ele vai atualizar sua landing page com o rastreamento correto.
                     </p>
-                    <div className="rounded-lg bg-slate-900 p-4 font-mono text-[11px] leading-5 text-slate-300">
-                      <span className="text-slate-500">&lt;!-- 1. Meta Pixel — dispara PageView/ViewContent no browser --&gt;</span>
-                      <br />
-                      <span className="text-slate-500">&lt;script&gt;</span>
-                      <br />
-                      &nbsp;&nbsp;!function(f,b,e,v,n,t,s){"{"}if(f.fbq)return;n=f.fbq=function(){"{"}n.callMethod?
-                      <br />
-                      &nbsp;&nbsp;n.callMethod.apply(n,arguments):n.queue.push(arguments){"}"};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version=&apos;2.0&apos;;
-                      <br />
-                      &nbsp;&nbsp;n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];
-                      <br />
-                      &nbsp;&nbsp;s.parentNode.insertBefore(t,s){"}"}(window,document,&apos;script&apos;,
-                      <br />
-                      &nbsp;&nbsp;&apos;https://connect.facebook.net/en_US/fbevents.js&apos;);
-                      <br />
-                      &nbsp;&nbsp;fbq(&apos;init&apos;, <span className="text-emerald-400">SEU_PIXEL_ID</span>);
-                      <br />
-                      &nbsp;&nbsp;fbq(&apos;track&apos;, &apos;PageView&apos;);
-                      <br />
-                      <span className="text-slate-500">&lt;/script&gt;</span>
-                      <br />
-                      <br />
-                      <span className="text-slate-500">&lt;!-- 2. Producer Script — injeta UTMs nos CTAs --&gt;</span>
-                      <br />
-                      &lt;script src=&quot;<span className="text-emerald-400">{appUrl}/api/producer-script</span>&quot; defer&gt;&lt;/script&gt;
-                      <br />
-                      <br />
-                      <span className="text-slate-500">&lt;!-- 3. Tracker.js — rastreia visitas e dispara CAPI --&gt;</span>
-                      <br />
-                      &lt;script src=&quot;<span className="text-emerald-400">{appUrl}/t/{meta.public_token}.js</span>&quot; async&gt;&lt;/script&gt;
+                    <div className="rounded-lg bg-slate-900 p-4 font-mono text-[11px] leading-5 text-slate-300 max-h-[300px] overflow-y-auto whitespace-pre-wrap">
+{buildLlmPrompt(appUrl, meta.public_token, pixelId)}
                     </div>
                     <p className="mt-3 text-xs text-muted">
-                      <strong>Dica:</strong> Se você usa construtor de páginas (Hotmart, Kiwify, etc.), cole o Meta Pixel e o Producer Script no {'<head>'} global. O tracker.js já é injetado automaticamente pelo checkout.
+                      <strong>Dica:</strong> Se você usa construtor de páginas (Hotmart, Kiwify, etc.), cole o prompt no LLM e ele vai adaptar automaticamente para o construtor que você utiliza.
                     </p>
                   </div>
                 </>
