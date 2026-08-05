@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { Loader2, Plus, Trash2, ToggleLeft, ToggleRight, X, KeyRound, Code2, Globe, Copy, Check } from 'lucide-react'
 import { createPixel, deletePixel, togglePixel, updatePixelCapiToken } from './actions'
 
-function buildLlmPrompt(appUrl: string, publicToken: string, pixelId: string): string {
+function buildLlmPrompt(appUrl: string, publicToken: string): string {
   return `Analise minha landing page e adicione os scripts de rastreamento Meta Ads no <head>. NÃO remova nenhum script existente. Apenas ADICIONE os 3 scripts abaixo na ordem correta.
 
 REGRA CRÍTICA: Os links de compra (CTAs) devem usar <a href> com o formato:
@@ -25,12 +25,12 @@ n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '${pixelId}');
+fbq('init', 'SEU_PIXEL_ID');
 fbq('track', 'PageView');
 fbq('track', 'ViewContent');
 </script>
 <noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1"
+src="https://www.facebook.com/tr?id=SEU_PIXEL_ID&ev=PageView&noscript=1"
 /></noscript>
 <!-- End Meta Pixel Code -->
 
@@ -45,7 +45,7 @@ SCRIPT 3 — Tracker.js (rastreia visitas e dispara CAPI server-side):
 INSTRUÇÕES:
 1. Adicione os 3 scripts no <head> da landing page, NESTA ordem
 2. NÃO remova scripts existentes (Google Analytics, outros pixels, etc)
-3. NÃO altere o Meta Pixel ID — use exatamente ${pixelId}
+3. Substitua SEU_PIXEL_ID pelo seu pixel ID do Meta Ads (ex: 1234567890123456)
 4. NÃO altere as URLs dos scripts da Flowyn
 5. Se já existe um Meta Pixel na página com outro ID, mantenha ambos (pode haver mais de um)
 6. Verifique se os CTAs de compra usam <a href="${appUrl}/r/${publicToken}?dest=/checkout/SEU_PLANO_ID">
@@ -368,7 +368,7 @@ export function PixelManager({ initialPixels, appUrl }: { initialPixels: Pixel[]
                       <h4 className="text-sm font-semibold text-foreground">Prompt para seu LLM</h4>
                       <button
                         onClick={() => {
-                          const prompt = buildLlmPrompt(appUrl, meta.public_token || '', meta.pixel_id || '')
+                          const prompt = buildLlmPrompt(appUrl, meta.public_token || '')
                           navigator.clipboard.writeText(prompt)
                           setSnippetCopiedId('llm-prompt')
                           setTimeout(() => setSnippetCopiedId(null), 2000)
@@ -386,7 +386,7 @@ export function PixelManager({ initialPixels, appUrl }: { initialPixels: Pixel[]
                       Copie o prompt abaixo e cole no seu ChatGPT, Claude, Gemini ou outro LLM. Ele vai atualizar sua landing page com o rastreamento correto.
                     </p>
                     <div className="rounded-lg bg-slate-900 p-4 font-mono text-[11px] leading-5 text-slate-300 max-h-[300px] overflow-y-auto whitespace-pre-wrap">
-{buildLlmPrompt(appUrl, meta.public_token || '', meta.pixel_id || '')}
+{buildLlmPrompt(appUrl, meta.public_token || '')}
                     </div>
                     <p className="mt-3 text-xs text-muted">
                       <strong>Dica:</strong> Se você usa construtor de páginas (Hotmart, Kiwify, etc.), cole o prompt no LLM e ele vai adaptar automaticamente para o construtor que você utiliza.
