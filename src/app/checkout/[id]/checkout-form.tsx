@@ -504,7 +504,6 @@ export function CheckoutForm({
               onChange={e => {
                 setCustomerName(e.target.value)
                 if (!cardHolderName) setCardHolderName(e.target.value)
-                if (e.target.value.trim()) fireInitiateCheckout()
               }}
               placeholder="Seu nome completo"
               className={inputClass}
@@ -525,6 +524,7 @@ export function CheckoutForm({
               required
               value={customerEmail}
               onChange={e => setCustomerEmail(e.target.value)}
+              onBlur={fireInitiateCheckout}
               placeholder="seu@email.com"
               className={inputClass}
               style={focusStyle}
