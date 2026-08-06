@@ -155,9 +155,12 @@ function buildTrackerJs(publicToken: string, appUrl: string): string {
 
   // Dispara evento server-side via fetch no-cors (bypass ad blockers)
   // Gera event_id único para dedup com pixel client-side (CAPI)
+  // Armazena em window.__fl_last_event_id para que inject() possa injetar na URL
+  // do redirect (/r/[token]), evitando PageView duplicado no CAPI.
   function sendTrack(eventName){
     try {
       var eventId = eventName + "_" + uuidv4();
+      window.__fl_last_event_id = eventId;
       var payload = {
         t: TOKEN,
         event_name: eventName,
@@ -242,6 +245,10 @@ function buildTrackerJs(publicToken: string, appUrl: string): string {
           if (fbp && !rUrl.searchParams.has("_fbp")) rUrl.searchParams.set("_fbp", fbp);
           if (fbc && !rUrl.searchParams.has("_fbc")) rUrl.searchParams.set("_fbc", fbc);
           if (!rUrl.searchParams.has("fl_sid")) rUrl.searchParams.set("fl_sid", SID);
+          // Injeta event_id do beacon para dedup CAPI com /r/[token]
+          if (window.__fl_last_event_id && !rUrl.searchParams.has("_fl_eid")) {
+            rUrl.searchParams.set("_fl_eid", window.__fl_last_event_id);
+          }
           a.setAttribute("href", rUrl.toString());
         } catch(_) {}
         return;

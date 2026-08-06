@@ -198,6 +198,10 @@ export async function GET(
   })
 
   // CAPI PageView (não-bloqueante)
+  // Usa _fl_eid do tracker.js se disponível (dedup com beacon), senão gera próprio event_id
+  const clientEventId = searchParams.get('_fl_eid')
+  const capiEventId = clientEventId || `pv_r_${crypto.randomUUID()}`
+
   const trackingParams: Record<string, string> = {}
   for (const key of [...utmKeys, ...clickKeys]) {
     if (trackingData[key]) trackingParams[key] = trackingData[key]
@@ -206,7 +210,7 @@ export async function GET(
   if (fbc) trackingParams._fbc = fbc
 
   sendCapiEvent({
-    eventId: `pv_r_${crypto.randomUUID()}`,
+    eventId: capiEventId,
     eventName: 'PageView',
     pixelId: pixel.id,
     productId: productId || undefined,

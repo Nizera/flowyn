@@ -57,6 +57,7 @@ export function CheckoutForm({
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null)
   const statusCheckInFlight = useRef(false)
   const initiateCheckoutFired = useRef(false)
+  const initiateCheckoutEventId = useRef(`ic_${crypto.randomUUID()}`)
 
   const [customerName, setCustomerName] = useState('')
   const [customerEmail, setCustomerEmail] = useState('')
@@ -138,34 +139,22 @@ export function CheckoutForm({
       if ((k === '_fbp' || k === '_fbc') && v) result[k] = v
     }
     setTrackingParams(Object.keys(result).length > 0 ? result : undefined)
-
-    // Fire page_view funnel event (skip in preview mode)
-    if (!previewMode) {
-      fetch('/api/checkout/funnel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan_id: planId,
-          event_name: 'page_view',
-          tracking_params: result,
-          session_id: result.fl_sid || null,
-        }),
-      }).catch(() => {})
-    }
   }, [planId, previewMode])
 
   const fireInitiateCheckout = useCallback(() => {
     if (initiateCheckoutFired.current || previewMode) return
     initiateCheckoutFired.current = true
-    // CORREÇÃO C5: initiate_checkout agora dispara quando o campo nome recebe
-    // conteúdo (não apenas onFocus), pois preenchimento indica intenção real de compra.
-    // O guard já impede disparo duplicado.
+    const eventId = initiateCheckoutEventId.current
+    if (window.fbq) {
+      window.fbq('track', 'InitiateCheckout', {}, { eventID: eventId })
+    }
     fetch('/api/checkout/funnel', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         plan_id: planId,
         event_name: 'initiate_checkout',
+        event_id: eventId,
         tracking_params: trackingParams,
         session_id: trackingParams?.fl_sid || null,
         customer_email: customerEmail || undefined,
