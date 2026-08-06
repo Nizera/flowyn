@@ -35,49 +35,11 @@ export function PixelFireBackup({ pixels, amount, orderId }: Props) {
   const tiktokSig = useMemo(() => tiktokPixels.map(p => p.pixel_id).join(','), [tiktokPixels])
 
   useEffect(() => {
-    const eventId = `order_${orderId}`
-
-    // CORREÇÃO C4 (auditoria tracking): o backup de pixel disparava Purchase novamente
-    // na success page mesmo quando o checkout-form já havia disparado (para cartão,
-    // a chamada em checkout-form.tsx:284; para PIX, polling em checkout-form.tsx:181).
-    // Isso resultava em 2x client + 1x CAPI, inflando Purchase no Meta Ads Manager.
-    // Agora usamos sessionStorage como "já disparou" (1-time guard) — PixelFireBackup
-    // só dispara se o checkout-form não tiver disparado (e.g., redirect direto sem
-    // passar pelo form).
-    const guardKey = `flowyn_pixel_fired_${orderId}`
-    try {
-      if (sessionStorage.getItem(guardKey) === '1') {
-        return
-      }
-      sessionStorage.setItem(guardKey, '1')
-    } catch {
-      // sessionStorage indisponível (modo privado) — prossegue sem o guard
-    }
-
-    if (window.fbq) {
-      metaPixels.forEach(p => {
-        window.fbq!('init', p.pixel_id)
-        window.fbq!('track', 'Purchase', { value: amount, currency: 'BRL', eventID: eventId })
-      })
-    }
-
-    if (window.gtag) {
-      googlePixels.forEach(p => {
-        window.gtag!('event', 'conversion', {
-          send_to: p.pixel_id,
-          value: amount,
-          currency: 'BRL',
-          transaction_id: eventId,
-        })
-      })
-    }
-
-    if (window.ttq) {
-      tiktokPixels.forEach(p => {
-        window.ttq!.load(p.pixel_id)
-        window.ttq!.track('CompletePayment', { value: amount, currency: 'BRL' })
-      })
-    }
+    // CORREÇÃO C4 (auditoria tracking): Purchase agora é enviado exclusivamente
+    // via CAPI server-side (order-fulfillment.ts). O pixel client-side não dispara
+    // mais Purchase, evitando duplicação no Meta Ads Manager.
+    // Este componente permanece para carregar os scripts de pixel (PageView etc.)
+    // mas NÃO dispara mais Purchase.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [amount, orderId, metaSig, googleSig, tiktokSig])
 

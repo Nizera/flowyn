@@ -234,10 +234,6 @@ export function CheckoutForm({
 
       if (data.paid) {
         setPaymentStatusMessage('Pagamento confirmado! Redirecionando...')
-        window.firePixelPurchase?.(totalAmount, `order_${pixPaymentId}`)
-        // CORREÇÃO C4 (auditoria tracking): marca que já disparamos o pixel Purchase
-        // neste tab — PixelFireBackup na success page vai ver a flag e não disparar de novo.
-        try { sessionStorage.setItem(`flowyn_pixel_fired_${pixPaymentId}`, '1') } catch {}
         await new Promise(r => setTimeout(r, 500))
         window.location.href = `/checkout/success?order_id=${pixPaymentId}`
         return
@@ -342,11 +338,6 @@ export function CheckoutForm({
         return
       }
 
-      window.firePixelPurchase?.(totalAmount, `order_${data.order_id}`)
-      // CORREGÃO C4 (auditoria tracking): marca disparo do pixel para o backup não
-      // disparar de novo na success page (CC path).
-      try { sessionStorage.setItem(`flowyn_pixel_fired_${data.order_id}`, '1') } catch {}
-      await new Promise(r => setTimeout(r, 500))
       window.location.href = `/checkout/success?order_id=${data.order_id}`
     } catch {
       setError('Erro de conexao. Verifique sua internet e tente novamente.')

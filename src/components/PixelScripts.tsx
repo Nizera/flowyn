@@ -21,10 +21,8 @@ interface TiktokTtq {
   page: () => void
 }
 
-// Expose global purchase fire function for checkout-form to call
 declare global {
   interface Window {
-    firePixelPurchase?: (amount: number, eventId?: string) => void
     fbq?: FbqFunction
     gtag?: GtagFunction
     ttq?: TiktokTtq
@@ -90,35 +88,6 @@ export function PixelScripts({ pixels }: Props) {
       })
     }
 
-    // Register global purchase handler
-    window.firePixelPurchase = (amount: number, eventId?: string) => {
-      const finalEventId = eventId || `purchase_${crypto.randomUUID()}`
-      const eventData = { value: amount, currency: 'BRL', eventID: finalEventId }
-
-      // Meta Purchase
-      if (window.fbq) {
-        window.fbq('track', 'Purchase', eventData)
-      }
-
-      // Google conversion
-      if (window.gtag) {
-        googlePixels.forEach(p => {
-          window.gtag!('event', 'conversion', {
-            send_to: p.pixel_id,
-            value: amount,
-            currency: 'BRL',
-            transaction_id: finalEventId,
-          })
-        })
-      }
-
-      // TikTok CompletePayment
-      if (window.ttq) {
-        window.ttq.track('CompletePayment', { value: amount, currency: 'BRL' })
-      }
-    }
-
-    return () => { delete window.firePixelPurchase }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metaSig, googleSig, tiktokSig])
 
