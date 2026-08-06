@@ -4,6 +4,7 @@ import { hashIdentifier } from '@/lib/hash'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { decryptApiKey } from '@/lib/encryption'
 import { getClientIp } from '@/lib/client-ip'
+import { fulfillPaidOrder } from '@/lib/order-fulfillment'
 
 const PAID_STATUSES = new Set(['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'])
 const FAILED_STATUSES = new Set(['REFUNDED', 'REFUND_REQUESTED', 'CHARGEBACK_REQUESTED', 'CHARGEBACK_DISPUTE', 'EXPIRED', 'OVERDUE', 'FAILED'])
@@ -107,6 +108,11 @@ export async function GET(req: NextRequest) {
             updated_at: new Date().toISOString(),
           })
           .eq('id', orderId)
+
+        // Fire Purchase CAPI + fulfillment (idempotent — second call returns { skipped: true })
+        fulfillPaidOrder(supabase, orderId, payment.status).catch(err => {
+          console.error('[Checkout Status] fulfillPaidOrder failed (non-blocking):', err)
+        })
       }
       return NextResponse.json({ paid: true, status: payment.status })
     }

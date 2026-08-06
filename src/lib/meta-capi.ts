@@ -228,9 +228,6 @@ export async function sendCapiEvent(data: CapiOrderData | CapiFunnelData) {
   if (data.trackingParams?._fbp) userData.fbp = data.trackingParams._fbp
   if (data.trackingParams?._fbc) {
     userData.fbc = data.trackingParams._fbc
-  } else if (data.trackingParams?.fbclid) {
-    const ts = Math.floor(Date.now() / 1000)
-    userData.fbc = `fb.1.${ts}.${data.trackingParams.fbclid}`
   }
 
   // Monta custom_data

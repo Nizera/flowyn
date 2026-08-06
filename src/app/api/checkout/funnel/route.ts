@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Request too large' }, { status: 413 })
     }
     const body = JSON.parse(rawBody)
-    const { plan_id, event_name, tracking_params, session_id, event_id, pixel_id } = body
+    const { plan_id, event_name, tracking_params, session_id, event_id, pixel_id, customer_email, customer_phone } = body
 
     if (!plan_id || !event_name) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 })
@@ -113,6 +113,8 @@ export async function POST(req: NextRequest) {
         userAgent,
         eventSourceUrl,
         trackingParams: tracking_params,
+        customerEmail: customer_email || undefined,
+        customerPhone: customer_phone || undefined,
       }).catch(err => {
         console.error(`[Funnel CAPI] ${capiEventName} failed (non-blocking):`, err)
       })

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, CreditCard, Loader2, Lock, Mail, MapPin, Phone, Search, ShieldCheck, User as UserIcon, QrCode } from 'lucide-react'
 import { formatCardNumber, formatCpfCnpj, formatPhone, formatPostalCode, lookupPostalCode, type CepAddress } from '@/lib/brazil-fields'
+import { processAndCollectParams } from 'meta-capi-param-builder-clientjs'
 
 interface OrderBumpData {
   id?: string
@@ -76,6 +77,10 @@ export function CheckoutForm({
   const [trackingParams, setTrackingParams] = useState<Record<string, string> | undefined>(undefined)
 
   useEffect(() => {
+    // Initialize Meta CAPI param builder — sets _fbc/_fbp cookies with correct timestamps
+    // before we read them below. Must run before the cookie-reading loop.
+    try { processAndCollectParams(window.location.href) } catch {}
+
     const params = new URLSearchParams(window.location.search)
     const result: Record<string, string> = {}
     const knownParams = [
@@ -163,9 +168,11 @@ export function CheckoutForm({
         event_name: 'initiate_checkout',
         tracking_params: trackingParams,
         session_id: trackingParams?.fl_sid || null,
+        customer_email: customerEmail || undefined,
+        customer_phone: customerPhone || undefined,
       }),
     }).catch(() => {})
-  }, [planId, previewMode, trackingParams])
+  }, [planId, previewMode, trackingParams, customerEmail, customerPhone])
 
   async function searchPostalCode() {
     if (digits(postalCode).length !== 8) {
