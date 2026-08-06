@@ -226,6 +226,20 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
                 <FaqList items={config.faq} onChange={(items) => update('faq', items)} />
               </div>
             )}
+
+            <div className="rounded-xl border border-border/40 bg-surface p-4 space-y-3">
+              <label className="flex items-center justify-between text-sm font-medium text-foreground">
+                Upsell pos-compra
+                <input type="checkbox" checked={config.upsellEnabled} onChange={(event) => update('upsellEnabled', event.target.checked)} className="accent-orange-500" />
+              </label>
+              {config.upsellEnabled && (
+                <>
+                  <Field label="Link de destino" value={config.upsellUrl} onChange={(value) => update('upsellUrl', value)} placeholder="https://..." />
+                  <Field label="Texto do botao" value={config.upsellButtonText} onChange={(value) => update('upsellButtonText', value)} placeholder="Ver oferta exclusiva →" />
+                  <Field label="Frase de contexto (opcional)" value={config.upsellHeadline} onChange={(value) => update('upsellHeadline', value)} textarea placeholder="Desbloqueie o app e continue sua evolucao" />
+                </>
+              )}
+            </div>
           </div>
         )
     }
@@ -363,6 +377,20 @@ export function CheckoutEditorClient({ productId, userId, product, plans, initia
                           <FaqList items={config.faq} onChange={(items) => update('faq', items)} />
                         </div>
                       )}
+
+                      <div className="rounded-xl border border-border/40 bg-surface p-4 space-y-3">
+                        <label className="flex items-center justify-between text-sm font-medium text-foreground">
+                          Upsell pos-compra
+                          <input type="checkbox" checked={config.upsellEnabled} onChange={(event) => update('upsellEnabled', event.target.checked)} className="accent-orange-500" />
+                        </label>
+                        {config.upsellEnabled && (
+                          <>
+                            <Field label="Link de destino" value={config.upsellUrl} onChange={(value) => update('upsellUrl', value)} placeholder="https://..." />
+                            <Field label="Texto do botao" value={config.upsellButtonText} onChange={(value) => update('upsellButtonText', value)} placeholder="Ver oferta exclusiva →" />
+                            <Field label="Frase de contexto (opcional)" value={config.upsellHeadline} onChange={(value) => update('upsellHeadline', value)} textarea placeholder="Desbloqueie o app e continue sua evolucao" />
+                          </>
+                        )}
+                      </div>
                     </div>
                   )}
                   <div className="mt-6 border-b border-border" />
@@ -552,14 +580,14 @@ function FaqList({ items, onChange }: { items: Array<{ question: string; answer:
   )
 }
 
-function Field({ label, value, onChange, textarea = false }: { label: string; value: string; onChange: (value: string) => void; textarea?: boolean }) {
+function Field({ label, value, onChange, textarea = false, placeholder }: { label: string; value: string; onChange: (value: string) => void; textarea?: boolean; placeholder?: string }) {
   return (
     <div className="block">
       <span className="mb-2 block text-sm font-semibold text-foreground">{label}</span>
       {textarea ? (
-        <textarea value={value} onChange={(event) => onChange(event.target.value)} className="min-h-24 w-full rounded-xl border border-border/60 bg-card px-4 py-3 text-sm font-medium text-foreground outline-none transition focus:border-orange-500/40 focus:ring-2 focus:ring-orange-500/20" />
+        <textarea value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="min-h-24 w-full rounded-xl border border-border/60 bg-card px-4 py-3 text-sm font-medium text-foreground outline-none transition focus:border-orange-500/40 focus:ring-2 focus:ring-orange-500/20" />
       ) : (
-        <input value={value} onChange={(event) => onChange(event.target.value)} className="h-12 w-full rounded-xl border border-border/60 bg-card px-4 text-sm font-medium text-foreground outline-none transition focus:border-orange-500/40 focus:ring-2 focus:ring-orange-500/20" />
+        <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="h-12 w-full rounded-xl border border-border/60 bg-card px-4 text-sm font-medium text-foreground outline-none transition focus:border-orange-500/40 focus:ring-2 focus:ring-orange-500/20" />
       )}
     </div>
   )

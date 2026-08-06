@@ -11,6 +11,10 @@ type Product = {
   name: string
   product_type?: string | null
   delivery_type?: string | null
+  upsell_enabled?: boolean
+  upsell_url?: string | null
+  upsell_button_text?: string | null
+  upsell_headline?: string | null
 }
 
 function isUuid(value: string) {
@@ -61,7 +65,7 @@ export default async function CheckoutSuccessPage(props: {
   const supabase = createAdminClient()
   const { data: order } = await supabase
     .from('orders')
-    .select('id, status, plan_id, amount, product:products(id, name, product_type, delivery_type)')
+    .select('id, status, plan_id, amount, product:products(id, name, product_type, delivery_type, upsell_enabled, upsell_url, upsell_button_text, upsell_headline)')
     .eq('id', orderId)
     .maybeSingle()
 
@@ -89,7 +93,7 @@ export default async function CheckoutSuccessPage(props: {
   const product = order.product as unknown as Product | null
   const { data: customer } = await supabase
     .from('order_customer_private')
-    .select('customer_email')
+    .select('customer_email, customer_name')
     .eq('order_id', orderId)
     .maybeSingle()
 
@@ -173,6 +177,20 @@ export default async function CheckoutSuccessPage(props: {
         <p className="mt-7 text-xs text-muted">
           Pedido <span className="font-mono">{orderId.slice(0, 8)}...</span>
         </p>
+
+        {product.upsell_enabled && product.upsell_url && (
+          <div className="mt-6 border-t border-border/40 pt-6 text-left">
+            {product.upsell_headline && (
+              <p className="mb-3 text-sm font-semibold text-foreground">{product.upsell_headline}</p>
+            )}
+            <a
+              href={`${product.upsell_url}?email=${encodeURIComponent(customer.customer_email)}&name=${encodeURIComponent(customer.customer_name || '')}`}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-orange-600"
+            >
+              {product.upsell_button_text || 'Continuar'}
+            </a>
+          </div>
+        )}
       </section>
     </main>
   )

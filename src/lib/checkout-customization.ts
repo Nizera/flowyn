@@ -17,6 +17,10 @@ export type CheckoutCustomizationConfig = {
   faq: Array<{ question: string; answer: string }>
   urgencyPhrases: string[]
   urgencyBarColor: string
+  upsellEnabled: boolean
+  upsellUrl: string
+  upsellButtonText: string
+  upsellHeadline: string
   blocks: {
     banner: boolean
     benefits: boolean
@@ -54,6 +58,10 @@ export function defaultCheckoutConfig(product?: {
     faq: [],
     urgencyPhrases: ['Oferta por tempo limitado', 'Garanta seu acesso agora', 'Acesso imediato apos a compra'],
     urgencyBarColor: '#f97316',
+    upsellEnabled: false,
+    upsellUrl: '',
+    upsellButtonText: '',
+    upsellHeadline: '',
     blocks: {
       banner: true,
       benefits: true,
@@ -114,6 +122,10 @@ export function normalizeCheckoutConfig(input: unknown, product?: Parameters<typ
       : defaults.faq,
     urgencyPhrases: safeStringArray(data.urgencyPhrases, defaults.urgencyPhrases),
     urgencyBarColor: HEX_COLOR.test(String(data.urgencyBarColor || '')) ? String(data.urgencyBarColor) : defaults.urgencyBarColor,
+    upsellEnabled: Boolean(data.upsellEnabled),
+    upsellUrl: safeUrl(data.upsellUrl),
+    upsellButtonText: safeText(data.upsellButtonText),
+    upsellHeadline: safeText(data.upsellHeadline),
     blocks: {
       banner: blocks.banner ?? defaults.blocks.banner,
       benefits: blocks.benefits ?? defaults.blocks.benefits,
