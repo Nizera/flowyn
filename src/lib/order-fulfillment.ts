@@ -5,6 +5,7 @@ import { getAppUrl } from '@/lib/app-url'
 import { createStudentPasswordSetupUrl, findAuthUserIdByEmail } from '@/lib/student-password-link'
 import { sendCapiEvent } from '@/lib/meta-capi'
 import { sendFirstSaleCertificateEmail } from '@/lib/certificate-email'
+import { sendWebhook } from '@/lib/webhooks'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -406,6 +407,21 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
   // ── First Sale Achievement (Badge "Iniciante") ──
   try {
     const producerId = orderData.product?.owner_id
+
+    // ── Send external webhooks ──
+    if (producerId) {
+      try {
+        await sendWebhook(producerId, 'payment.confirmed', {
+          customer_email: deliveryCustomerEmail,
+          customer_name: deliveryCustomerName,
+          product_id: orderData.product_id,
+          order_id: orderId,
+          amount: orderData.amount,
+        })
+      } catch (webhookError) {
+        console.error('[fulfillPaidOrder] External webhook failed (non-blocking):', webhookError)
+      }
+    }
     if (producerId) {
       // Check if producer already has the "iniciante" badge
       const { data: existingBadge } = await supabase
