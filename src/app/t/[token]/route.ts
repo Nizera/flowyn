@@ -188,29 +188,20 @@ function buildTrackerJs(publicToken: string, appUrl: string, pixelId: string): s
   }
 
   // === INJEÇÃO DO PIXEL META ===
-  // Carrega fbevents.js PRIMEIRO, depois injeta pixel e fire eventos.
-  // Isso evita o erro "Multiple pixels with conflicting versions".
+  // NÃO criamos stub fbq — deixamos fbevents.js criar sozinho.
+  // Isso evita "Multiple pixels with conflicting versions".
   if (!window.fbq) {
-    // Cria fila de eventos (padrão Meta — fbevents.js processa ao carregar)
-    window.fbq = function() {
-      (fbq.q = fbq.q || []).push(arguments);
-    };
-    window.fbq.q = [];
-
-    // Fire PageView com event_id para dedup com CAPI (CAPI funciona mesmo se pixel bloqueado)
+    // CAPI eventos imediatamente (independente do pixel)
     var pvEid = 'pv_' + uuidv4();
     sendTrackWithId('page_view', pvEid);
-
-    // Fire ViewContent com event_id para dedup com CAPI
     var vcEid = 'vc_' + uuidv4();
     sendTrackWithId('view_content', vcEid);
 
-    // Carrega fbevents.js PRIMEIRO
+    // Carrega fbevents.js — ele cria window.fbq automaticamente
     var script = document.createElement('script');
     script.src = 'https://connect.facebook.net/en_US/fbevents.js';
     script.async = true;
     script.onload = function() {
-      // fbevents.js carregou — agora inicializa pixel e fire eventos via pixel
       try {
         fbq('init', PIXEL_ID);
         fbq('track', 'PageView', {}, { eventID: pvEid });
@@ -218,13 +209,11 @@ function buildTrackerJs(publicToken: string, appUrl: string, pixelId: string): s
       } catch(_) {}
     };
     script.onerror = function() {
-      // Ad blocker bloqueou fbevents.js — CAPI já enviou os eventos
-      console.warn('[Flowyn] fbevents.js bloqueado (possivel ad blocker). Eventos CAPI já enviados.');
+      console.warn('[Flowyn] fbevents.js bloqueado (ad blocker). Eventos CAPI já enviados.');
     };
     document.head.appendChild(script);
   } else {
-    // Pixel já existe (produtor adicionou) — avisa no console
-    console.warn('[Flowyn] Pixel Meta detectado na página. Para evitar duplicação de eventos, remova o snippet do pixel Meta da landing e use apenas o script Flowyn.');
+    console.warn('[Flowyn] Pixel Meta detectado na página. Para evitar duplicação, remova o snippet do pixel e use apenas o script Flowyn.');
   }
 
   // === CLICK INJECTION + INITIATECHECKOUT ===
