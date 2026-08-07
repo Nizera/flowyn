@@ -188,26 +188,30 @@ function buildTrackerJs(publicToken: string, appUrl: string, pixelId: string): s
   }
 
   // === INJEÇÃO DO PIXEL META ===
-  // NÃO criamos stub fbq — deixamos fbevents.js criar sozinho.
-  // Isso evita "Multiple pixels with conflicting versions".
+  // Cria stub fbq ANTES de carregar fbevents.js (padrão Meta).
+  // fbq() enfileira eventos; fbevents.js processa ao carregar.
   if (!window.fbq) {
+    // Stub fbq — apenas enfileira chamadas até fbevents.js carregar
+    window.fbq = function() {
+      (fbq.q = fbq.q || []).push(arguments);
+    };
+    window.fbq.q = [];
+
     // CAPI eventos imediatamente (independente do pixel)
     var pvEid = 'pv_' + uuidv4();
     sendTrackWithId('page_view', pvEid);
     var vcEid = 'vc_' + uuidv4();
     sendTrackWithId('view_content', vcEid);
 
-    // Carrega fbevents.js — ele cria window.fbq automaticamente
+    // Enfileira pixel events (processados quando fbevents.js carregar)
+    fbq('init', PIXEL_ID);
+    fbq('track', 'PageView', {}, { eventID: pvEid });
+    fbq('track', 'ViewContent', {}, { eventID: vcEid });
+
+    // Carrega fbevents.js — ele substitui o stub pelo fbq real e processa a fila
     var script = document.createElement('script');
     script.src = 'https://connect.facebook.net/en_US/fbevents.js';
     script.async = true;
-    script.onload = function() {
-      try {
-        fbq('init', PIXEL_ID);
-        fbq('track', 'PageView', {}, { eventID: pvEid });
-        fbq('track', 'ViewContent', {}, { eventID: vcEid });
-      } catch(_) {}
-    };
     script.onerror = function() {
       console.warn('[Flowyn] fbevents.js bloqueado (ad blocker). Eventos CAPI já enviados.');
     };
