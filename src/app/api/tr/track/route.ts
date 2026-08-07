@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       return new NextResponse('bad json', { status: 400, headers: corsHeaders })
     }
 
-    const { t, event_name, product_id, url, referrer, utm, fbclid, ttclid, gclid, session_id, fbp, fbc, event_id } = body
+    const { t, event_name, product_id, url, referrer, utm, fbclid, ttclid, gclid, session_id, fbp, fbc, event_id, external_id } = body
     if (!t || !event_name) {
       return new NextResponse('missing params', { status: 400, headers: corsHeaders })
     }
@@ -104,6 +104,7 @@ export async function POST(req: NextRequest) {
       userAgent,
       eventSourceUrl: finalUrl,
       trackingParams: Object.keys(trackingParams).length > 0 ? trackingParams : null,
+      externalId: external_id || undefined,
     }).catch(err => {
       console.error(`[Tracker CAPI] ${capiEventName} failed (non-blocking):`, err)
     })
@@ -136,6 +137,7 @@ interface TrackBody {
   fbc?: string | null
   session_id?: string | null
   event_id?: string | null  // ID do evento para dedup com pixel client-side
+  external_id?: string | null  // ID anônimo persistente (_fl_uid) para Advanced Matching
 }
 
 const ALLOWED_ORIGINS = [

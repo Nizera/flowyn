@@ -202,6 +202,9 @@ export async function GET(
   const clientEventId = searchParams.get('_fl_eid')
   const capiEventId = clientEventId || `pv_r_${crypto.randomUUID()}`
 
+  // External ID persistente para Advanced Matching (~15% melhoria)
+  const externalId = searchParams.get('_fl_uid') || req.cookies.get('_fl_uid')?.value || undefined
+
   const trackingParams: Record<string, string> = {}
   for (const key of [...utmKeys, ...clickKeys]) {
     if (trackingData[key]) trackingParams[key] = trackingData[key]
@@ -219,6 +222,7 @@ export async function GET(
     userAgent,
     eventSourceUrl,
     trackingParams: Object.keys(trackingParams).length > 0 ? trackingParams : null,
+    externalId,
   }).catch(err => {
     console.error('[/r/] CAPI PageView failed (non-blocking):', err)
   })

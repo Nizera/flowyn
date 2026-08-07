@@ -204,6 +204,9 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
 
   // ── Meta CAPI (server-side) ──
   try {
+    const trackingParams = orderData.tracking_params as Record<string, string> | null | undefined
+    const externalId = trackingParams?._fl_uid || undefined
+
     await sendCapiEvent({
       eventId: `order_${orderId}`,
       eventName: 'Purchase',
@@ -219,7 +222,8 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
       clientIp: orderData.client_ip || '127.0.0.1',
       userAgent: orderData.user_agent || 'Unknown',
       eventSourceUrl: `${getAppUrl()}/checkout/${orderData.plan_id}`,
-      trackingParams: orderData.tracking_params as Record<string, string> | null | undefined,
+      trackingParams,
+      externalId,
     })
   } catch (capiError) {
     console.error('[fulfillPaidOrder] CAPI event failed:', capiError)

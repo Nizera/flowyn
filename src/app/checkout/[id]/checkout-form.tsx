@@ -136,7 +136,7 @@ export function CheckoutForm({
     const cookies = document.cookie.split('; ')
     for (const c of cookies) {
       const [k, v] = c.split('=', 2) as [string, string | undefined]
-      if ((k === '_fbp' || k === '_fbc') && v) result[k] = v
+      if ((k === '_fbp' || k === '_fbc' || k === '_fl_uid') && v) result[k] = v
     }
     setTrackingParams(Object.keys(result).length > 0 ? result : undefined)
   }, [planId, previewMode])
@@ -148,6 +148,12 @@ export function CheckoutForm({
     if (window.fbq) {
       window.fbq('track', 'InitiateCheckout', {}, { eventID: eventId })
     }
+    // External ID persistente para Advanced Matching
+    let externalId: string | undefined
+    try {
+      const uidMatch = document.cookie.match(/(?:^|; )_fl_uid=([^;]*)/)
+      if (uidMatch) externalId = decodeURIComponent(uidMatch[1])
+    } catch {}
     fetch('/api/checkout/funnel', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -159,6 +165,7 @@ export function CheckoutForm({
         session_id: trackingParams?.fl_sid || null,
         customer_email: customerEmail || undefined,
         customer_phone: customerPhone || undefined,
+        external_id: externalId,
       }),
     }).catch(() => {})
   }, [planId, previewMode, trackingParams, customerEmail, customerPhone])

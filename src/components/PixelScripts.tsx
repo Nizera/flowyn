@@ -83,6 +83,13 @@ export function PixelScripts({ pixels }: Props) {
           }
         } catch {}
 
+        // External ID persistente para Advanced Matching (~15% melhoria)
+        let externalId: string | undefined
+        try {
+          const uidMatch = document.cookie.match(/(?:^|; )_fl_uid=([^;]*)/)
+          if (uidMatch) externalId = decodeURIComponent(uidMatch[1])
+        } catch {}
+
         // Envia ao backend para CAPI (com event_id para dedup + tracking_params para attribuição)
         try {
           fetch('/api/checkout/funnel', {
@@ -94,6 +101,7 @@ export function PixelScripts({ pixels }: Props) {
               pixel_id: p.pixel_id,
               tracking_params: Object.keys(trackingParams).length > 0 ? trackingParams : undefined,
               session_id: urlParams.get('fl_sid') || undefined,
+              external_id: externalId,
             }),
           }).catch(() => {})
         } catch {}

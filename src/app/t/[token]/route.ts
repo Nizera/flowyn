@@ -9,10 +9,11 @@ import { getAppUrl } from '@/lib/app-url'
 // O script:
 // 1) Gera session_id (uuid v4) e salva em first-party cookie (_fl_sid), 30 dias
 // 2) Captura UTMs da URL atual (+ fbclid/ttclid/gclid)
-// 3) Dispara fbq('init', PIXEL_ID), fbq('track','PageView')
-// 4) beacon POST /api/tr/track (server-side fallback para bypass ad blockers)
-// 5) Intercepta clicks em <a href*="/checkout/...">  e injeta ?utm_...=&fl_sid= na URL
+// 3) NÃO dispara page_view via beacon (evita duplicação com pixel client do produtor)
+//    CAPI PageView é feito no redirect /r/[token] como backup server-side
+// 4) Intercepta clicks em <a href*="/checkout/..."> e injeta ?utm_...=&fl_sid= na URL
 //    antes de redirecionar para o checkout da Flowyn (preserva cross-domain)
+// 5) Expõe window.__fl_track("view_content") para o produtor chamar manualmente
 //
 // Importante: PIXEL_ID real da Meta aparece no JS no browser. É semi-public
 // (pixel IDs sempre aparecem no client). Token public_token é o que vincula ao
@@ -104,6 +105,10 @@ function buildTrackerJs(publicToken: string, appUrl: string): string {
   var SID = getCookie("_fl_sid");
   if (!SID) { SID = uuidv4(); setCookie("_fl_sid", SID, 30); }
 
+  // External ID — ID anônimo persistente, 1 ano (melhora matching CAPI em ~15%)
+  var UID = getCookie("_fl_uid");
+  if (!UID) { UID = uuidv4(); setCookie("_fl_uid", UID, 365); }
+
   // Captura UTMs da URL atual (e click IDs)
   function readCurrentTracking(){
     var params = new URLSearchParams(window.location.search);
@@ -174,7 +179,8 @@ function buildTrackerJs(publicToken: string, appUrl: string): string {
         gclid: gclid,
         fbp: fbp,
         fbc: fbc,
-        session_id: SID
+        session_id: SID,
+        external_id: UID
       };
       if (navigator.sendBeacon) {
         navigator.sendBeacon(ENDPOINT, new Blob([JSON.stringify(payload)], { type: "application/json" }));
@@ -190,7 +196,11 @@ function buildTrackerJs(publicToken: string, appUrl: string): string {
     } catch(e){ /* swallow */ }
   }
 
-  sendTrack("page_view");
+  // CORREÇÃO: page_view NÃO é enviado via beacon aqui porque o produtor já
+  // dispara fbq('track','PageView') no snippet do pixel. Enviar CAPI page_view
+  // aqui causaria DUPLICAÇÃO (eventIDs diferentes → Meta conta como 2 eventos).
+  // O CAPI PageView é feito no redirect /r/[token] (server-side backup).
+  // sendTrack("page_view");
 
   // Configuração de seletores CSS para capturar cliques (configurável pelo produtor)
   // Ex: window.__fl_checkout_selectors = ".btn-comprar, [data-checkout]"
@@ -245,6 +255,8 @@ function buildTrackerJs(publicToken: string, appUrl: string): string {
           if (fbp && !rUrl.searchParams.has("_fbp")) rUrl.searchParams.set("_fbp", fbp);
           if (fbc && !rUrl.searchParams.has("_fbc")) rUrl.searchParams.set("_fbc", fbc);
           if (!rUrl.searchParams.has("fl_sid")) rUrl.searchParams.set("fl_sid", SID);
+          // Injeta external_id para CAPI matching cross-domain
+          if (UID && !rUrl.searchParams.has("_fl_uid")) rUrl.searchParams.set("_fl_uid", UID);
           // Injeta event_id do beacon para dedup CAPI com /r/[token]
           if (window.__fl_last_event_id && !rUrl.searchParams.has("_fl_eid")) {
             rUrl.searchParams.set("_fl_eid", window.__fl_last_event_id);

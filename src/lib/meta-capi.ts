@@ -25,6 +25,7 @@ export interface CapiEventData {
   userAgent: string
   eventSourceUrl: string
   trackingParams?: Record<string, string> | null
+  externalId?: string                // ID anônimo persistente (_fl_uid) para Advanced Matching
 }
 
 // Dados específicos do evento Purchase (extende o base)
@@ -229,6 +230,9 @@ export async function sendCapiEvent(data: CapiOrderData | CapiFunnelData) {
   if (data.trackingParams?._fbc) {
     userData.fbc = data.trackingParams._fbc
   }
+
+  // External ID para Advanced Matching (melhora matching em ~15%)
+  if (data.externalId) userData.external_id = data.externalId
 
   // Monta custom_data
   const customData: Record<string, unknown> = {}
