@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const body = JSON.parse(rawBody)
     const { plan_id, event_name, tracking_params, session_id, event_id, pixel_id, customer_email, customer_phone, external_id } = body
 
-    if (!plan_id || !event_name) {
+    if (!event_name) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 })
     }
 
@@ -34,15 +34,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
     }
 
-    // Resolve product_id from plans
-    const { data: plan, error: planError } = await supabase
-      .from('plans')
-      .select('product_id')
-      .eq('id', plan_id)
-      .single()
+    // Resolve product_id from plans (optional for page_view)
+    let productId: string | null = null
+    let producerId: string | null = null
 
-    if (planError || !plan) {
-      return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
+    if (plan_id) {
+      const { data: plan, error: planError } = await supabase
+        .from('plans')
+        .select('product_id')
+        .eq('id', plan_id)
+        .single()
+
+      if (planError || !plan) {
+        return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
+      }
+      productId = plan.product_id
+
+      // Resolve producer_id do produto
+      const { data: product } = await supabase
+        .from('products')
+        .select('owner_id')
+        .eq('id', plan.product_id)
+        .maybeSingle()
+      producerId = product?.owner_id || null
     }
 
     const utm_source = tracking_params?.utm_source || null
@@ -63,8 +77,8 @@ export async function POST(req: NextRequest) {
     const { error: insertError } = await supabase
       .from('funnel_events')
       .insert({
-        product_id: plan.product_id,
-        plan_id,
+        product_id: productId,
+        plan_id: plan_id || null,
         event_name,
         session_id: finalSessionId,
         utm_source,
@@ -90,25 +104,18 @@ export async function POST(req: NextRequest) {
     const capiEventName = event_name === 'page_view' ? 'PageView' as const : 'InitiateCheckout' as const
     const finalEventId = event_id || `${event_name}_${crypto.randomUUID()}`
 
-    // Resolve producer_id do produto
-    const { data: product } = await supabase
-      .from('products')
-      .select('owner_id')
-      .eq('id', plan.product_id)
-      .maybeSingle()
-
-    if (product?.owner_id) {
+    if (producerId) {
       const userAgent = req.headers.get('user-agent') || ''
-      const eventSourceUrl = req.headers.get('referer') || `${req.nextUrl.origin}/checkout/${plan_id}`
+      const eventSourceUrl = req.headers.get('referer') || `${req.nextUrl.origin}/checkout/${plan_id || 'unknown'}`
 
       // Envia CAPI de forma não-bloqueante
       sendCapiEvent({
         eventId: finalEventId,
         eventName: capiEventName,
-        planId: plan_id,
+        planId: plan_id || undefined,
         pixelId: pixel_id,
-        productId: plan.product_id,
-        producerId: product.owner_id,
+        productId: productId || undefined,
+        producerId,
         clientIp: ip,
         userAgent,
         eventSourceUrl,

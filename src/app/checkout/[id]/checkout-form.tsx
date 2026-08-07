@@ -144,8 +144,10 @@ export function CheckoutForm({
   // InitiateCheckout server-side: dispara quando o checkout é acessado (não no clique do CTA).
   // Abordagem Utmify: rastrear quando o checkout é aberto no servidor, não no browser.
   // Gera event_id único para dedup com Meta pixel (pixel do produtor na landing + pixel da Flowyn).
+  // Usa ref para garantir que dispara apenas uma vez (trackingParams muda de undefined → objeto).
   useEffect(() => {
-    if (previewMode) return
+    if (previewMode || initiateCheckoutFired.current) return
+    initiateCheckoutFired.current = true
 
     const eventId = `ic_${crypto.randomUUID()}`
 
