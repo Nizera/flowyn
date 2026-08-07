@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { sendCapiEvent } from '@/lib/meta-capi'
 
 // Redirect server-side: resolve public_token → pixel config, seta cookies
 // first-party no domínio da Flowyn com UTMs/click IDs, e redireciona pro checkout.
 //
-// Além do redirect, este endpoint também grava page_view em tracking_external_events
-// e dispara CAPI PageView server-side. Isso garante rastreamento mesmo que o beacon
-// do tracker.js seja bloqueado por Cloudflare/ad blockers no browser do visitante.
+// O tracker.js (v2) na landing page já injeta o pixel Meta e fire PageView/ViewContent/InitiateCheckout.
+// Este endpoint apenas planteia cookies e redireciona. CAPI PageView não é necessário aqui
+// porque o tracker.js já fez o beacon para /api/tr/track.
 
 export async function GET(
   req: NextRequest,
@@ -172,7 +171,7 @@ export async function GET(
     } catch {}
   }
 
-  // Insert tracking_external_events (não-bloqueante)
+  // Insert tracking_external_events (não-bloqueante, para analytics interno)
   supabase.from('tracking_external_events').insert({
     user_id: pixel.user_id,
     pixel_id: pixel.id,
@@ -195,36 +194,6 @@ export async function GET(
     session_id: sid,
   }).then(({ error }) => {
     if (error) console.error('[/r/] tracking_external_events insert failed:', error.message)
-  })
-
-  // CAPI PageView (não-bloqueante)
-  // Usa _fl_eid do tracker.js se disponível (dedup com beacon), senão gera próprio event_id
-  const clientEventId = searchParams.get('_fl_eid')
-  const capiEventId = clientEventId || `pv_r_${crypto.randomUUID()}`
-
-  // External ID persistente para Advanced Matching (~15% melhoria)
-  const externalId = searchParams.get('_fl_uid') || req.cookies.get('_fl_uid')?.value || undefined
-
-  const trackingParams: Record<string, string> = {}
-  for (const key of [...utmKeys, ...clickKeys]) {
-    if (trackingData[key]) trackingParams[key] = trackingData[key]
-  }
-  if (fbp) trackingParams._fbp = fbp
-  if (fbc) trackingParams._fbc = fbc
-
-  sendCapiEvent({
-    eventId: capiEventId,
-    eventName: 'PageView',
-    pixelId: pixel.id,
-    productId: productId || undefined,
-    producerId: pixel.user_id,
-    clientIp: ip,
-    userAgent,
-    eventSourceUrl,
-    trackingParams: Object.keys(trackingParams).length > 0 ? trackingParams : null,
-    externalId,
-  }).catch(err => {
-    console.error('[/r/] CAPI PageView failed (non-blocking):', err)
   })
 
   return response

@@ -141,43 +141,6 @@ export function CheckoutForm({
     setTrackingParams(Object.keys(result).length > 0 ? result : undefined)
   }, [planId, previewMode])
 
-  // InitiateCheckout server-side: dispara quando o checkout é acessado (não no clique do CTA).
-  // Abordagem Utmify: rastrear quando o checkout é aberto no servidor, não no browser.
-  // Gera event_id único para dedup com Meta pixel (pixel do produtor na landing + pixel da Flowyn).
-  // Usa ref para garantir que dispara apenas uma vez (trackingParams muda de undefined → objeto).
-  useEffect(() => {
-    if (previewMode || initiateCheckoutFired.current) return
-    initiateCheckoutFired.current = true
-
-    const eventId = `ic_${crypto.randomUUID()}`
-
-    // Meta pixel client-side com eventID para dedup com CAPI
-    if (window.fbq) {
-      window.fbq('track', 'InitiateCheckout', {}, { eventID: eventId })
-    }
-
-    // External ID persistente para Advanced Matching (~15% melhoria)
-    let externalId: string | undefined
-    try {
-      const uidMatch = document.cookie.match(/(?:^|; )_fl_uid=([^;]*)/)
-      if (uidMatch) externalId = decodeURIComponent(uidMatch[1])
-    } catch {}
-
-    // CAPI server-side via Flowyn funnel (non-blocking)
-    fetch('/api/checkout/funnel', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        plan_id: planId,
-        event_name: 'initiate_checkout',
-        event_id: eventId,
-        tracking_params: trackingParams,
-        session_id: trackingParams?.fl_sid || null,
-        external_id: externalId,
-      }),
-    }).catch(() => {})
-  }, [planId, previewMode, trackingParams])
-
   const fireInitiateCheckout = useCallback(() => {
     if (initiateCheckoutFired.current || previewMode) return
     initiateCheckoutFired.current = true

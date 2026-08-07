@@ -1,23 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { getAppUrl } from '@/lib/app-url'
+import { decryptApiKey } from '@/lib/encryption'
 
 // Serve o tracker.js customizado para cada pixel (lookup pelo public_token).
 // URL publica: https://flowyn.com/t/PUBLIC_TOKEN.js
 // Produtor cola no HTML da landing externa: <script src="https://flowyn.com/t/UUID.js" async></script>
 //
-// O script:
-// 1) Gera session_id (uuid v4) e salva em first-party cookie (_fl_sid), 30 dias
-// 2) Captura UTMs da URL atual (+ fbclid/ttclid/gclid)
-// 3) NÃO dispara page_view via beacon (evita duplicação com pixel client do produtor)
-//    CAPI PageView é feito no redirect /r/[token] como backup server-side
-// 4) Intercepta clicks em <a href*="/checkout/..."> e injeta ?utm_...=&fl_sid= na URL
-//    antes de redirecionar para o checkout da Flowyn (preserva cross-domain)
-// 5) Expõe window.__fl_track("view_content") para o produtor chamar manualmente
+// O script (v2):
+// 1) Injeta pixel Meta com pixel_id do produtor (se não existe)
+// 2) Fire PageView, ViewContent com event_ids para dedup pixel+CAPI
+// 3) Intercepta clicks em CTAs e fire InitiateCheckout com event_id
+// 4) Gera session_id (uuid v4) e salva em first-party cookie (_fl_sid), 30 dias
+// 5) Captura UTMs da URL atual (+ fbclid/ttclid/gclid)
+// 6) Injeta UTMs nos links de checkout
 //
-// Importante: PIXEL_ID real da Meta aparece no JS no browser. É semi-public
-// (pixel IDs sempre aparecem no client). Token public_token é o que vincula ao
-// nosso DB — não expõe o pixel_id encriptado (que é server-only).
+// PIXEL_ID é decodificado server-side e passado para o browser.
+// Pixel IDs são semi-públicos (sempre aparecem no client via fbevents.js).
 
 export async function GET(
   _req: NextRequest,
@@ -45,15 +44,14 @@ export async function GET(
     return new NextResponse('not found', { status: 404 })
   }
 
-  // pixel_id está encriptado no DB com AES-256-GCM — não expomos aqui. O tracker.js
-  // não usa pixel_id da Meta (ele só usa fbq via PixelScripts injetado no checkout);
-  // faz apenas: a) registrar page_view server-side, b) preservar UTMs no redirect.
-  // Para suporte a pixel client-side na landing externa, o produtor deve colar
-  // também o snippet oficial `<!-- Meta Pixel Code -->` da Meta diretamente no HTML.
-  // Escopo dessa entrega: tracking server-side + UTM preservation.
+  // Decodifica pixel_id para injeção no browser (pixel IDs são semi-públicos)
+  const decryptedPixelId = decryptApiKey(pixel.pixel_id)
+  if (!decryptedPixelId) {
+    return new NextResponse('pixel not configured', { status: 500 })
+  }
 
   const appUrl = getAppUrl()
-  const js = buildTrackerJs(token, appUrl)
+  const js = buildTrackerJs(token, appUrl, decryptedPixelId)
 
   return new NextResponse(js, {
     status: 200,
@@ -65,8 +63,8 @@ export async function GET(
   })
 }
 
-function buildTrackerJs(publicToken: string, appUrl: string): string {
-  return `/* FlowynPay cross-domain tracker v1 — public_token=${publicToken} */
+function buildTrackerJs(publicToken: string, appUrl: string, pixelId: string): string {
+  return `/* FlowynPay cross-domain tracker v2 — public_token=${publicToken} */
 (function(){
   "use strict";
   if (window.__fl_tracker) return;
@@ -75,6 +73,7 @@ function buildTrackerJs(publicToken: string, appUrl: string): string {
   var TOKEN = ${JSON.stringify(publicToken)};
   var ENDPOINT = ${JSON.stringify(appUrl)} + "/api/tr/track";
   var APP_ORIGIN = ${JSON.stringify(appUrl)};
+  var PIXEL_ID = ${JSON.stringify(pixelId)};
 
   var UTM_KEYS = ["utm_source","utm_medium","utm_campaign","utm_content","utm_term","src","sck"];
   var CLICK_KEYS = ["fbclid","ttclid","gclid"];
@@ -129,7 +128,6 @@ function buildTrackerJs(publicToken: string, appUrl: string): string {
     var trackedKeys = UTM_KEYS.concat(CLICK_KEYS);
     var have = false;
     var currentSearch = window.location.search || "";
-    // Se URL tem UTMs, capture e salve em cookie (renova a cada visita com UTMs)
     if (currentSearch.indexOf("utm_") !== -1 || currentSearch.indexOf("clid") !== -1) {
       var cur = readCurrentTracking();
       if (Object.keys(cur).length > 0) {
@@ -137,7 +135,6 @@ function buildTrackerJs(publicToken: string, appUrl: string): string {
         have = true;
       }
     }
-    // Se não tem UTMs na URL, tenta restaurar do cookie
     if (!have) {
       var stored = getCookie("_fl_utm");
       if (stored) {
@@ -154,49 +151,9 @@ function buildTrackerJs(publicToken: string, appUrl: string): string {
   var fbp = getCookie("_fbp") || null;
   var fbc = getCookie("_fbc") || null;
 
-  // Lockup do productId é opcional no snippet (produtor pode setar
-  // <script>window.__fl_product_id = "UUID"</script> ANTES deste script)
   var productId = window.__fl_product_id || null;
 
-  // Dispara evento server-side via fetch no-cors (bypass ad blockers)
-  // Gera event_id único para dedup com pixel client-side (CAPI)
-  // Armazena em window.__fl_last_event_id para que inject() possa injetar na URL
-  // do redirect (/r/[token]), evitando PageView duplicado no CAPI.
-  function sendTrack(eventName){
-    try {
-      var eventId = eventName + "_" + uuidv4();
-      window.__fl_last_event_id = eventId;
-      var payload = {
-        t: TOKEN,
-        event_name: eventName,
-        event_id: eventId,
-        product_id: productId,
-        url: window.location.href,
-        referrer: document.referrer || null,
-        utm: trackingParams,
-        fbclid: fbclid,
-        ttclid: ttclid,
-        gclid: gclid,
-        fbp: fbp,
-        fbc: fbc,
-        session_id: SID,
-        external_id: UID
-      };
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon(ENDPOINT, new Blob([JSON.stringify(payload)], { type: "application/json" }));
-      } else {
-        fetch(ENDPOINT, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          keepalive: true
-        }).catch(function(){});
-      }
-    } catch(e){ /* swallow */ }
-  }
-
-  // Like sendTrack but with a pre-defined event_id (for dedup with pixel client-side)
+  // Dispara evento server-side via beacon (bypass ad blockers)
   function sendTrackWithId(eventName, eventId){
     try {
       var payload = {
@@ -229,61 +186,80 @@ function buildTrackerJs(publicToken: string, appUrl: string): string {
     } catch(e){ /* swallow */ }
   }
 
-  // CORREÇÃO: page_view NÃO é enviado via beacon aqui porque o produtor já
-  // dispara fbq('track','PageView') no snippet do pixel. Enviar CAPI page_view
-  // aqui causaria DUPLICAÇÃO (eventIDs diferentes → Meta conta como 2 eventos).
-  // O CAPI PageView é feito no redirect /r/[token] (server-side backup).
-  // sendTrack("page_view");
+  // === INJEÇÃO DO PIXEL META ===
+  // Se o produtor já tem pixel (window.fbq existe), não injeta (evita duplicação).
+  // Se não tem, injeta pixel Meta com pixel_id do produtor e fire todos os eventos.
+  if (!window.fbq) {
+    // Cria fila de eventos (padrão Meta — processa quando fbevents.js carrega)
+    window.fbq = function() {
+      (fbq.q = fbq.q || []).push(arguments);
+    };
+    window.fbq.q = [];
+    window.fbq.loaded = true;
+    window.fbq.version = '2.0';
 
-  // ViewContent CAPI automático: se o snippet do produtor gerou um event_id
-  // (window.__fl_vc_eid), envia CAPI ViewContent com o MESMO event_id para dedup.
-  // Se o snippet antigo não gerou event_id, NÃO envia (evita duplicação).
-  try {
-    var vcEid = window.__fl_vc_eid || null;
-    if (vcEid) {
-      sendTrackWithId("view_content", vcEid);
-    }
-  } catch(_) {}
+    // Inicializa pixel
+    fbq('init', PIXEL_ID);
 
-  // Configuração de seletores CSS para capturar cliques (configurável pelo produtor)
-  // Ex: window.__fl_checkout_selectors = ".btn-comprar, [data-checkout]"
+    // Fire PageView com event_id para dedup com CAPI
+    var pvEid = 'pv_' + uuidv4();
+    fbq('track', 'PageView', {}, { eventID: pvEid });
+    sendTrackWithId('page_view', pvEid);
+
+    // Fire ViewContent com event_id para dedup com CAPI
+    var vcEid = 'vc_' + uuidv4();
+    fbq('track', 'ViewContent', {}, { eventID: vcEid });
+    sendTrackWithId('view_content', vcEid);
+
+    // Carrega fbevents.js (assíncrono)
+    var script = document.createElement('script');
+    script.src = 'https://connect.facebook.net/en_US/fbevents.js';
+    script.async = true;
+    script.onload = function() {
+      // Processa fila de eventos (fbq.q)
+      // O script Meta faz isso automaticamente
+    };
+    document.head.appendChild(script);
+  } else {
+    // Pixel já existe (produtor adicionou) — avisa no console
+    console.warn('[Flowyn] Pixel Meta detectado na página. Para evitar duplicação de eventos, remova o snippet do pixel Meta da landing e use apenas o script Flowyn.');
+  }
+
+  // === CLICK INJECTION + INITIATECHECKOUT ===
+  var icFired = false;
   var CUSTOM_SELECTORS = window.__fl_checkout_selectors || null;
 
-  // Intercepta clicks em links para o checkout da Flowyn (/checkout/...)
-  // e injeta UTMs + session_id para preservar attribution cross-domain.
-  // Suporta: <a href>, <button data-href>, e seletores customizados.
   function inject(e){
     try {
       var target = e.target;
-
-      // 1. Tenta encontrar <a href> mais próximo
       var a = target.closest ? target.closest("a[href]") : null;
-
-      // 2. Se não encontrou, tenta seletores customizados
       if (!a && CUSTOM_SELECTORS && target.closest) {
         a = target.closest(CUSTOM_SELECTORS);
       }
-
-      // 3. Se não encontrou, tenta <button data-href>
       if (!a && target.closest) {
         a = target.closest("[data-href]");
       }
-
       if (!a) return;
 
-      // Obtém o href (de <a href> ou <button data-href>)
       var href = a.getAttribute("href") || a.getAttribute("data-href");
       if (!href) return;
 
-      // Verifica se é link para checkout
       var isCheckout = href.indexOf("flowyn.com/checkout/") !== -1 ||
                        href.indexOf("/checkout/") !== -1 ||
                        href.indexOf("/r/") !== -1;
       if (!isCheckout) return;
 
-      // Para links /r/ (redirect server-side), injeta UTMs como query params
-      // (o cookie _fl_utm está no domínio da landing, não do flowyn.com,
-      //  então o servidor não consegue ler — precisamos passar via URL)
+      // Fire InitiateCheckout no clique do CTA (pixel + CAPI com mesmo event_id)
+      if (window.fbq && !icFired) {
+        icFired = true;
+        var icEid = 'ic_' + uuidv4();
+        try {
+          fbq('track', 'InitiateCheckout', {}, { eventID: icEid });
+        } catch(_) {}
+        sendTrackWithId('initiate_checkout', icEid);
+      }
+
+      // Injeta UTMs no link (código existente)
       if (href.indexOf("/r/") !== -1) {
         try {
           var rUrl = new URL(href, window.location.origin);
@@ -294,16 +270,10 @@ function buildTrackerJs(publicToken: string, appUrl: string): string {
               rUrl.searchParams.set(prop, trackingParams[prop]);
             }
           }
-          // Injeta _fbp/_fbc cross-domain (cookies ficam no domínio da landing)
           if (fbp && !rUrl.searchParams.has("_fbp")) rUrl.searchParams.set("_fbp", fbp);
           if (fbc && !rUrl.searchParams.has("_fbc")) rUrl.searchParams.set("_fbc", fbc);
           if (!rUrl.searchParams.has("fl_sid")) rUrl.searchParams.set("fl_sid", SID);
-          // Injeta external_id para CAPI matching cross-domain
           if (UID && !rUrl.searchParams.has("_fl_uid")) rUrl.searchParams.set("_fl_uid", UID);
-          // Injeta event_id do beacon para dedup CAPI com /r/[token]
-          if (window.__fl_last_event_id && !rUrl.searchParams.has("_fl_eid")) {
-            rUrl.searchParams.set("_fl_eid", window.__fl_last_event_id);
-          }
           a.setAttribute("href", rUrl.toString());
         } catch(_) {}
         return;
@@ -313,7 +283,6 @@ function buildTrackerJs(publicToken: string, appUrl: string): string {
       try { url = new URL(href, window.location.origin); }
       catch(_) { return; }
 
-      // Injeta UTMs se ainda não presentes
       var prop;
       for (prop in trackingParams) {
         if (!trackingParams.hasOwnProperty(prop)) continue;
@@ -329,9 +298,15 @@ function buildTrackerJs(publicToken: string, appUrl: string): string {
 
   document.addEventListener("click", inject, true);
 
-  // Expõe helper para o produtor chamar manualmente se quiser (raramente necessário)
+  // Helper para produtor chamar manualmente (raramente necessário)
   window.__fl_track = function(name){
-    if (name === "view_content") sendTrack("view_content");
+    if (name === "view_content") {
+      var eid = 'vc_' + uuidv4();
+      if (window.fbq) {
+        try { fbq('track', 'ViewContent', {}, { eventID: eid }); } catch(_) {}
+      }
+      sendTrackWithId('view_content', eid);
+    }
   };
 })();`
 }

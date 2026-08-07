@@ -5,7 +5,11 @@ import { Loader2, Plus, Trash2, ToggleLeft, ToggleRight, X, KeyRound, Code2, Glo
 import { createPixel, deletePixel, togglePixel, updatePixelCapiToken } from './actions'
 
 function buildLlmPrompt(appUrl: string): string {
-  return `Analise minha landing page e adicione os scripts de rastreamento Meta Ads no <head>. NÃO remova nenhum script existente. Apenas ADICIONE os 3 scripts abaixo na ordem correta.
+  return `Analise minha landing page e adicione o script de rastreamento Flowyn no <head>. NÃO remova nenhum script existente. Apenas ADICIONE o script abaixo.
+
+SCRIPT ÚNICO — FlowynPay Tracker (injeta pixel Meta + rastreia visitas):
+<!-- FlowynPay Tracker -->
+<script src="${appUrl}/t/SEU_TOKEN_PUBLICO.js" async></script>
 
 REGRA CRÍTICA: Os links de compra (CTAs) devem usar <a href> com o formato:
 <a href="${appUrl}/r/SEU_TOKEN_PUBLICO?dest=/checkout/SEU_PLANO_ID">
@@ -14,47 +18,18 @@ Onde:
 - SEU_PLANO_ID é o ID do plano no Flowyn (ex: 8927dbb7-5bd0-444d-a8f3-a45c13d5ab23)
 
 Se o CTA atual já é um <a href> apontando para /checkout/, substitua o href pelo formato /r/ acima.
-Se o CTA é um <button> ou não permite editar o href, mantenha como está (o producer script injeta as UTMs automaticamente).
+Se o CTA é um <button> ou não permite editar o href, mantenha como está (o tracker injeta as UTMs automaticamente).
 
-SCRIPT 1 — Meta Pixel (dispara PageView e ViewContent no browser):
-<!-- Meta Pixel Code -->
-<script>
-!function(f,b,e,v,n,t,s)
-{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbp)f._fbp=n;n.push=n;n.loaded=!0;n.version='2.0';
-n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];
-s.parentNode.insertBefore(t,s)}(window, document,'script',
-'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', 'SEU_PIXEL_ID');
-fbq('track', 'PageView');
-var _vcEid = "vc_" + (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
-fbq('track', 'ViewContent', {}, { eventID: _vcEid });
-window.__fl_vc_eid = _vcEid;
-</script>
-<noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=SEU_PIXEL_ID&ev=PageView&noscript=1"
-/></noscript>
-<!-- End Meta Pixel Code -->
-
-SCRIPT 2 — Producer Script (injeta UTMs nos CTAs automaticamente):
-<!-- FlowynPay Producer Script -->
-<script src="${appUrl}/api/producer-script" defer></script>
-
-SCRIPT 3 — Tracker.js (rastreia visitas e dispara CAPI server-side):
-<!-- FlowynPay Tracker -->
-<script src="${appUrl}/t/SEU_TOKEN_PUBLICO.js" async></script>
+IMPORTANTE: NÃO adicione o pixel Meta separadamente. O script Flowyn injeta o pixel Meta automaticamente usando o pixel ID que você cadastrou na plataforma. Adicionar o pixel manualmente causará duplicação de eventos.
 
 INSTRUÇÕES:
-1. Adicione os 3 scripts no <head> da landing page, NESTA ordem
+1. Adicione o script no <head> da landing page
 2. NÃO remova scripts existentes (Google Analytics, outros pixels, etc)
-3. Substitua SEU_PIXEL_ID pelo seu pixel ID do Meta Ads (ex: 1234567890123456)
+3. NÃO adicione o pixel Meta separadamente (o tracker Flowyn injeta automaticamente)
 4. Substitua SEU_TOKEN_PUBLICO pelo token público do seu produto no Flowyn
 5. Substitua SEU_PLANO_ID pelo ID do plano que será vendido
-6. Se já existe um Meta Pixel na página com outro ID, mantenha ambos (pode haver mais de um)
-7. Verifique se os CTAs de compra usam o formato /r/SEU_TOKEN_PUBLICO?dest=/checkout/SEU_PLANO_ID
-8. Teste: after updating, open the page and check the browser console for errors`
+6. Verifique se os CTAs de compra usam o formato /r/SEU_TOKEN_PUBLICO?dest=/checkout/SEU_PLANO_ID
+7. Teste: after updating, open the page and check the browser console for errors`
 }
 
 const PLATFORMS = [
@@ -291,8 +266,8 @@ export function PixelManager({ initialPixels, appUrl }: { initialPixels: Pixel[]
                       &lt;script src=&quot;{appUrl}/t/<span className="text-emerald-400">{meta.public_token}</span>.js&quot; async&gt;&lt;/script&gt;
                     </div>
                     <p className="text-xs text-blue-800/70">
-                      <strong>Como funciona:</strong> Gera um session ID, grava UTMs em cookie first-party, e dispara{' '}
-                      <code className="rounded bg-blue-100 px-1 py-0.5">page_view</code> via beacon server-side.
+                      <strong>Importante:</strong> NÃO adicione o pixel Meta separadamente. O tracker Flowyn injeta o pixel Meta automaticamente.
+                      Adicionar o pixel manualmente causará duplicação de eventos.
                     </p>
                   </div>
 
@@ -303,7 +278,7 @@ export function PixelManager({ initialPixels, appUrl }: { initialPixels: Pixel[]
                       <h4 className="text-sm font-semibold text-amber-900">Passo 2 — Configurar o botão &quot;Comprar&quot;</h4>
                     </div>
                     <p className="mb-3 text-xs leading-6 text-amber-800/80">
-                      O snippet injeta UTMs automaticamente no link do checkout quando o visitante clica em &quot;Comprar&quot;.
+                      O tracker injeta UTMs automaticamente no link do checkout quando o visitante clica em &quot;Comprar&quot;.
                       <strong> Mas isso só funciona se o botão for um {'<a href>'} real.</strong>
                     </p>
 
@@ -312,7 +287,7 @@ export function PixelManager({ initialPixels, appUrl }: { initialPixels: Pixel[]
                       <div className="rounded-lg border border-green-200 bg-green-50 p-3">
                         <p className="mb-1 text-xs font-bold text-green-800">Se o botão é {'<a href>'} ↓</p>
                         <p className="mb-2 text-xs text-green-700">
-                          O snippet já intercepta o clique automaticamente.
+                          O tracker já intercepta o clique automaticamente.
                           <strong> Não precisa mudar nada.</strong>
                         </p>
                         <div className="rounded bg-slate-900 p-2 font-mono text-[10px] text-slate-300">
@@ -343,27 +318,6 @@ export function PixelManager({ initialPixels, appUrl }: { initialPixels: Pixel[]
                     <p className="text-xs text-amber-800/70">
                       <strong>Como funciona o {'/r/'}:</strong> Planta cookies first-party no domínio da Flowyn antes de redirecionar pro checkout.
                       Assim as UTMs e o fbclid chegam certinho, mesmo que o construtor de página não permita edição de href.
-                    </p>
-                  </div>
-
-                  {/* Passo 3: Producer Script */}
-                  <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/50 p-5">
-                    <div className="mb-3 flex items-center gap-2">
-                      <Code2 className="h-4 w-4 text-emerald-600" />
-                      <h4 className="text-sm font-semibold text-emerald-900">Passo 3 — Injetar UTMs automaticamente na landing</h4>
-                    </div>
-                    <p className="mb-3 text-xs leading-6 text-emerald-800/80">
-                      Adicione este script na <strong>{'<head>'}</strong> da sua landing page.
-                      Ele lê as UTMs da URL e injeta nos links que levam ao checkout, garantindo rastreamento mesmo se o visitante navegue entre páginas.
-                    </p>
-                    <div className="mb-3 rounded-lg bg-slate-900 p-3 font-mono text-xs text-slate-300">
-                      <span className="text-slate-500">&lt;!-- FlowynPay producer script — injeta UTMs nos CTAs --&gt;</span>
-                      <br />
-                      &lt;script src=&quot;{appUrl}/api/producer-script&quot; defer&gt;&lt;/script&gt;
-                    </div>
-                    <p className="text-xs text-emerald-800/70">
-                      <strong>Como funciona:</strong> Lê UTMs da URL ou cookie, e injeta em todos os links {'<a href="/r/...">'} da página.
-                      Funciona com links adicionados dinamicamente (MutationObserver). Cookie dura 30 dias.
                     </p>
                   </div>
 
