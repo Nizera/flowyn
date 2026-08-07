@@ -141,6 +141,41 @@ export function CheckoutForm({
     setTrackingParams(Object.keys(result).length > 0 ? result : undefined)
   }, [planId, previewMode])
 
+  // InitiateCheckout server-side: dispara quando o checkout é acessado (não no clique do CTA).
+  // Abordagem Utmify: rastrear quando o checkout é aberto no servidor, não no browser.
+  // Gera event_id único para dedup com Meta pixel (pixel do produtor na landing + pixel da Flowyn).
+  useEffect(() => {
+    if (previewMode) return
+
+    const eventId = `ic_${crypto.randomUUID()}`
+
+    // Meta pixel client-side com eventID para dedup com CAPI
+    if (window.fbq) {
+      window.fbq('track', 'InitiateCheckout', {}, { eventID: eventId })
+    }
+
+    // External ID persistente para Advanced Matching (~15% melhoria)
+    let externalId: string | undefined
+    try {
+      const uidMatch = document.cookie.match(/(?:^|; )_fl_uid=([^;]*)/)
+      if (uidMatch) externalId = decodeURIComponent(uidMatch[1])
+    } catch {}
+
+    // CAPI server-side via Flowyn funnel (non-blocking)
+    fetch('/api/checkout/funnel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        plan_id: planId,
+        event_name: 'initiate_checkout',
+        event_id: eventId,
+        tracking_params: trackingParams,
+        session_id: trackingParams?.fl_sid || null,
+        external_id: externalId,
+      }),
+    }).catch(() => {})
+  }, [planId, previewMode, trackingParams])
+
   const fireInitiateCheckout = useCallback(() => {
     if (initiateCheckoutFired.current || previewMode) return
     initiateCheckoutFired.current = true
@@ -169,13 +204,6 @@ export function CheckoutForm({
       }),
     }).catch(() => {})
   }, [planId, previewMode, trackingParams, customerEmail, customerPhone])
-
-  // Fire InitiateCheckout on mount as fallback (covers pre-filled emails, direct links, etc.)
-  useEffect(() => {
-    if (previewMode) return
-    const timer = setTimeout(() => fireInitiateCheckout(), 3000)
-    return () => clearTimeout(timer)
-  }, [fireInitiateCheckout, previewMode])
 
   async function searchPostalCode() {
     if (digits(postalCode).length !== 8) {
@@ -518,7 +546,6 @@ export function CheckoutForm({
               required
               value={customerEmail}
               onChange={e => setCustomerEmail(e.target.value)}
-              onBlur={fireInitiateCheckout}
               placeholder="seu@email.com"
               className={inputClass}
               style={focusStyle}
