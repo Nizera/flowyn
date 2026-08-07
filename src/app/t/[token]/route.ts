@@ -188,37 +188,38 @@ function buildTrackerJs(publicToken: string, appUrl: string, pixelId: string): s
   }
 
   // === INJEÇÃO DO PIXEL META ===
-  // Se o produtor já tem pixel (window.fbq existe), não injeta (evita duplicação).
-  // Se não tem, injeta pixel Meta com pixel_id do produtor e fire todos os eventos.
+  // Carrega fbevents.js PRIMEIRO, depois injeta pixel e fire eventos.
+  // Isso evita o erro "Multiple pixels with conflicting versions".
   if (!window.fbq) {
-    // Cria fila de eventos (padrão Meta — processa quando fbevents.js carrega)
+    // Cria fila de eventos (padrão Meta — fbevents.js processa ao carregar)
     window.fbq = function() {
       (fbq.q = fbq.q || []).push(arguments);
     };
     window.fbq.q = [];
-    window.fbq.loaded = true;
-    window.fbq.version = '2.0';
 
-    // Inicializa pixel
-    fbq('init', PIXEL_ID);
-
-    // Fire PageView com event_id para dedup com CAPI
+    // Fire PageView com event_id para dedup com CAPI (CAPI funciona mesmo se pixel bloqueado)
     var pvEid = 'pv_' + uuidv4();
-    fbq('track', 'PageView', {}, { eventID: pvEid });
     sendTrackWithId('page_view', pvEid);
 
     // Fire ViewContent com event_id para dedup com CAPI
     var vcEid = 'vc_' + uuidv4();
-    fbq('track', 'ViewContent', {}, { eventID: vcEid });
     sendTrackWithId('view_content', vcEid);
 
-    // Carrega fbevents.js (assíncrono)
+    // Carrega fbevents.js PRIMEIRO
     var script = document.createElement('script');
     script.src = 'https://connect.facebook.net/en_US/fbevents.js';
     script.async = true;
+    script.onload = function() {
+      // fbevents.js carregou — agora inicializa pixel e fire eventos via pixel
+      try {
+        fbq('init', PIXEL_ID);
+        fbq('track', 'PageView', {}, { eventID: pvEid });
+        fbq('track', 'ViewContent', {}, { eventID: vcEid });
+      } catch(_) {}
+    };
     script.onerror = function() {
-      // Ad blocker pode estar bloqueando fbevents.js
-      console.warn('[Flowyn] fbevents.js bloqueado (possivel ad blocker). Eventos CAPI continuam funcionando normalmente.');
+      // Ad blocker bloqueou fbevents.js — CAPI já enviou os eventos
+      console.warn('[Flowyn] fbevents.js bloqueado (possivel ad blocker). Eventos CAPI já enviados.');
     };
     document.head.appendChild(script);
   } else {
