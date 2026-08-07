@@ -188,36 +188,33 @@ function buildTrackerJs(publicToken: string, appUrl: string, pixelId: string): s
   }
 
   // === INJEÇÃO DO PIXEL META ===
-  // Cria stub fbq ANTES de carregar fbevents.js (padrão Meta).
-  // fbq() enfileira eventos; fbevents.js processa ao carregar.
+  // Padrão EXATO do Meta: IIFE que cria fbq + insere script antes do primeiro <script>
   if (!window.fbq) {
-    // Stub fbq — apenas enfileira chamadas até fbevents.js carregar
-    window.fbq = function() {
-      (fbq.q = fbq.q || []).push(arguments);
-    };
-    window.fbq.q = [];
-
-    // CAPI eventos imediatamente (independente do pixel)
+    // CAPI eventos imediatamente
     var pvEid = 'pv_' + uuidv4();
     sendTrackWithId('page_view', pvEid);
     var vcEid = 'vc_' + uuidv4();
     sendTrackWithId('view_content', vcEid);
 
-    // Enfileira pixel events (processados quando fbevents.js carregar)
+    // Pixel injection — padrão oficial Meta
+    var s = document.getElementsByTagName('script')[0];
+    var t = document.createElement('script');
+    t.async = true;
+    t.src = 'https://connect.facebook.net/en_US/fbevents.js';
+    s.parentNode.insertBefore(t, s);
+
+    // Cria stub fbq (depois do script existir, mas antes do fbevents.js carregar)
+    window.fbq = function() {
+      (fbq.q = fbq.q || []).push(arguments);
+    };
+    window.fbq.q = [];
+
+    // Enfileira pixel events
     fbq('init', PIXEL_ID);
     fbq('track', 'PageView', {}, { eventID: pvEid });
     fbq('track', 'ViewContent', {}, { eventID: vcEid });
-
-    // Carrega fbevents.js — ele substitui o stub pelo fbq real e processa a fila
-    var script = document.createElement('script');
-    script.src = 'https://connect.facebook.net/en_US/fbevents.js';
-    script.async = true;
-    script.onerror = function() {
-      console.warn('[Flowyn] fbevents.js bloqueado (ad blocker). Eventos CAPI já enviados.');
-    };
-    document.head.appendChild(script);
   } else {
-    console.warn('[Flowyn] Pixel Meta detectado na página. Para evitar duplicação, remova o snippet do pixel e use apenas o script Flowyn.');
+    console.warn('[Flowyn] Pixel Meta detectado na página.');
   }
 
   // === CLICK INJECTION + INITIATECHECKOUT ===
