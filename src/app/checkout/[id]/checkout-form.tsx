@@ -170,6 +170,13 @@ export function CheckoutForm({
     }).catch(() => {})
   }, [planId, previewMode, trackingParams, customerEmail, customerPhone])
 
+  // Fire InitiateCheckout on mount as fallback (covers pre-filled emails, direct links, etc.)
+  useEffect(() => {
+    if (previewMode) return
+    const timer = setTimeout(() => fireInitiateCheckout(), 3000)
+    return () => clearTimeout(timer)
+  }, [fireInitiateCheckout, previewMode])
+
   async function searchPostalCode() {
     if (digits(postalCode).length !== 8) {
       setPostalCodeAddress(null)
