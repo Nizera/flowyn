@@ -58,55 +58,54 @@ export function PixelScripts({ pixels }: Props) {
   // Fire PageView on mount and register global purchase handler
   useEffect(() => {
     // Meta PageView — gera event_id para dedup com CAPI server-side
-    if (window.fbq) {
-      metaPixels.forEach(p => {
-        window.fbq!('init', p.pixel_id)
-        const pageViewId = `pv_${crypto.randomUUID()}`
-        window.fbq!('track', 'PageView', {}, { eventID: pageViewId })
+    // Não checa window.fbq: o Meta pixel enfileira chamadas antes do script carregar
+    metaPixels.forEach(p => {
+      window.fbq!('init', p.pixel_id)
+      const pageViewId = `pv_${crypto.randomUUID()}`
+      window.fbq!('track', 'PageView', {}, { eventID: pageViewId })
 
-        // Lê tracking params de URL/cookies para attribuição no funnel
-        const urlParams = new URLSearchParams(window.location.search)
-        const trackingParams: Record<string, string> = {}
-        const knownKeys = [
-          'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
-          'src', 'sck', 'gclid', 'fbclid', 'ttclid',
-        ]
-        for (const k of knownKeys) {
-          const v = urlParams.get(k)
-          if (v) trackingParams[k] = v
+      // Lê tracking params de URL/cookies para attribuição no funnel
+      const urlParams = new URLSearchParams(window.location.search)
+      const trackingParams: Record<string, string> = {}
+      const knownKeys = [
+        'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+        'src', 'sck', 'gclid', 'fbclid', 'ttclid',
+      ]
+      for (const k of knownKeys) {
+        const v = urlParams.get(k)
+        if (v) trackingParams[k] = v
+      }
+      // Cookies _fbp/_fbc
+      try {
+        for (const c of document.cookie.split('; ')) {
+          const [k, v] = c.split('=', 2) as [string, string | undefined]
+          if ((k === '_fbp' || k === '_fbc') && v) trackingParams[k] = v
         }
-        // Cookies _fbp/_fbc
-        try {
-          for (const c of document.cookie.split('; ')) {
-            const [k, v] = c.split('=', 2) as [string, string | undefined]
-            if ((k === '_fbp' || k === '_fbc') && v) trackingParams[k] = v
-          }
-        } catch {}
+      } catch {}
 
-        // External ID persistente para Advanced Matching (~15% melhoria)
-        let externalId: string | undefined
-        try {
-          const uidMatch = document.cookie.match(/(?:^|; )_fl_uid=([^;]*)/)
-          if (uidMatch) externalId = decodeURIComponent(uidMatch[1])
-        } catch {}
+      // External ID persistente para Advanced Matching (~15% melhoria)
+      let externalId: string | undefined
+      try {
+        const uidMatch = document.cookie.match(/(?:^|; )_fl_uid=([^;]*)/)
+        if (uidMatch) externalId = decodeURIComponent(uidMatch[1])
+      } catch {}
 
-        // Envia ao backend para CAPI (com event_id para dedup + tracking_params para attribuição)
-        try {
-          fetch('/api/checkout/funnel', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              event_name: 'page_view',
-              event_id: pageViewId,
-              pixel_id: p.pixel_id,
-              tracking_params: Object.keys(trackingParams).length > 0 ? trackingParams : undefined,
-              session_id: urlParams.get('fl_sid') || undefined,
-              external_id: externalId,
-            }),
-          }).catch(() => {})
-        } catch {}
-      })
-    }
+      // Envia ao backend para CAPI (com event_id para dedup + tracking_params para attribuição)
+      try {
+        fetch('/api/checkout/funnel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event_name: 'page_view',
+            event_id: pageViewId,
+            pixel_id: p.pixel_id,
+            tracking_params: Object.keys(trackingParams).length > 0 ? trackingParams : undefined,
+            session_id: urlParams.get('fl_sid') || undefined,
+            external_id: externalId,
+          }),
+        }).catch(() => {})
+      } catch {}
+    })
 
     // Google page_view fires automatically via gtag config
 
@@ -132,7 +131,6 @@ export function PixelScripts({ pixels }: Props) {
             n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
             t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
             document,'script','https://connect.facebook.net/en_US/fbevents.js');
-            ${metaPixels.map(p => `fbq('init','${p.pixel_id}');`).join('\n')}
           `}
         </Script>
       )}
