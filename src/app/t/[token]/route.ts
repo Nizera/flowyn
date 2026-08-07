@@ -188,7 +188,7 @@ function buildTrackerJs(publicToken: string, appUrl: string, pixelId: string): s
   }
 
   // === INJEÇÃO DO PIXEL META ===
-  // Padrão EXATO do Meta: IIFE que cria fbq + insere script antes do primeiro <script>
+  // IIFE oficial da Meta, parametrizada com PIXEL_ID e eventIDs.
   if (!window.fbq) {
     // CAPI eventos imediatamente
     var pvEid = 'pv_' + uuidv4();
@@ -196,18 +196,18 @@ function buildTrackerJs(publicToken: string, appUrl: string, pixelId: string): s
     var vcEid = 'vc_' + uuidv4();
     sendTrackWithId('view_content', vcEid);
 
-    // Pixel injection — padrão oficial Meta
-    var s = document.getElementsByTagName('script')[0];
-    var t = document.createElement('script');
-    t.async = true;
-    t.src = 'https://connect.facebook.net/en_US/fbevents.js';
-    s.parentNode.insertBefore(t, s);
-
-    // Cria stub fbq (depois do script existir, mas antes do fbevents.js carregar)
-    window.fbq = function() {
-      (fbq.q = fbq.q || []).push(arguments);
-    };
-    window.fbq.q = [];
+    // Pixel injection — snippet oficial da Meta
+    (function(f,b,e,v,n,t,s){
+      if(f.fbq)return;
+      n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;
+      n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];
+      t=b.createElement(e);t.async=!0;t.src=v;
+      s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s);
+    })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
 
     // Enfileira pixel events
     fbq('init', PIXEL_ID);
