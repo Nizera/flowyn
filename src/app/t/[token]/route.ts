@@ -178,6 +178,7 @@ function buildTrackerJs(publicToken: string, appUrl: string, pixelId: string): s
         fetch(ENDPOINT, {
           method: "POST",
           mode: "no-cors",
+          credentials: "omit",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
           keepalive: true
@@ -215,9 +216,9 @@ function buildTrackerJs(publicToken: string, appUrl: string, pixelId: string): s
     var script = document.createElement('script');
     script.src = 'https://connect.facebook.net/en_US/fbevents.js';
     script.async = true;
-    script.onload = function() {
-      // Processa fila de eventos (fbq.q)
-      // O script Meta faz isso automaticamente
+    script.onerror = function() {
+      // Ad blocker pode estar bloqueando fbevents.js
+      console.warn('[Flowyn] fbevents.js bloqueado (possivel ad blocker). Eventos CAPI continuam funcionando normalmente.');
     };
     document.head.appendChild(script);
   } else {

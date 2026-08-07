@@ -30,7 +30,8 @@ export async function POST(req: NextRequest) {
     if (!t || !event_name) {
       return new NextResponse('missing params', { status: 400, headers: corsHeaders })
     }
-    if (event_name !== 'page_view' && event_name !== 'view_content') {
+    const VALID_EVENTS = ['page_view', 'view_content', 'initiate_checkout']
+    if (!VALID_EVENTS.includes(event_name)) {
       return new NextResponse('invalid event', { status: 400, headers: corsHeaders })
     }
 
@@ -81,7 +82,12 @@ export async function POST(req: NextRequest) {
     }
 
     // CAPI server-side (não-bloqueante)
-    const capiEventName = event_name === 'page_view' ? 'PageView' as const : 'ViewContent' as const
+    const CAPI_EVENT_MAP: Record<string, string> = {
+      page_view: 'PageView',
+      view_content: 'ViewContent',
+      initiate_checkout: 'InitiateCheckout',
+    }
+    const capiEventName = CAPI_EVENT_MAP[event_name] as 'PageView' | 'ViewContent' | 'InitiateCheckout'
     const finalEventId = event_id || `${event_name}_${crypto.randomUUID()}`
 
     const trackingParams: Record<string, string> = {}
@@ -153,6 +159,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
     'Access-Control-Allow-Origin': allowed,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Credentials': 'true',
     'Vary': 'Origin',
   }
 }
