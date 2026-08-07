@@ -22,14 +22,16 @@ SCRIPT 1 — Meta Pixel (dispara PageView e ViewContent no browser):
 !function(f,b,e,v,n,t,s)
 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
 n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+if(!f._fbp)f._fbp=n;n.push=n;n.loaded=!0;n.version='2.0';
 n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
 fbq('init', 'SEU_PIXEL_ID');
 fbq('track', 'PageView');
-fbq('track', 'ViewContent');
+var _vcEid = "vc_" + (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
+fbq('track', 'ViewContent', {}, { eventID: _vcEid });
+window.__fl_vc_eid = _vcEid;
 </script>
 <noscript><img height="1" width="1" style="display:none"
 src="https://www.facebook.com/tr?id=SEU_PIXEL_ID&ev=PageView&noscript=1"

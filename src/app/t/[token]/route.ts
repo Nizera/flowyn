@@ -196,11 +196,54 @@ function buildTrackerJs(publicToken: string, appUrl: string): string {
     } catch(e){ /* swallow */ }
   }
 
+  // Like sendTrack but with a pre-defined event_id (for dedup with pixel client-side)
+  function sendTrackWithId(eventName, eventId){
+    try {
+      var payload = {
+        t: TOKEN,
+        event_name: eventName,
+        event_id: eventId,
+        product_id: productId,
+        url: window.location.href,
+        referrer: document.referrer || null,
+        utm: trackingParams,
+        fbclid: fbclid,
+        ttclid: ttclid,
+        gclid: gclid,
+        fbp: fbp,
+        fbc: fbc,
+        session_id: SID,
+        external_id: UID
+      };
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(ENDPOINT, new Blob([JSON.stringify(payload)], { type: "application/json" }));
+      } else {
+        fetch(ENDPOINT, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          keepalive: true
+        }).catch(function(){});
+      }
+    } catch(e){ /* swallow */ }
+  }
+
   // CORREÇÃO: page_view NÃO é enviado via beacon aqui porque o produtor já
   // dispara fbq('track','PageView') no snippet do pixel. Enviar CAPI page_view
   // aqui causaria DUPLICAÇÃO (eventIDs diferentes → Meta conta como 2 eventos).
   // O CAPI PageView é feito no redirect /r/[token] (server-side backup).
   // sendTrack("page_view");
+
+  // ViewContent CAPI automático: se o snippet do produtor gerou um event_id
+  // (window.__fl_vc_eid), envia CAPI ViewContent com o MESMO event_id para dedup.
+  // Se o snippet antigo não gerou event_id, NÃO envia (evita duplicação).
+  try {
+    var vcEid = window.__fl_vc_eid || null;
+    if (vcEid) {
+      sendTrackWithId("view_content", vcEid);
+    }
+  } catch(_) {}
 
   // Configuração de seletores CSS para capturar cliques (configurável pelo produtor)
   // Ex: window.__fl_checkout_selectors = ".btn-comprar, [data-checkout]"
