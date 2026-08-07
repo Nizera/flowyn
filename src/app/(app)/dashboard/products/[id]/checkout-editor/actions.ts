@@ -63,6 +63,14 @@ export async function publishCheckout(productId: string, rawConfig: unknown): Pr
     updated_at: now,
   }, { onConflict: 'product_id' })
 
+  // Sincroniza campos de upsell para a tabela products (usado pela página de sucesso)
+  await supabase.from('products').update({
+    upsell_enabled: config.upsellEnabled ?? false,
+    upsell_url: config.upsellUrl || null,
+    upsell_button_text: config.upsellButtonText || null,
+    upsell_headline: config.upsellHeadline || null,
+  }).eq('id', productId)
+
   revalidatePath(`/dashboard/products/${productId}/checkout-editor`)
   revalidatePath('/checkout/[id]', 'page')
 

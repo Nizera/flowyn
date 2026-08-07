@@ -4,7 +4,6 @@
 // produtores. Como a funcionalidade de Google Ads para produtores ainda não existe,
 // removemos o GlobalPixels por completo para evitar confusão. Produtores continuam
 // pixelizando suas páginas de checkout via PixelScripts na própria checkout page.
-import { PixelScripts } from '@/components/PixelScripts'
 
 export function GlobalPixels() {
   // Google Ads para produtores ainda não implementado — sem pixels globais por enquanto.
