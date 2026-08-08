@@ -3,10 +3,18 @@
 import { useState, useRef, useEffect } from 'react'
 import { Calendar, ChevronDown, Check, X } from 'lucide-react'
 
+function todayBr(): string {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
+}
+
+function formatBr(d: Date): string {
+  return d.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
+}
+
 function getDefaultDateRange() {
   const now = new Date()
   const from = new Date(now.getTime() - 7 * 86400000)
-  return { from: from.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) }
+  return { from: formatBr(from), to: todayBr() }
 }
 
 const DATE_PRESETS = [
@@ -35,14 +43,14 @@ function applyDatePreset(preset: typeof DATE_PRESETS[number]): { from: string; t
   } else if (preset.days === 'lastmonth') {
     from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const to = new Date(now.getFullYear(), now.getMonth(), 0)
-    return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) }
+    return { from: formatBr(from), to: formatBr(to) }
   } else if (preset.days === 0) {
-    const today = now.toISOString().slice(0, 10)
+    const today = todayBr()
     return { from: today, to: today }
   } else {
     from = new Date(now.getTime() - (preset.days as number) * 86400000)
   }
-  return { from: from.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) }
+  return { from: formatBr(from), to: todayBr() }
 }
 
 type CampaignOption = { campaign_id: string; name: string }

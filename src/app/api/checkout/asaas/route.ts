@@ -28,7 +28,7 @@ type PlanRow = {
 const PAID_STATUSES = new Set(['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'])
 
 function today() {
-  return new Date().toISOString().slice(0, 10)
+  return new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
 }
 
 function maskEmail(email: string) {
@@ -383,7 +383,7 @@ export async function POST(req: NextRequest) {
         customer: asaasCustomer.id,
         billingType: 'PIX',
         value: totalAmount,
-        dueDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+        dueDate: new Date(Date.now() + 86400000).toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }),
         description: `${product.name} - ${plan.name}`,
         externalReference: order.id,
         remoteIp: clientIp,

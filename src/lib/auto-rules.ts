@@ -169,8 +169,8 @@ export async function fetchEntityInsights(
     .eq('ad_account_id', adAccountId)
     .eq(idField, entityId)
     .eq('insight_level', entityLevel === 'campaign' ? 'campaign' : entityLevel === 'adset' ? 'adset' : 'ad')
-    .gte('date', since.toISOString().slice(0, 10))
-    .lte('date', until.toISOString().slice(0, 10))
+    .gte('date', since.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }))
+    .lte('date', until.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }))
 
   if (!rows || rows.length === 0) {
     return { spend: 0, impressions: 0, clicks: 0, conversions: 0, conversion_value: 0, purchase_value: 0, purchase_count: 0, cpc: 0, cpm: 0, ctr: 0 }

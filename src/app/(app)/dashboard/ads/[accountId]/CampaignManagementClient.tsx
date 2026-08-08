@@ -93,10 +93,18 @@ function MetricCell({ value, prefix = '', suffix = '', decimals = 0 }: {
   return <span>{prefix}{formatted}{suffix}</span>
 }
 
+function todayBr(): string {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
+}
+
+function formatBr(d: Date): string {
+  return d.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
+}
+
 function getDefaultDateRange() {
   const now = new Date()
   const from = new Date(now.getTime() - 30 * 86400000)
-  return { from: from.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) }
+  return { from: formatBr(from), to: todayBr() }
 }
 
 const DATE_PRESETS = [
@@ -415,13 +423,13 @@ export default function CampaignManagementPageInner() {
     } else if (preset.days === 'lastmonth') {
       from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
       const to = new Date(now.getFullYear(), now.getMonth(), 0)
-      setDateRange({ from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) })
+      setDateRange({ from: formatBr(from), to: formatBr(to) })
       setShowDatePicker(false)
       return
     } else {
       from = new Date(now.getTime() - (preset.days as number) * 86400000)
     }
-    setDateRange({ from: from.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) })
+    setDateRange({ from: formatBr(from), to: todayBr() })
     setShowDatePicker(false)
   }
 

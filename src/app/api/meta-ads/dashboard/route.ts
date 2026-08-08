@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { getDecryptedToken } from '@/lib/meta-oauth'
 import { GRAPH_API } from '@/lib/meta-graph-api'
+import { todayBr } from '@/lib/date-br'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayBr()
   const defaultStart = `${new Date().getFullYear()}-01-01`
 
   const startDate = searchParams.get('start_date') || defaultStart

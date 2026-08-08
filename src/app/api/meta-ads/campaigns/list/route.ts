@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
 
     if (campaignIds) {
       const insightsRes = await fetch(
-        `${GRAPH_API}/act_${adAccountId}/insights?fields=campaign_id,impressions,clicks,spend,actions,action_values&level=campaign&time_range={'since':'${since.toISOString().slice(0, 10)}','until':'${now.toISOString().slice(0, 10)}'}&access_token=${accessToken}`
+        `${GRAPH_API}/act_${adAccountId}/insights?fields=campaign_id,impressions,clicks,spend,actions,action_values&level=campaign&time_range={'since':'${since.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })}','until':'${now.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })}'}&access_token=${accessToken}`
       )
       const insightsData = await insightsRes.json()
       if (insightsData.data) {

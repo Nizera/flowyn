@@ -18,7 +18,7 @@ const FLOWYN_PRO_PRICE = 97
 
 function isoDate(value: string | null | undefined) {
   const date = value ? new Date(value) : new Date()
-  return date.toISOString().slice(0, 10)
+  return date.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
 }
 
 function isFuture(value: string | null | undefined) {

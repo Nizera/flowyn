@@ -24,8 +24,8 @@ function getDateRange(sinceDate?: string) {
   const since = sinceDate ? new Date(sinceDate) : new Date(now)
   if (!sinceDate) since.setDate(since.getDate() - 90)
   return JSON.stringify({
-    since: since.toISOString().slice(0, 10),
-    until: now.toISOString().slice(0, 10),
+    since: since.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }),
+    until: now.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }),
   })
 }
 

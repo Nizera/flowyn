@@ -56,8 +56,8 @@ export async function GET(req: NextRequest) {
 
     // If local DB has campaigns, use them
     if (realCampaigns.length > 0) {
-      const since = dateFrom || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
-      const until = dateTo || new Date().toISOString().slice(0, 10)
+      const since = dateFrom || new Date(Date.now() - 30 * 86400000).toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
+      const until = dateTo || new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
 
       const { data: campaignInsights } = await admin
         .from('ad_insights_cache')
@@ -155,8 +155,8 @@ export async function GET(req: NextRequest) {
 
     const now = new Date()
     const sinceDate = dateFrom ? new Date(dateFrom) : new Date(now.getTime() - 30 * 86400000)
-    const sinceStr = sinceDate.toISOString().slice(0, 10)
-    const untilStr = dateTo || now.toISOString().slice(0, 10)
+    const sinceStr = sinceDate.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
+    const untilStr = dateTo || now.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
     const timeRange = `{'since':'${sinceStr}','until':'${untilStr}'}`
 
     async function metaApiCall(url: string) {

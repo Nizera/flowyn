@@ -87,7 +87,7 @@ const EMPTY_SUMMARY: Summary = {
 function getDefaultDateRange() {
   const now = new Date()
   const from = new Date(now.getTime() - 7 * 86400000) // Default to 7 days for closer zoom
-  return { from: from.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) }
+  return { from: from.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }), to: now.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }) }
 }
 
 const STORAGE_KEY = 'flowyn_dashboard_filters'

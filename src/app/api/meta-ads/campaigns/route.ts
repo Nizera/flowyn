@@ -104,8 +104,8 @@ export async function GET(req: NextRequest) {
     const now = new Date()
     const since = new Date(now)
     since.setDate(now.getDate() - 90)
-    const until = now.toISOString().slice(0, 10)
-    const sinceStr = since.toISOString().slice(0, 10)
+    const until = now.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
+    const sinceStr = since.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
 
     const insightsRes = await fetch(
       `${GRAPH_API}/act_${adAccountId}/insights?fields=campaign_id,impressions,clicks,spend,actions,ctr,cpc,cpm&level=campaign&time_range={'since':'${sinceStr}','until':'${until}'}&access_token=${accessToken}`

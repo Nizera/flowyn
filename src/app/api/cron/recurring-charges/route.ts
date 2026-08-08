@@ -27,7 +27,7 @@ function addBusinessDays(startDate: Date, days: number): Date {
 }
 
 function formatDate(date: Date): string {
-  return date.toISOString().slice(0, 10)
+  return date.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
 }
 
 export async function GET(request: NextRequest) {
