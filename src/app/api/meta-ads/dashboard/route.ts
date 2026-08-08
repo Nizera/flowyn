@@ -18,13 +18,13 @@ export async function GET(req: NextRequest) {
   const today = todayBr()
   const defaultStart = `${new Date().getFullYear()}-01-01`
 
-  const startDate = searchParams.get('start_date') || defaultStart
-  const endDate = searchParams.get('end_date') || today
+  let startDate = searchParams.get('start_date') || defaultStart
+  let endDate = searchParams.get('end_date') || today
   if (!DATE_RE.test(startDate) || !DATE_RE.test(endDate)) {
     return NextResponse.json({ error: 'Invalid date format' }, { status: 400 })
   }
   if (startDate > endDate) {
-    return NextResponse.json({ error: 'start_date must be <= end_date' }, { status: 400 })
+    const tmp = startDate; startDate = endDate; endDate = tmp
   }
   const spanDays = (new Date(endDate).getTime() - new Date(startDate).getTime()) / 86_400_000
   if (spanDays > 365) {
