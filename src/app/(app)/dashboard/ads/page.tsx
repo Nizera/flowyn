@@ -393,7 +393,7 @@ function CampaignRow({
         </td>
         <td className="px-4 py-4">
           <span className="text-sm text-muted">
-            {acc.sync_from_date ? new Date(acc.sync_from_date + 'T00:00:00').toLocaleDateString('pt-BR') : acc.created_at ? new Date(acc.created_at).toLocaleDateString('pt-BR') : '—'}
+            {acc.sync_from_date ? new Date(acc.sync_from_date + 'T00:00:00').toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : acc.created_at ? new Date(acc.created_at).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '—'}
           </span>
         </td>
         <td className="px-4 py-4">

@@ -231,7 +231,7 @@ export default function ReferralsPage() {
                 {data.commissions.map(c => (
                   <tr key={c.id} className="hover:bg-surface/50">
                     <td className="px-6 py-3 text-muted">
-                      {new Date(c.created_at).toLocaleDateString('pt-BR')}
+                      {new Date(c.created_at).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
                     </td>
                     <td className="px-6 py-3 font-medium text-foreground">
                       {currency(Number(c.amount))}

@@ -101,7 +101,7 @@ export default async function SalesPage() {
                         <Status status={order.status} />
                       </td>
                       <td className="whitespace-nowrap px-5 py-4 text-right text-xs text-muted">
-                        {new Date(order.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        {new Date(order.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}
                       </td>
                     </tr>
                   ))}
