@@ -170,6 +170,11 @@ export function CheckoutForm({
     }).catch(() => {})
   }, [planId, previewMode, trackingParams, customerEmail, customerPhone])
 
+  // Dispara initiate_checkout quando o checkout carrega (popula funnel_events)
+  useEffect(() => {
+    fireInitiateCheckout()
+  }, [fireInitiateCheckout])
+
   async function searchPostalCode() {
     if (digits(postalCode).length !== 8) {
       setPostalCodeAddress(null)
