@@ -1015,7 +1015,7 @@ export default function CampaignManagementPageInner() {
                           onClick={key === 'budget' ? () => openBudgetEdit(item as CampaignItem | AdSetItem) : undefined}>
                           {key === 'budget' ? (
                             <>
-                              <BudgetDisplay daily={(item as CampaignItem | AdSetItem).daily_budget} lifetime={(item as CampaignItem | AdSetItem).lifetime_budget} />
+                              <span className="text-blue-600"><BudgetDisplay daily={(item as CampaignItem | AdSetItem).daily_budget} lifetime={(item as CampaignItem | AdSetItem).lifetime_budget} /></span>
                               <span className="hidden group-hover:inline ml-1 text-xs text-blue-500">editar</span>
                             </>
                           ) : (
