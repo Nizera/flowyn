@@ -210,7 +210,7 @@ export default function AdsAccountsPage() {
 
       <div className="border-b border-border bg-card">
         <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-lg font-bold text-foreground">Meta Ads</h1>
               <p className="text-sm text-muted">Conecte e gerencie suas contas de anuncios</p>
@@ -230,7 +230,7 @@ export default function AdsAccountsPage() {
                       }
                     } catch {}
                   }}
-                  className="flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                  className="flex items-center gap-2 rounded-lg border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 sm:px-4 sm:text-sm"
                 >
                   Desconectar todas
                 </button>
@@ -238,7 +238,7 @@ export default function AdsAccountsPage() {
               <button
                 type="button"
                 onClick={() => setShowConnectModal(true)}
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 sm:px-4 sm:text-sm"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -252,17 +252,16 @@ export default function AdsAccountsPage() {
 
       {accounts.length > 0 && (
         <div className="mx-auto max-w-[1600px] px-4 pt-4 sm:px-6 sm:pt-6">
-          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 sm:p-4">
             <div className="flex items-start gap-3">
               <svg className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <div className="text-sm text-blue-800">
+              <div className="text-xs text-blue-800 sm:text-sm">
                 <p className="font-semibold">Como funciona</p>
                 <p className="mt-1">
                   A Flowyn apenas <strong>le</strong> seus dados do Meta Ads. Nos nao gastamos dinheiro,
                   nao criamos campanhas e nao modificamos suas configuracoes sem sua autorizacao.
-                  Os dados sao usados apenas para exibir metricas no dashboard.
                 </p>
               </div>
             </div>
@@ -284,48 +283,73 @@ export default function AdsAccountsPage() {
         ) : accounts.length === 0 ? (
           <EmptyState onConnect={() => setShowConnectModal(true)} />
         ) : (
-          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 z-10 border-b border-border bg-card">
-                <tr className="text-left text-xs uppercase text-muted">
-                  <th className="px-4 py-3">Conta</th>
-                  <th className="px-4 py-3">ID</th>
-                  <th className="px-4 py-3 text-center">Sincronizacao</th>
-                  <th className="px-4 py-3 text-center">Status</th>
-                  <th className="px-4 py-3">Dados desde</th>
-                  <th className="px-4 py-3">Ultimo sync</th>
-                  <th className="px-4 py-3 text-right">Acoes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {accounts.map(acc => (
-                  <CampaignRow
-                    key={acc.id}
-                    acc={acc}
-                    expanded={expandedAccount === acc.ad_account_id}
-                    onExpand={toggleExpand}
-                    campaigns={campaigns[acc.ad_account_id] || null}
-                    loadingCampaigns={loadingCampaigns === acc.ad_account_id}
-                    togglingCampaign={togglingCampaign}
-                    onToggleCampaign={handleToggleCampaign}
-                    syncStatus={syncStatus}
-                    syncingAccount={syncingAccount}
-                    onSync={handleSync}
-                    onToggleSync={handleToggleSync}
-                    onDisconnect={handleDisconnect}
-                    disconnecting={disconnecting}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="hidden md:block">
+              <div className="overflow-x-auto rounded-xl border border-border">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-border bg-card">
+                    <tr className="text-left text-xs uppercase text-muted">
+                      <th className="px-4 py-3">Conta</th>
+                      <th className="px-4 py-3">ID</th>
+                      <th className="px-4 py-3 text-center">Sincronizacao</th>
+                      <th className="px-4 py-3 text-center">Status</th>
+                      <th className="px-4 py-3">Dados desde</th>
+                      <th className="px-4 py-3">Ultimo sync</th>
+                      <th className="px-4 py-3 text-right">Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {accounts.map(acc => (
+                      <CampaignRowDesktop
+                        key={acc.id}
+                        acc={acc}
+                        expanded={expandedAccount === acc.ad_account_id}
+                        onExpand={toggleExpand}
+                        campaigns={campaigns[acc.ad_account_id] || null}
+                        loadingCampaigns={loadingCampaigns === acc.ad_account_id}
+                        togglingCampaign={togglingCampaign}
+                        onToggleCampaign={handleToggleCampaign}
+                        syncStatus={syncStatus}
+                        syncingAccount={syncingAccount}
+                        onSync={handleSync}
+                        onToggleSync={handleToggleSync}
+                        onDisconnect={handleDisconnect}
+                        disconnecting={disconnecting}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="space-y-3 md:hidden">
+              {accounts.map(acc => (
+                <CampaignCardMobile
+                  key={acc.id}
+                  acc={acc}
+                  expanded={expandedAccount === acc.ad_account_id}
+                  onExpand={toggleExpand}
+                  campaigns={campaigns[acc.ad_account_id] || null}
+                  loadingCampaigns={loadingCampaigns === acc.ad_account_id}
+                  togglingCampaign={togglingCampaign}
+                  onToggleCampaign={handleToggleCampaign}
+                  syncStatus={syncStatus}
+                  syncingAccount={syncingAccount}
+                  onSync={handleSync}
+                  onToggleSync={handleToggleSync}
+                  onDisconnect={handleDisconnect}
+                  disconnecting={disconnecting}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>
   )
 }
 
-function CampaignRow({
+function CampaignRowDesktop({
   acc, expanded, onExpand, campaigns, loadingCampaigns, togglingCampaign,
   onToggleCampaign, syncStatus, syncingAccount, onSync, onToggleSync,
   onDisconnect, disconnecting,
@@ -540,6 +564,177 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
+function CampaignCardMobile({
+  acc, expanded, onExpand, campaigns, loadingCampaigns, togglingCampaign,
+  onToggleCampaign, syncStatus, syncingAccount, onSync, onToggleSync,
+  onDisconnect, disconnecting,
+}: {
+  acc: AdAccount
+  expanded: boolean
+  onExpand: (id: string) => void
+  campaigns: Campaign[] | null
+  loadingCampaigns: boolean
+  togglingCampaign: string | null
+  onToggleCampaign: (id: string, adAccountId: string, enabled: boolean) => void
+  syncStatus: SyncStatusMap
+  syncingAccount: string | null
+  onSync: (id: string) => void
+  onToggleSync: (id: string, enabled: boolean) => void
+  onDisconnect: (id: string) => void
+  disconnecting: string | null
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <button
+        type="button"
+        onClick={() => onExpand(acc.ad_account_id)}
+        className="flex w-full items-center justify-between p-4 text-left"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <svg className={`h-4 w-4 shrink-0 text-muted transition-transform ${expanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            <span className="truncate text-sm font-bold text-foreground">{acc.ad_account_name || 'Sem nome'}</span>
+          </div>
+          <p className="mt-1 truncate pl-6 font-mono text-[11px] text-muted">{acc.ad_account_id}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {syncingAccount === acc.ad_account_id ? (
+            <span className="inline-flex items-center gap-1 text-[11px] text-blue-600">
+              <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Sync...
+            </span>
+          ) : syncStatus[acc.ad_account_id] === 'done' ? (
+            <span className="text-[11px] text-emerald-600">OK</span>
+          ) : syncStatus[acc.ad_account_id] === 'error' ? (
+            <span className="text-[11px] text-red-600">Erro</span>
+          ) : null}
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+            acc.sync_enabled ? 'bg-emerald-500/15 text-emerald-500' : 'bg-surface text-muted'
+          }`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${acc.sync_enabled ? 'bg-emerald-500' : 'bg-muted'}`} />
+            {acc.sync_enabled ? 'Ativa' : 'Inativa'}
+          </span>
+        </div>
+      </button>
+
+      <div className="border-t border-border px-4 pb-3 pt-2">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted">
+          <span>{acc.sync_from_date ? new Date(acc.sync_from_date + 'T00:00:00').toLocaleDateString('pt-BR') : acc.created_at ? new Date(acc.created_at).toLocaleDateString('pt-BR') : '—'}</span>
+          <span>{acc.last_sync_at ? `${formatTimeAgo(acc.last_sync_at)} atras` : 'Nunca'}</span>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {acc.sync_enabled && (
+            <button
+              type="button"
+              onClick={() => onSync(acc.ad_account_id)}
+              disabled={syncingAccount === acc.ad_account_id}
+              className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-[11px] font-semibold text-foreground transition hover:bg-surface disabled:opacity-50"
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Sync
+            </button>
+          )}
+          <Link href={`/dashboard/ads/${acc.ad_account_id}`}
+            className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-[11px] font-semibold text-white transition hover:bg-blue-700">
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Dashboard
+          </Link>
+          <button
+            type="button"
+            onClick={() => onDisconnect(acc.ad_account_id)}
+            disabled={disconnecting === acc.ad_account_id}
+            className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-card px-2.5 py-1.5 text-[11px] font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+          >
+            {disconnecting === acc.ad_account_id ? (
+              <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+            )}
+            Remover
+          </button>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="border-t border-border bg-surface/50 px-4 py-3">
+          {loadingCampaigns ? (
+            <div className="flex items-center gap-2 py-2 text-xs text-muted">
+              <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Carregando...
+            </div>
+          ) : !campaigns || campaigns.length === 0 ? (
+            <p className="py-2 text-xs text-muted">Nenhuma campanha encontrada.</p>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold uppercase text-muted">{campaigns.length} campanha{campaigns.length !== 1 ? 's' : ''}</span>
+                <span className="text-[11px] text-muted">{campaigns.filter(c => c.sync_enabled).length} sincronizando</span>
+              </div>
+              {campaigns.map(c => (
+                <div key={c.campaign_id} className={`rounded-lg border border-border bg-card p-2.5 ${c.sync_enabled ? '' : 'opacity-60'}`}>
+                  <div className="flex items-start gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onToggleCampaign(c.campaign_id, acc.ad_account_id, !c.sync_enabled)}
+                      disabled={togglingCampaign === c.campaign_id}
+                      className="mt-0.5 focus:outline-none disabled:opacity-50"
+                    >
+                      <span className={`inline-flex h-5 w-5 items-center justify-center rounded border transition ${
+                        c.sync_enabled
+                          ? 'border-blue-500 bg-blue-500 text-white'
+                          : 'border-border bg-background text-transparent'
+                      }`}>
+                        {c.sync_enabled && (
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-xs font-medium ${c.sync_enabled ? 'text-foreground' : 'text-muted'}`}>{c.name}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <StatusBadge status={c.effective_status || c.status} />
+                        {c.objective && (
+                          <span className="rounded bg-surface px-1 py-0.5 text-[9px] text-muted">{c.objective}</span>
+                        )}
+                      </div>
+                      {(c.stats.spend > 0 || c.stats.clicks > 0 || c.stats.conversions > 0) && (
+                        <div className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-muted">
+                          {c.stats.spend > 0 && <span>R$ {c.stats.spend.toFixed(2)}</span>}
+                          {c.stats.clicks > 0 && <span>{c.stats.clicks.toLocaleString()} cliques</span>}
+                          {c.stats.conversions > 0 && <span className="text-emerald-600">{c.stats.conversions} conv</span>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function EmptyState({ onConnect }: { onConnect: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-muted">
@@ -610,7 +805,7 @@ function ConnectModal({ onClose }: { onClose: () => void }) {
 
             <div className="mt-5 rounded-xl border border-gray-200 bg-gray-50 p-4">
               <p className="text-xs font-bold uppercase tracking-wider text-gray-500">O que voce pode fazer</p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <Feature icon="📊" text="Dashboard com metricas em tempo real" />
                 <Feature icon="💰" text="Alterar orcamentos de campanhas" />
                 <Feature icon="⏸️" text="Pausar ou retomar campanhas" />
