@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { AppLayoutUI } from '@/components/AppLayoutUI'
+import { PushNotificationManager } from '@/components/PushNotificationManager'
 
 function getSevenDaysAgoIso() {
   return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -18,6 +19,7 @@ type Notification = {
   time: string
   read: boolean
   href?: string
+  type?: string
 }
 
 export default async function AppLayout({
@@ -147,6 +149,7 @@ export default async function AppLayout({
           time: o.created_at,
           read: false,
           href: '/dashboard/sales',
+          type: 'sale',
         })
       } else if (o.status === 'pending') {
         notifications.push({
@@ -156,6 +159,7 @@ export default async function AppLayout({
           time: o.created_at,
           read: false,
           href: '/dashboard/sales',
+          type: 'pending',
         })
       }
     }
@@ -211,6 +215,7 @@ export default async function AppLayout({
       subscription={subscription}
       notifications={notifications}
     >
+      <PushNotificationManager />
       {children}
     </AppLayoutUI>
   )

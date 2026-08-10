@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { Sidebar, SIDEBAR_STORAGE_KEY, SIDEBAR_WIDTH_EXPANDED, SIDEBAR_WIDTH_COLLAPSED } from '@/components/Sidebar'
 import Link from 'next/link'
-import { Bell, CalendarClock, DollarSign, Clock, AlertTriangle, Menu, X } from 'lucide-react'
+import { Bell, CalendarClock, DollarSign, Clock, AlertTriangle, Menu, X, Check } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { usePathname } from 'next/navigation'
 
@@ -19,6 +19,7 @@ type Notification = {
   time: string
   read: boolean
   href?: string
+  type?: string
 }
 
 interface AppLayoutUIProps {
@@ -111,15 +112,51 @@ function notifBg(id: string) {
   return 'bg-orange-500/15'
 }
 
-export function AppLayoutUI({ children, profile, subscription, notifications }: AppLayoutUIProps) {
+export function AppLayoutUI({ children, profile, subscription, notifications: initialNotifications }: AppLayoutUIProps) {
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isNotifOpen, setIsNotifOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [notifications, setNotifications] = useState(initialNotifications)
   const notifRef = useRef<HTMLDivElement>(null)
   const unreadCount = notifications.filter(n => !n.read).length
   const page = pageTitles.find(item => pathname === item.match || pathname.startsWith(`${item.match}/`)) || pageTitles[pageTitles.length - 1]
   const isLearningExperience = pathname === '/learn' || pathname.startsWith('/learn/')
+
+  const markAsRead = useCallback(async (ids: string[]) => {
+    try {
+      await fetch('/api/notifications/read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notification_ids: ids }),
+      })
+      setNotifications(prev => prev.map(n => ids.includes(n.id) ? { ...n, read: true } : n))
+    } catch (err) {
+      console.error('Failed to mark notifications as read:', err)
+    }
+  }, [])
+
+  const markAllAsRead = useCallback(async () => {
+    try {
+      await fetch('/api/notifications/read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mark_all: true }),
+      })
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    } catch (err) {
+      console.error('Failed to mark all notifications as read:', err)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isNotifOpen && unreadCount > 0) {
+      const unreadIds = notifications.filter(n => !n.read).map(n => n.id)
+      if (unreadIds.length > 0) {
+        markAsRead(unreadIds)
+      }
+    }
+  }, [isNotifOpen, unreadCount, notifications, markAsRead])
 
   useEffect(() => {
     try {
@@ -224,6 +261,15 @@ export function AppLayoutUI({ children, profile, subscription, notifications }: 
                   >
                     <div className="flex items-center justify-between border-b border-border px-4 py-3">
                       <span className="text-sm font-black text-foreground">Notificacoes</span>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={markAllAsRead}
+                          className="flex items-center gap-1 text-xs font-medium text-muted transition hover:text-foreground"
+                        >
+                          <Check className="h-3 w-3" />
+                          Marcar lidas
+                        </button>
+                      )}
                     </div>
                     {notifications.length === 0 ? (
                       <div className="flex flex-col items-center justify-center px-4 py-10 text-center">

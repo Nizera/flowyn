@@ -6,6 +6,7 @@ import { createStudentPasswordSetupUrl, findAuthUserIdByEmail } from '@/lib/stud
 import { sendCapiEvent } from '@/lib/meta-capi'
 import { sendFirstSaleCertificateEmail } from '@/lib/certificate-email'
 import { sendWebhook } from '@/lib/webhooks'
+import { sendPushToProducer } from '@/lib/push'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -424,6 +425,19 @@ export async function fulfillPaidOrder(supabase: SupabaseAdmin, orderId: string,
         })
       } catch (webhookError) {
         console.error('[fulfillPaidOrder] External webhook failed (non-blocking):', webhookError)
+      }
+
+      // Push notification to producer
+      try {
+        const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(orderData.amount) || 0)
+        await sendPushToProducer(supabase, producerId, {
+          title: 'Nova venda!',
+          body: `${deliveryCustomerName} comprou ${product?.name || 'seu produto'} — ${formattedAmount}`,
+          tag: 'flowyn-sale',
+          url: '/dashboard/sales',
+        })
+      } catch (pushError) {
+        console.error('[fulfillPaidOrder] Push notification failed (non-blocking):', pushError)
       }
     }
     if (producerId) {

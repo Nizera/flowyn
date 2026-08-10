@@ -12,6 +12,14 @@ import {
 import { safeBearerCompare } from '@/lib/safe-bearer-compare'
 
 export async function GET(req: NextRequest) {
+  return handleSync(req)
+}
+
+export async function POST(req: NextRequest) {
+  return handleSync(req)
+}
+
+async function handleSync(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const accountId = searchParams.get('account_id')
 

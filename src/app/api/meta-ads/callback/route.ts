@@ -77,8 +77,8 @@ export async function GET(req: NextRequest) {
           ad_account_name: account.name,
           access_token: encryptedToken,
           pixel_id: null,
-          is_active: false,
-          sync_enabled: false,
+          is_active: true,
+          sync_enabled: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
