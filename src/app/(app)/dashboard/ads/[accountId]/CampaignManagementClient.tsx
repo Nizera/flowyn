@@ -677,43 +677,43 @@ export default function CampaignManagementPageInner() {
   return (
     <div className="min-h-screen bg-card">
       <div className="border-b border-border">
-        <div className="max-w-[1600px] mx-auto px-4 py-4 sm:px-6">
+        <div className="max-w-[1600px] mx-auto px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
               <Link href="/dashboard/ads" className="text-muted hover:text-muted transition-colors">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </Link>
               <div>
-                <h1 className="text-lg font-bold text-foreground">Gestao de Campanhas</h1>
-                <p className="text-sm text-muted">Conta: {accountId}</p>
+                <h1 className="text-base font-bold text-foreground sm:text-lg">Gestao de Campanhas</h1>
+                <p className="text-xs text-muted sm:text-sm truncate max-w-[200px] sm:max-w-none">{accountId}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Link href={`/dashboard/ads/${accountId}/rules`}
-                className="flex items-center gap-2 px-4 py-2 bg-card border border-border text-foreground text-sm font-semibold rounded-lg hover:bg-surface transition-colors">
+                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-card border border-border text-foreground text-sm font-semibold rounded-lg hover:bg-surface transition-colors">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                 </svg>
                 Regras
               </Link>
               <button onClick={handleSync} disabled={isSyncing}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors sm:gap-2 sm:px-4 sm:text-sm">
               {isSyncing ? (
                 <>
                   <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  Sincronizando...
+                  <span className="hidden sm:inline">Sincronizando...</span>
                 </>
               ) : (
                 <>
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  Sincronizar
+                  Sync
                 </>
               )}
               </button>
@@ -725,7 +725,7 @@ export default function CampaignManagementPageInner() {
       {/* Tabs */}
       <div className="border-b border-border">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
-          <div className="flex gap-0">
+          <div className="-mb-px flex gap-0 overflow-x-auto">
             {tabs.map(t => (
               <button key={t.key}
                 onClick={() => {
@@ -739,11 +739,11 @@ export default function CampaignManagementPageInner() {
                   setSelected(new Set())
                   router.push(`?tab=${t.key}`)
                 }}
-                className={`px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
+                className={`whitespace-nowrap px-3 py-2.5 text-xs font-semibold border-b-2 transition-colors sm:px-5 sm:py-3 sm:text-sm ${
                   tab === t.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-muted hover:text-foreground'
                 }`}>
                 {t.label}
-                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${tab === t.key ? 'bg-blue-100 text-blue-700' : 'bg-surface text-muted'}`}>
+                <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] sm:ml-2 sm:px-2 sm:text-xs ${tab === t.key ? 'bg-blue-100 text-blue-700' : 'bg-surface text-muted'}`}>
                   {t.count}
                 </span>
               </button>
@@ -755,7 +755,7 @@ export default function CampaignManagementPageInner() {
       {/* Action Bar - estilo Utmify/Meta */}
       <div className="border-b border-border bg-card">
         <div className="max-w-[1600px] mx-auto px-4 py-2 sm:px-6">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
             {/* Colunas */}
             <div className="relative">
               <button onClick={() => { setShowColumnMenu(!showColumnMenu); setShowGroupMenu(false); setShowDatePicker(false) }}
@@ -874,15 +874,15 @@ export default function CampaignManagementPageInner() {
 
       {/* Search + Bulk */}
       <div className="border-b border-border bg-surface">
-        <div className="max-w-[1600px] mx-auto px-4 py-3 sm:px-6">
-          <div className="flex items-center justify-between gap-4">
+        <div className="max-w-[1600px] mx-auto px-4 py-2 sm:px-6 sm:py-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div className="flex items-center gap-3">
-              <div className="relative">
+              <div className="relative flex-1 sm:flex-none">
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <input type="text" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)}
-                  className="pl-9 pr-4 py-2 bg-card border border-border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  className="w-full pl-9 pr-4 py-2 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:w-64" />
               </div>
               {tab !== 'campaigns' && selectedCampaignFilter.size > 0 && (
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
@@ -896,22 +896,22 @@ export default function CampaignManagementPageInner() {
                 </div>
               )}
               {selected.size > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted">{selected.size} selecionado(s)</span>
+                <div className="flex items-center gap-1.5 overflow-x-auto sm:gap-2">
+                  <span className="shrink-0 text-xs text-muted sm:text-sm">{selected.size} sel.</span>
                   {tab === 'campaigns' && (
                     <button onClick={openDuplicateModal}
-                      className="px-3 py-1.5 bg-purple-600 text-white text-xs font-semibold rounded-lg hover:bg-purple-700">Duplicar</button>
+                      className="shrink-0 px-2.5 py-1 bg-purple-600 text-white text-[11px] font-semibold rounded-lg hover:bg-purple-700 sm:px-3 sm:text-xs">Duplicar</button>
                   )}
                   {(tab === 'campaigns' || tab === 'adsets') && (
                     <button onClick={() => setBulkBudgetModalOpen(true)}
-                      className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700">Alterar Orcamento</button>
+                      className="shrink-0 px-2.5 py-1 bg-indigo-600 text-white text-[11px] font-semibold rounded-lg hover:bg-indigo-700 sm:px-3 sm:text-xs">Orcamento</button>
                   )}
                   <button onClick={() => handleBulk('ACTIVE')}
-                    className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700">Ativar</button>
+                    className="shrink-0 px-2.5 py-1 bg-emerald-600 text-white text-[11px] font-semibold rounded-lg hover:bg-emerald-700 sm:px-3 sm:text-xs">Ativar</button>
                   <button onClick={() => handleBulk('PAUSED')}
-                    className="px-3 py-1.5 bg-amber-600 text-white text-xs font-semibold rounded-lg hover:bg-amber-700">Pausar</button>
+                    className="shrink-0 px-2.5 py-1 bg-amber-600 text-white text-[11px] font-semibold rounded-lg hover:bg-amber-700 sm:px-3 sm:text-xs">Pausar</button>
                   <button onClick={() => { if (confirm('Tem certeza que deseja excluir?')) handleBulk('DELETED') }}
-                    className="px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700">Excluir</button>
+                    className="shrink-0 px-2.5 py-1 bg-red-600 text-white text-[11px] font-semibold rounded-lg hover:bg-red-700 sm:px-3 sm:text-xs">Excluir</button>
                 </div>
               )}
             </div>
@@ -937,11 +937,13 @@ export default function CampaignManagementPageInner() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
             </svg>
             <p className="text-sm">Nenhum item encontrado</p>
-            <p className="text-xs mt-1">Clique em Sincronizar para carregar dados do Meta</p>
+            <p className="text-xs mt-1">Clique em Sync para carregar dados do Meta</p>
           </div>
         ) : (
-          <div className="overflow-x-auto light-scrollbar">
-            <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+          <>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto light-scrollbar">
+              <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
               <thead className="sticky top-0 bg-card z-10 border-b border-border">
                 <tr className="text-left text-muted text-xs uppercase">
                   <th className="px-4 py-3 shrink-0" style={{ width: 48 }}>
@@ -1052,7 +1054,122 @@ export default function CampaignManagementPageInner() {
                 )}
               </tbody>
             </table>
-          </div>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="space-y-2 px-4 py-2 md:hidden">
+              {filtered.map((item) => {
+                const id = getId(item)
+                const ins = item.insights || { spend: 0, impressions: 0, clicks: 0, reach: 0, conversions: 0, conversion_value: 0, landing_page_views: 0, initiate_checkout: 0, cpc: null, cpm: null, ctr: null, cpv: null, cpi: null, cpa: null, roas: null }
+                const cpc = ins.clicks > 0 ? ins.spend / ins.clicks : 0
+                const ctr = ins.impressions > 0 ? (ins.clicks / ins.impressions) * 100 : 0
+                const cpa = ins.conversions > 0 ? ins.spend / ins.conversions : 0
+                const roas = ins.spend > 0 ? ins.conversion_value / ins.spend : 0
+                const isToggling = togglingId === id
+
+                return (
+                  <div key={id} className={`rounded-xl border border-border bg-card p-3 ${selected.has(id) ? 'ring-2 ring-blue-500' : ''}`}>
+                    <div className="flex items-start gap-2.5">
+                      <input type="checkbox" checked={selected.has(id)} onChange={() => toggleSelect(id)}
+                        className="mt-1 h-4 w-4 shrink-0 rounded border-border text-blue-600" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-foreground truncate">{item.name}</p>
+                            {tab === 'campaigns' && (item as CampaignItem).objective && (
+                              <p className="text-[11px] text-muted">{(item as CampaignItem).objective}</p>
+                            )}
+                          </div>
+                          <button onClick={() => handleToggle(item, level)} disabled={isToggling} className="shrink-0 focus:outline-none">
+                            {isToggling ? (
+                              <svg className="animate-spin h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                            ) : (
+                              <StatusBadge status={item.status} />
+                            )}
+                          </button>
+                        </div>
+                        <div className="mt-2 grid grid-cols-3 gap-2 text-[11px]">
+                          <div>
+                            <p className="text-muted">Gasto</p>
+                            <p className="font-semibold text-foreground">{formatBRL(ins.spend)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted">Cliques</p>
+                            <p className="font-semibold text-foreground">{ins.clicks.toLocaleString('pt-BR')}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted">CTR</p>
+                            <p className="font-semibold text-foreground">{ctr > 0 ? `${ctr.toFixed(2)}%` : '—'}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted">Impress.</p>
+                            <p className="font-semibold text-foreground">{ins.impressions.toLocaleString('pt-BR')}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted">Conv.</p>
+                            <p className="font-semibold text-emerald-600">{ins.conversions}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted">ROAS</p>
+                            <p className={`font-semibold ${roas >= 1 ? 'text-emerald-600' : roas > 0 ? 'text-amber-600' : 'text-muted'}`}>
+                              {roas > 0 ? `${roas.toFixed(2)}x` : '—'}
+                            </p>
+                          </div>
+                        </div>
+                        {(tab === 'campaigns' || tab === 'adsets') && (
+                          <div className="mt-2 flex items-center gap-2 text-[11px]">
+                            <span className="text-muted">Orc.:</span>
+                            <button onClick={() => openBudgetEdit(item as CampaignItem | AdSetItem)}
+                              className="font-medium text-blue-600 hover:underline">
+                              <BudgetDisplay daily={(item as CampaignItem | AdSetItem).daily_budget} lifetime={(item as CampaignItem | AdSetItem).lifetime_budget} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+              {filtered.length > 0 && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-3 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-foreground">Total ({filtered.length} itens)</span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    <div>
+                      <p className="text-muted">Gasto</p>
+                      <p className="font-bold text-foreground">{formatBRL(subtotal.spend)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted">Cliques</p>
+                      <p className="font-bold text-foreground">{subtotal.clicks.toLocaleString('pt-BR')}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted">CTR</p>
+                      <p className="font-bold text-foreground">{subCtr.toFixed(2)}%</p>
+                    </div>
+                    <div>
+                      <p className="text-muted">Conv.</p>
+                      <p className="font-bold text-emerald-600">{subtotal.conversions}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted">ROAS</p>
+                      <p className={`font-bold ${subRoas >= 1 ? 'text-emerald-600' : subRoas > 0 ? 'text-amber-600' : 'text-muted'}`}>
+                        {subRoas > 0 ? `${subRoas.toFixed(2)}x` : '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted">Valor Conv.</p>
+                      <p className="font-bold text-emerald-600">{formatBRL(subtotal.conversion_value)}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
 
