@@ -47,7 +47,13 @@ export function PushNotificationManager() {
   }
 
   const subscribe = useCallback(async () => {
-    if (!isSupported || !VAPID_PUBLIC_KEY) return
+    if (!isSupported) return
+
+    if (!VAPID_PUBLIC_KEY) {
+      console.warn('[Push] VAPID_PUBLIC_KEY not configured')
+      setShowPrompt(false)
+      return
+    }
 
     setLoading(true)
     try {
@@ -56,6 +62,7 @@ export function PushNotificationManager() {
 
       if (newPermission !== 'granted') {
         setLoading(false)
+        setShowPrompt(false)
         return
       }
 
@@ -84,10 +91,11 @@ export function PushNotificationManager() {
 
       if (response.ok) {
         setIsSubscribed(true)
-        setShowPrompt(false)
       }
+      setShowPrompt(false)
     } catch (err) {
       console.error('[Push] Subscribe error:', err)
+      setShowPrompt(false)
     } finally {
       setLoading(false)
     }

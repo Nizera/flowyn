@@ -112,42 +112,64 @@ function notifBg(id: string) {
   return 'bg-orange-500/15'
 }
 
+const NOTIF_READ_KEY = 'flowyn_notif_read'
+
+function getReadNotifIds(): Set<string> {
+  try {
+    const stored = localStorage.getItem(NOTIF_READ_KEY)
+    if (stored) return new Set(JSON.parse(stored))
+  } catch {}
+  return new Set()
+}
+
+function saveReadNotifIds(ids: Set<string>) {
+  try {
+    const arr = Array.from(ids)
+    if (arr.length > 100) arr.splice(0, arr.length - 100)
+    localStorage.setItem(NOTIF_READ_KEY, JSON.stringify(arr))
+  } catch {}
+}
+
 export function AppLayoutUI({ children, profile, subscription, notifications: initialNotifications }: AppLayoutUIProps) {
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isNotifOpen, setIsNotifOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [notifications, setNotifications] = useState(initialNotifications)
+  const [readIds, setReadIds] = useState<Set<string>>(new Set())
+  const [hydrated, setHydrated] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setReadIds(getReadNotifIds())
+    setHydrated(true)
+  }, [])
+
+  const notifications = initialNotifications.map(n => ({
+    ...n,
+    read: n.read || readIds.has(n.id),
+  }))
+
   const unreadCount = notifications.filter(n => !n.read).length
   const page = pageTitles.find(item => pathname === item.match || pathname.startsWith(`${item.match}/`)) || pageTitles[pageTitles.length - 1]
   const isLearningExperience = pathname === '/learn' || pathname.startsWith('/learn/')
 
-  const markAsRead = useCallback(async (ids: string[]) => {
-    try {
-      await fetch('/api/notifications/read', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notification_ids: ids }),
-      })
-      setNotifications(prev => prev.map(n => ids.includes(n.id) ? { ...n, read: true } : n))
-    } catch (err) {
-      console.error('Failed to mark notifications as read:', err)
-    }
+  const markAsRead = useCallback((ids: string[]) => {
+    setReadIds(prev => {
+      const next = new Set(prev)
+      for (const id of ids) next.add(id)
+      saveReadNotifIds(next)
+      return next
+    })
   }, [])
 
-  const markAllAsRead = useCallback(async () => {
-    try {
-      await fetch('/api/notifications/read', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mark_all: true }),
-      })
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-    } catch (err) {
-      console.error('Failed to mark all notifications as read:', err)
-    }
-  }, [])
+  const markAllAsRead = useCallback(() => {
+    setReadIds(prev => {
+      const next = new Set(prev)
+      for (const n of initialNotifications) next.add(n.id)
+      saveReadNotifIds(next)
+      return next
+    })
+  }, [initialNotifications])
 
   useEffect(() => {
     if (isNotifOpen && unreadCount > 0) {
@@ -248,7 +270,7 @@ export function AppLayoutUI({ children, profile, subscription, notifications: in
                   className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-card text-muted shadow-sm transition hover:text-foreground"
                 >
                 <Bell className="h-5 w-5" />
-                {unreadCount > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500" />}
+                {hydrated && unreadCount > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500" />}
               </button>
               <AnimatePresence>
                 {isNotifOpen && (
