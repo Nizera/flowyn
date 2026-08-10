@@ -262,7 +262,7 @@ export default function RulesPage() {
   return (
     <div className="min-h-screen bg-card">
       <div className="border-b border-border">
-        <div className="max-w-[1600px] mx-auto px-6 py-4">
+        <div className="max-w-[1600px] mx-auto px-4 py-4 sm:px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href={`/dashboard/ads/${accountId}`} className="text-muted hover:text-muted transition-colors">
@@ -288,7 +288,7 @@ export default function RulesPage() {
 
       {/* Tabs */}
       <div className="border-b border-border">
-        <div className="max-w-[1600px] mx-auto px-6">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
           <div className="flex gap-0">
             {[
               { key: 'rules' as const, label: 'Regras', count: rules.length },

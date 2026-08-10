@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { GlobalPixels } from "@/components/GlobalPixels";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -18,6 +18,13 @@ const playfair = Playfair_Display({
   style: ["italic"],
   weight: ["400", "700"],
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#f97316",
+};
 
 export const metadata: Metadata = {
   title: "Flowyn — Checkout para infoprodutores com custo previsivel",
@@ -45,9 +52,6 @@ export const metadata: Metadata = {
     apple: [{ url: "/brand/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   manifest: "/manifest.json",
-  other: {
-    "theme-color": "#f97316",
-  },
 };
 
 export default function RootLayout({

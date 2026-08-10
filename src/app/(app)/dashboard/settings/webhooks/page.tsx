@@ -189,7 +189,7 @@ export default function WebhooksPage() {
 
   if (loading) {
     return (
-      <section className="overflow-hidden rounded-[10px] bg-card px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+      <section className="overflow-hidden rounded-[10px] bg-card px-4 py-4 sm:px-8 sm:py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-orange-400" />
         </div>
@@ -198,7 +198,7 @@ export default function WebhooksPage() {
   }
 
   return (
-    <section className="overflow-hidden rounded-[10px] bg-card px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+    <section className="overflow-hidden rounded-[10px] bg-card px-4 py-4 sm:px-8 sm:py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Webhooks</h2>

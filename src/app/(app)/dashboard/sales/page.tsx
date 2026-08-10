@@ -47,7 +47,7 @@ export default async function SalesPage() {
   const averageTicket = paidCount > 0 ? totalRevenue / paidCount : 0
 
   return (
-    <section className="overflow-hidden rounded-[10px] bg-card px-8 py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+    <section className="overflow-hidden rounded-[10px] bg-card px-4 py-4 sm:px-8 sm:py-8 shadow-[0_1px_0_rgba(15,23,42,0.04)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-foreground">Minhas vendas</h2>

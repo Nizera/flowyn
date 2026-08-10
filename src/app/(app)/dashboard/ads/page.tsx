@@ -209,7 +209,7 @@ export default function AdsAccountsPage() {
       {showConnectModal && <ConnectModal onClose={() => setShowConnectModal(false)} />}
 
       <div className="border-b border-border bg-card">
-        <div className="mx-auto max-w-[1600px] px-6 py-4">
+        <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-lg font-bold text-foreground">Meta Ads</h1>
@@ -251,7 +251,7 @@ export default function AdsAccountsPage() {
       </div>
 
       {accounts.length > 0 && (
-        <div className="mx-auto max-w-[1600px] px-6 pt-6">
+        <div className="mx-auto max-w-[1600px] px-4 pt-4 sm:px-6 sm:pt-6">
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
             <div className="flex items-start gap-3">
               <svg className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -270,7 +270,7 @@ export default function AdsAccountsPage() {
         </div>
       )}
 
-      <div className="mx-auto max-w-[1600px] px-6 py-6">
+      <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6 sm:py-6">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="flex items-center gap-3 text-muted">
@@ -284,7 +284,7 @@ export default function AdsAccountsPage() {
         ) : accounts.length === 0 ? (
           <EmptyState onConnect={() => setShowConnectModal(true)} />
         ) : (
-          <div className="w-full">
+          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-10 border-b border-border bg-card">
                 <tr className="text-left text-xs uppercase text-muted">

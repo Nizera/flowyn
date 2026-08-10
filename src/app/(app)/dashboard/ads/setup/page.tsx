@@ -118,13 +118,13 @@ export default function MetaSetupPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b border-border bg-card">
-        <div className="mx-auto max-w-3xl px-6 py-4">
+        <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6">
           <h1 className="text-lg font-bold text-foreground">Configurar Meta Ads</h1>
           <p className="text-sm text-muted">Escolha quais contas de anuncios deseja acompanhar</p>
         </div>
       </div>
 
-      <div className="mx-auto max-w-3xl px-6 py-8">
+      <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
             {error}

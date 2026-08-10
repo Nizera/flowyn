@@ -677,7 +677,7 @@ export default function CampaignManagementPageInner() {
   return (
     <div className="min-h-screen bg-card">
       <div className="border-b border-border">
-        <div className="max-w-[1600px] mx-auto px-6 py-4">
+        <div className="max-w-[1600px] mx-auto px-4 py-4 sm:px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/dashboard/ads" className="text-muted hover:text-muted transition-colors">
@@ -724,7 +724,7 @@ export default function CampaignManagementPageInner() {
 
       {/* Tabs */}
       <div className="border-b border-border">
-        <div className="max-w-[1600px] mx-auto px-6">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
           <div className="flex gap-0">
             {tabs.map(t => (
               <button key={t.key}
@@ -754,7 +754,7 @@ export default function CampaignManagementPageInner() {
 
       {/* Action Bar - estilo Utmify/Meta */}
       <div className="border-b border-border bg-card">
-        <div className="max-w-[1600px] mx-auto px-6 py-2">
+        <div className="max-w-[1600px] mx-auto px-4 py-2 sm:px-6">
           <div className="flex items-center gap-2 flex-wrap">
             {/* Colunas */}
             <div className="relative">
@@ -874,7 +874,7 @@ export default function CampaignManagementPageInner() {
 
       {/* Search + Bulk */}
       <div className="border-b border-border bg-surface">
-        <div className="max-w-[1600px] mx-auto px-6 py-3">
+        <div className="max-w-[1600px] mx-auto px-4 py-3 sm:px-6">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="relative">
