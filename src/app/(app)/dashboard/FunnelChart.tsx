@@ -127,7 +127,7 @@ export function FunnelChart({ adAccountId, dateRange, selectedCampaigns }: { adA
                   }}
                 />
 
-                <div className="flex items-center gap-2 relative z-10 text-foreground w-full justify-center">
+                <div className="flex items-center gap-2 relative z-10 text-foreground">
                   <div
                     className="p-1 rounded-md flex items-center justify-center transition-transform group-hover:scale-110"
                     style={{
@@ -143,7 +143,7 @@ export function FunnelChart({ adAccountId, dateRange, selectedCampaigns }: { adA
                 )}
                 </div>
 
-                <span className="text-xs font-black relative z-10 text-foreground font-mono absolute right-3">
+                <span className="text-xs font-black relative z-10 text-foreground font-mono">
                   {stage.value.toLocaleString('pt-BR')}
                 </span>
               </div>
