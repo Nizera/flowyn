@@ -118,15 +118,16 @@ export function FunnelChart({ adAccountId, dateRange, selectedCampaigns }: { adA
             <div key={stage.name} className="relative">
               <div className="w-full bg-surface/40 rounded-xl h-11 overflow-hidden relative flex items-center px-3 justify-between border border-border/40 group hover:border-border transition-all">
                 <div
-                  className="absolute top-0 bottom-0 left-0 rounded-lg transition-all duration-500 ease-out"
+                  className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 rounded-lg transition-all duration-500 ease-out"
                   style={{
                     width: `${width}%`,
                     backgroundColor: hasData ? `${stage.color}20` : 'rgba(148, 163, 184, 0.08)',
+                    borderLeft: hasData ? `3px solid ${stage.color}` : '2px solid rgba(148, 163, 184, 0.2)',
                     borderRight: hasData ? `3px solid ${stage.color}` : '2px solid rgba(148, 163, 184, 0.2)',
                   }}
                 />
 
-                <div className="flex items-center gap-2 relative z-10 text-foreground">
+                <div className="flex items-center gap-2 relative z-10 text-foreground w-full justify-center">
                   <div
                     className="p-1 rounded-md flex items-center justify-center transition-transform group-hover:scale-110"
                     style={{
@@ -142,7 +143,7 @@ export function FunnelChart({ adAccountId, dateRange, selectedCampaigns }: { adA
                 )}
                 </div>
 
-                <span className="text-xs font-black relative z-10 text-foreground font-mono">
+                <span className="text-xs font-black relative z-10 text-foreground font-mono absolute right-3">
                   {stage.value.toLocaleString('pt-BR')}
                 </span>
               </div>
