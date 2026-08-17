@@ -18,33 +18,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  let payload: unknown
-  try {
-    payload = await req.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
-  }
-
-  const body = payload as Record<string, unknown>
-  const event = Array.isArray(body.entry)
-    ? (body.entry[0] as Record<string, unknown> | undefined)
-    : undefined
-  const changes = Array.isArray(event?.changes)
-    ? (event.changes[0] as Record<string, unknown> | undefined)
-    : undefined
-  const eventType = changes?.field ? String(changes.field) : 'unknown'
-
-  const supabase = createAdminClient()
-  const { error } = await supabase.from('whatsapp_webhook_logs').insert({
-    event_type: eventType,
-    payload: body,
-    status: 'received',
-  })
-
-  if (error) {
-    console.error('[WhatsApp Webhook] Insert failed:', error.message)
-    return NextResponse.json({ error: 'Could not log webhook' }, { status: 500 })
-  }
-
-  return NextResponse.json({ received: true })
+  // TEMPORARIAMENTE DESABILITADO
+  return NextResponse.json(
+    { error: 'WhatsApp CRM está temporariamente indisponível' },
+    { status: 503 }
+  )
 }
