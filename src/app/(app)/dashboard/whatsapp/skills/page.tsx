@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Puzzle, Plus, Edit2, Trash2, Save, X, Zap, Lock, Unlock } from 'lucide-react'
+import { Puzzle, Plus, Edit2, Trash2, Save, X, Zap, Lock, Unlock, Eye } from 'lucide-react'
 
 interface Skill {
   id: string
@@ -132,7 +132,7 @@ export default function SkillsPage() {
         <div className="mb-6 p-4 bg-zinc-800/50 border border-zinc-800 rounded-xl">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-zinc-300">
-              {editingSkill.id ? 'Editar Skill' : 'Nova Skill'}
+              {editingSkill.is_system ? 'Visualizar Skill' : editingSkill.id ? 'Editar Skill' : 'Nova Skill'}
             </h3>
             <button
               onClick={() => { setIsEditing(false); setEditingSkill({}) }}
@@ -151,7 +151,8 @@ export default function SkillsPage() {
                   value={editingSkill.name || ''}
                   onChange={(e) => setEditingSkill({ ...editingSkill, name: e.target.value })}
                   placeholder="Minha Skill"
-                  className="w-full px-3 py-2 bg-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  readOnly={!!editingSkill.is_system}
+                  className="w-full px-3 py-2 bg-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-60"
                 />
               </div>
               <div>
@@ -161,19 +162,21 @@ export default function SkillsPage() {
                   value={editingSkill.slug || ''}
                   onChange={(e) => setEditingSkill({ ...editingSkill, slug: e.target.value })}
                   placeholder="minha-skill"
-                  className="w-full px-3 py-2 bg-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  readOnly={!!editingSkill.is_system}
+                  className="w-full px-3 py-2 bg-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-60"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs text-zinc-400 mb-1 block">Descrição</label>
-              <input
-                type="text"
-                value={editingSkill.description || ''}
-                onChange={(e) => setEditingSkill({ ...editingSkill, description: e.target.value })}
-                placeholder="O que esta skill faz"
-                className="w-full px-3 py-2 bg-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                <label className="text-xs text-zinc-400 mb-1 block">Descrição</label>
+                <input
+                  type="text"
+                  value={editingSkill.description || ''}
+                  onChange={(e) => setEditingSkill({ ...editingSkill, description: e.target.value })}
+                  placeholder="O que esta skill faz"
+                  readOnly={!!editingSkill.is_system}
+                  className="w-full px-3 py-2 bg-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-60"
               />
             </div>
 
@@ -183,7 +186,8 @@ export default function SkillsPage() {
                 <select
                   value={editingSkill.trigger_type || 'keyword'}
                   onChange={(e) => setEditingSkill({ ...editingSkill, trigger_type: e.target.value })}
-                  className="w-full px-3 py-2 bg-zinc-700 text-zinc-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  disabled={!!editingSkill.is_system}
+                  className="w-full px-3 py-2 bg-zinc-700 text-zinc-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-60"
                 >
                   {Object.entries(triggerTypeLabels).map(([value, label]) => (
                     <option key={value} value={value}>{label}</option>
@@ -195,7 +199,8 @@ export default function SkillsPage() {
                 <select
                   value={editingSkill.action_type || 'message'}
                   onChange={(e) => setEditingSkill({ ...editingSkill, action_type: e.target.value })}
-                  className="w-full px-3 py-2 bg-zinc-700 text-zinc-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  disabled={!!editingSkill.is_system}
+                  className="w-full px-3 py-2 bg-zinc-700 text-zinc-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-60"
                 >
                   {Object.entries(actionTypeLabels).map(([value, label]) => (
                     <option key={value} value={value}>{label}</option>
@@ -216,7 +221,8 @@ export default function SkillsPage() {
                   } catch {}
                 }}
                 rows={3}
-                className="w-full px-3 py-2 bg-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                readOnly={!!editingSkill.is_system}
+                className="w-full px-3 py-2 bg-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-60"
               />
             </div>
 
@@ -232,7 +238,8 @@ export default function SkillsPage() {
                   } catch {}
                 }}
                 rows={3}
-                className="w-full px-3 py-2 bg-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                readOnly={!!editingSkill.is_system}
+                className="w-full px-3 py-2 bg-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-60"
               />
             </div>
 
@@ -246,14 +253,16 @@ export default function SkillsPage() {
               />
             </div>
 
-            <button
-              onClick={handleSave}
-              disabled={!editingSkill.name || !editingSkill.slug}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg transition-colors disabled:opacity-50"
-            >
-              <Save className="w-4 h-4" />
-              Salvar
-            </button>
+            {!editingSkill.is_system && (
+              <button
+                onClick={handleSave}
+                disabled={!editingSkill.name || !editingSkill.slug}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg transition-colors disabled:opacity-50"
+              >
+                <Save className="w-4 h-4" />
+                Salvar
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -309,6 +318,13 @@ export default function SkillsPage() {
               </div>
 
               <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleEdit(skill)}
+                  className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 rounded transition-colors"
+                  title={skill.is_system ? "Visualizar" : "Editar"}
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
                 {!skill.is_system && (
                   <>
                     <button
