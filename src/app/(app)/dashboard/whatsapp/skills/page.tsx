@@ -9,6 +9,7 @@ interface Skill {
   name: string
   slug: string
   description: string | null
+  content: string | null
   is_system: boolean
   is_enabled: boolean
   trigger_type: string
@@ -44,6 +45,7 @@ export default function SkillsPage() {
       name: '',
       slug: '',
       description: '',
+      content: '',
       trigger_type: 'keyword',
       trigger_config: { keywords: [] },
       action_type: 'message',
@@ -250,6 +252,20 @@ export default function SkillsPage() {
                 value={editingSkill.priority || 0}
                 onChange={(e) => setEditingSkill({ ...editingSkill, priority: parseInt(e.target.value) })}
                 className="w-32 px-3 py-2 bg-zinc-700 text-zinc-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-zinc-400 mb-1 block">
+                Conteudo da Skill (Markdown) — O agente IA le e segue essas instrucoes
+              </label>
+              <textarea
+                value={editingSkill.content || ''}
+                onChange={(e) => setEditingSkill({ ...editingSkill, content: e.target.value })}
+                placeholder="# Nome da Skill&#10;&#10;Instrucoes detalhadas para o agente seguir...&#10;&#10;## Regras&#10;1. Regra primeira&#10;2. Regra segunda"
+                rows={15}
+                readOnly={!!editingSkill.is_system}
+                className="w-full px-3 py-2 bg-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-lg text-sm font-mono resize-y focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-60 min-h-[200px]"
               />
             </div>
 

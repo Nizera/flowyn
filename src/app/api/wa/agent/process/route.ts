@@ -14,6 +14,8 @@ interface Skill {
   id: string
   name: string
   slug: string
+  description: string | null
+  content: string | null
   trigger_type: string
   trigger_config: Record<string, unknown>
   action_type: string
@@ -70,39 +72,41 @@ export async function POST(req: NextRequest) {
     // Detectar skill baseada na mensagem
     const matchedSkill = matchSkill(message, skills || [])
 
-    if (matchedSkill) {
-      // Executar ação da skill
-      const result = await executeSkill(matchedSkill, {
-        session_id,
-        chat_jid,
-        message,
-        contact_name,
-        product_id,
-        user_id: config.user_id,
-        supabase,
-      })
-
-      // Atualizar contexto
-      await supabase
-        .from('wa_conversation_context')
-        .upsert({
-          session_id,
-          chat_jid,
-          last_skill_used: matchedSkill.slug,
-          messages_count: (conversationContext?.messages_count || 0) + 1,
-        }, { onConflict: 'session_id,chat_jid' })
-
-      return NextResponse.json({
-        ...result,
-        skill_used: matchedSkill.slug,
-      })
+    // Coletar markdown de todas as skills relevantes (matched +始终激活的 skills)
+    const skillContents: string[] = []
+    if (matchedSkill?.content) {
+      skillContents.push(`## Skill Ativa: ${matchedSkill.name}\n\n${matchedSkill.content}`)
     }
 
-    // Se não achou skill, usar LLM
+    // Adicionar skills始终激活 (greeting, etc) que devem sempre estar no contexto
+    const alwaysOnSkills = (skills || []).filter(s =>
+      s.content && s.slug !== matchedSkill?.slug &&
+      (s.trigger_config as { always_on?: boolean })?.always_on === true
+    )
+    for (const skill of alwaysOnSkills) {
+      skillContents.push(`## Skill: ${skill.name}\n\n${skill.content}`)
+    }
+
+    // Buscar skills de produto se tiver product_id
+    if (product_id) {
+      const { data: product } = await supabase
+        .from('products')
+        .select('name, description, price')
+        .eq('id', product_id)
+        .single()
+
+      if (product) {
+        skillContents.push(`## Produto Atual\n\nNome: ${product.name}\nDescrição: ${product.description || 'N/A'}\nPreço: R$ ${product.price}`)
+      }
+    }
+
+    // Chamar LLM com contexto das skills
     const llmResponse = await callLLM(config, {
       message,
       contact_name,
       conversation_history: conversationContext?.context?.history || [],
+      skill_context: skillContents.length > 0 ? skillContents.join('\n\n---\n\n') : null,
+      matched_skill: matchedSkill?.slug || null,
     })
 
     // Atualizar contexto
@@ -111,11 +115,15 @@ export async function POST(req: NextRequest) {
       .upsert({
         session_id,
         chat_jid,
+        last_skill_used: matchedSkill?.slug || null,
         last_intent: llmResponse.intent || null,
         messages_count: (conversationContext?.messages_count || 0) + 1,
       }, { onConflict: 'session_id,chat_jid' })
 
-    return NextResponse.json(llmResponse)
+    return NextResponse.json({
+      ...llmResponse,
+      skill_used: matchedSkill?.slug || null,
+    })
   } catch (error) {
     console.error('[WA Agent Process] error:', error)
     return NextResponse.json(
@@ -245,6 +253,8 @@ async function callLLM(
     message: string
     contact_name?: string
     conversation_history: Array<{ role: string; content: string }>
+    skill_context?: string | null
+    matched_skill?: string | null
   }
 ): Promise<{ action: string; message: string; intent?: string }> {
   if (!config.api_key) {
@@ -254,12 +264,31 @@ async function callLLM(
     }
   }
 
-  const systemPrompt = config.system_prompt || 'Você é um assistente de vendas via WhatsApp. Responda de forma friendly e objetiva em português brasileiro.'
+  const basePrompt = config.system_prompt || 'Você é um assistente de vendas via WhatsApp. Responda de forma friendly e objetiva em português brasileiro.'
+
+  // Montar system prompt com contexto das skills
+  let systemPrompt = basePrompt
+
+  if (context.skill_context) {
+    systemPrompt = `${basePrompt}
+
+---SKILLS DISPONÍVEIS---
+
+Leia e siga as instruções abaixo cuidadosamente. Elas definem como você deve se comportar nesta conversa:
+
+${context.skill_context}
+
+---FIM DAS SKILLS---
+
+Responda ao cliente seguindo fielmente as instruções acima. Seja natural e humanizado.`
+  }
+
+  const contactInfo = context.contact_name ? `\n\nNome do contato: ${context.contact_name}` : ''
 
   const messages = [
     { role: 'system', content: systemPrompt },
     ...context.conversation_history.slice(-10),
-    { role: 'user', content: context.message },
+    { role: 'user', content: context.message + contactInfo },
   ]
 
   try {

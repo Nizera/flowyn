@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
       name,
       slug,
       description,
+      content,
       trigger_type,
       trigger_config,
       action_type,
@@ -67,6 +68,7 @@ export async function POST(req: NextRequest) {
         name,
         slug,
         description: description || null,
+        content: content || null,
         is_system: false,
         is_enabled: true,
         trigger_type: trigger_type || 'keyword',
@@ -113,6 +115,7 @@ export async function PUT(req: NextRequest) {
       id,
       name,
       description,
+      content,
       is_enabled,
       trigger_type,
       trigger_config,
@@ -145,6 +148,7 @@ export async function PUT(req: NextRequest) {
     const updateData: Record<string, unknown> = {}
     if (name !== undefined) updateData.name = name
     if (description !== undefined) updateData.description = description
+    if (content !== undefined) updateData.content = content
     if (is_enabled !== undefined) updateData.is_enabled = is_enabled
     if (trigger_type !== undefined) updateData.trigger_type = trigger_type
     if (trigger_config !== undefined) updateData.trigger_config = trigger_config

@@ -508,6 +508,7 @@ export interface WaSkill {
   name: string
   slug: string
   description: string | null
+  content: string | null
   is_system: boolean
   is_enabled: boolean
   trigger_type: WaSkillTriggerType
@@ -523,6 +524,7 @@ export interface WaSkillCreate {
   name: string
   slug: string
   description?: string
+  content?: string
   is_enabled?: boolean
   trigger_type?: WaSkillTriggerType
   trigger_config?: Record<string, unknown>
