@@ -289,8 +289,8 @@ export default function AgentConfigPage() {
             value={config.system_prompt || ''}
             onChange={(e) => setConfig({ ...config, system_prompt: e.target.value })}
             placeholder="Você é um assistente de vendas da empresa X. Seu objetivo é ajudar clientes..."
-            rows={6}
-            className="w-full px-3 py-2 bg-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+            rows={10}
+            className="w-full px-3 py-2 bg-zinc-700 text-zinc-100 placeholder-zinc-500 rounded-lg text-sm resize-y focus:outline-none focus:ring-2 focus:ring-emerald-500/50 min-h-[120px]"
           />
         </div>
 
