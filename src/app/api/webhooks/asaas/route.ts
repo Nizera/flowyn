@@ -234,6 +234,17 @@ export async function POST(req: NextRequest) {
     }
 
     if (!platformSubscriptionHandled && orderId && paymentId) {
+      // Check if this is a WhatsApp PIX payment (externalReference starts with "wa_")
+      const extRef = payment.externalReference ? String(payment.externalReference) : ''
+      if (extRef.startsWith('wa_')) {
+        // Update wa_pix_payments status
+        const pixStatus = PAID_EVENTS.has(eventType) ? 'confirmed' : eventType
+        await supabase
+          .from('wa_pix_payments')
+          .update({ status: pixStatus, updated_at: new Date().toISOString() })
+          .eq('external_reference', extRef)
+      }
+
       const orderUpdate: Record<string, string | number | null> = {
         asaas_payment_id: paymentId,
         asaas_status: payment.status ? String(payment.status) : eventType,

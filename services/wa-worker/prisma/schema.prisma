@@ -1,0 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model WaSession {
+  id              String    @id @default(uuid()) @db.Uuid()
+  userId          String    @unique @map("user_id") @db.Uuid()
+  phoneNumber     String?   @map("phone_number")
+  instanceId      String?   @unique @map("instance_id")
+  status          String    @default("disconnected")
+  qrCode          String?   @map("qr_code")
+  pairingCode     String?   @map("pairing_code")
+  config          Json      @default("{}")
+  workerId        String?   @map("worker_id")
+  leaseExpiresAt  DateTime? @map("lease_expires_at")
+  lastConnectedAt DateTime? @map("last_connected_at")
+  reconnectCount  Int       @default(0) @map("reconnect_count")
+  errorMessage    String?   @map("error_message")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  contacts      WaContact[]
+  conversations WaConversation[]
+  messages      WaMessage[]
+  campaigns     WaCampaign[]
+
+  @@map("wa_sessions")
+}
+
+model WaContact {
+  id            String   @id @default(uuid()) @db.Uuid()
+  userId        String   @map("user_id") @db.Uuid()
+  phone         String
+  name          String?
+  pushName      String?  @map("push_name")
+  isBusiness    Boolean  @default(false) @map("is_business")
+  tags          String[] @default([])
+  source        String   @default("manual")
+  notes         String?
+  lastMessageAt DateTime? @map("last_message_at")
+  totalOrders   Int      @default(0) @map("total_orders")
+  totalRevenue  Decimal  @default(0) @map("total_revenue") @db.Decimal(10, 2)
+  metadata      Json     @default("{}")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  session            WaSession            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations      WaConversation[]
+  messages           WaMessage[]
+  campaignRecipients WaCampaignRecipient[]
+
+  @@unique([userId, phone])
+  @@map("wa_contacts")
+}
+
+model WaConversation {
+  id                String    @id @default(uuid()) @db.Uuid()
+  userId            String    @map("user_id") @db.Uuid()
+  contactId         String?   @map("contact_id") @db.Uuid()
+  phone             String
+  campaignId        String?   @map("campaign_id") @db.Uuid()
+  status            String    @default("open")
+  assignedTo        String?   @default("bot") @map("assigned_to")
+  lastMessageAt     DateTime? @map("last_message_at")
+  lastMessagePreview String?  @map("last_message_preview")
+  unreadCount       Int       @default(0) @map("unread_count")
+  tags              String[]  @default([])
+  metadata          Json      @default("{}")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  session  WaSession   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contact  WaContact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  campaign WaCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  messages WaMessage[]
+
+  @@index([userId, status])
+  @@index([contactId])
+  @@map("wa_conversations")
+}
+
+model WaMessage {
+  id                 String   @id @default(uuid()) @db.Uuid()
+  userId             String   @map("user_id") @db.Uuid()
+  conversationId     String?  @map("conversation_id") @db.Uuid()
+  contactId          String?  @map("contact_id") @db.Uuid()
+  direction          String
+  type               String   @default("text")
+  content            String?
+  mediaUrl           String?  @map("media_url")
+  mediaType          String?  @map("media_type")
+  status             String?
+  providerMessageId  String?  @unique @map("provider_message_id")
+  errorMessage       String?  @map("error_message")
+  quotedMessageId    String?  @map("quoted_message_id")
+  metadata           Json     @default("{}")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  session      WaSession       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation WaConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  contact      WaContact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
+  @@index([providerMessageId])
+  @@map("wa_messages")
+}
+
+model WaCampaign {
+  id                 String    @id @default(uuid()) @db.Uuid()
+  userId             String    @map("user_id") @db.Uuid()
+  name               String
+  status             String    @default("draft")
+  keyword            String    @unique
+  preFilledMessage   String    @map("pre_filled_message")
+  autoReplyEnabled   Boolean   @default(true) @map("auto_reply_enabled")
+  autoReplyMessage   String?   @map("auto_reply_message")
+  metaCampaignId     String?   @map("meta_campaign_id")
+  metaAdSetId        String?   @map("meta_adset_id")
+  metaAdId           String?   @map("meta_ad_id")
+  whatsappNumber     String?   @map("whatsapp_number")
+  productId          String?   @map("product_id") @db.Uuid()
+  targetTags         String[]  @default([]) @map("target_tags")
+  totalClicks        Int       @default(0) @map("total_clicks")
+  totalMessages      Int       @default(0) @map("total_messages")
+  totalReplies       Int       @default(0) @map("total_replies")
+  totalConversions   Int       @default(0) @map("total_conversions")
+  totalRevenue       Decimal   @default(0) @map("total_revenue") @db.Decimal(10, 2)
+  totalSpend         Decimal   @default(0) @map("total_spend") @db.Decimal(10, 2)
+  startedAt          DateTime? @map("started_at")
+  completedAt        DateTime? @map("completed_at")
+  scheduledAt        DateTime? @map("scheduled_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  session      WaSession            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations WaConversation[]
+  recipients   WaCampaignRecipient[]
+  attributions WaOrderAttribution[]
+
+  @@unique([userId, keyword])
+  @@map("wa_campaigns")
+}
+
+model WaCampaignRecipient {
+  id            String    @id @default(uuid()) @db.Uuid()
+  campaignId    String    @map("campaign_id") @db.Uuid()
+  contactId     String    @map("contact_id") @db.Uuid()
+  phone         String
+  status        String    @default("pending")
+  isReply       Boolean   @default(false) @map("is_reply")
+  sentAt        DateTime? @map("sent_at")
+  deliveredAt   DateTime? @map("delivered_at")
+  readAt        DateTime? @map("read_at")
+  repliedAt     DateTime? @map("replied_at")
+  errorMessage  String?   @map("error_message")
+  orderId       String?   @map("order_id") @db.Uuid()
+  revenue       Decimal?  @db.Decimal(10, 2)
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  campaign WaCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact  WaContact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, status])
+  @@map("wa_campaign_recipients")
+}
+
+model WaOrderAttribution {
+  id               String   @id @default(uuid()) @db.Uuid()
+  userId           String   @map("user_id") @db.Uuid()
+  orderId          String   @unique @map("order_id") @db.Uuid()
+  contactId        String?  @map("contact_id") @db.Uuid()
+  campaignId       String?  @map("campaign_id") @db.Uuid()
+  conversationId   String?  @map("conversation_id") @db.Uuid()
+  attributionType  String   @default("phone_match") @map("attribution_type")
+  confidence       Decimal  @default(0.8) @db.Decimal(3, 2)
+  firstContactAt   DateTime? @map("first_contact_at")
+  orderCreatedAt   DateTime? @map("order_created_at")
+  hoursBetween     Decimal?  @map("hours_between") @db.Decimal(6, 1)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  campaign WaCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@map("wa_order_attribution")
+}
+
+model WaAutomation {
+  id            String   @id @default(uuid()) @db.Uuid()
+  userId        String   @map("user_id") @db.Uuid()
+  name          String
+  isActive      Boolean  @default(true) @map("is_active")
+  triggerType   String   @map("trigger_type")
+  triggerConfig Json     @default("{}") @map("trigger_config")
+  actions       Json     @default("[]")
+  totalTriggered Int     @default(0) @map("total_triggered")
+  lastTriggeredAt DateTime? @map("last_triggered_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("wa_automations")
+}
+
+model WaAdClick {
+  id              String    @id @default(uuid()) @db.Uuid()
+  userId          String    @map("user_id") @db.Uuid()
+  campaignId      String?   @map("campaign_id") @db.Uuid()
+  metaCampaignId  String?   @map("meta_campaign_id")
+  metaAdsetId     String?   @map("meta_adset_id")
+  metaAdId        String?   @map("meta_ad_id")
+  fbclid          String?
+  phone           String?
+  ipAddress       String?   @map("ip_address")
+  clickedAt       DateTime  @default(now()) @map("clicked_at")
+  matchedOrderId  String?   @map("matched_order_id") @db.Uuid()
+  matchedAt       DateTime? @map("matched_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, clickedAt])
+  @@index([phone, clickedAt])
+  @@map("wa_ad_clicks")
+}
+
+model WaAnalyticsDaily {
+  id                 String   @id @default(uuid()) @db.Uuid()
+  userId             String   @map("user_id") @db.Uuid()
+  date               DateTime @db.Date
+  campaignId         String?  @map("campaign_id") @db.Uuid()
+  messagesSent       Int      @default(0) @map("messages_sent")
+  messagesReceived   Int      @default(0) @map("messages_received")
+  messagesDelivered  Int      @default(0) @map("messages_delivered")
+  messagesRead       Int      @default(0) @map("messages_read")
+  messagesFailed     Int      @default(0) @map("messages_failed")
+  conversationsStarted Int    @default(0) @map("conversations_started")
+  conversationsClosed Int    @default(0) @map("conversations_closed")
+  revenue            Decimal  @default(0) @db.Decimal(10, 2)
+  ordersCount        Int      @default(0) @map("orders_count")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, date, campaignId])
+  @@map("wa_analytics_daily")
+}

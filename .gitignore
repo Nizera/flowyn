@@ -55,3 +55,10 @@ carrossel-instagram/
 # local development launcher and logs
 /.dev*.log
 /start-dev-local.ps1
+
+# WhatsApp Worker (services/wa-worker)
+services/wa-worker/node_modules/
+services/wa-worker/dist/
+services/wa-worker/.env
+services/wa-worker/auth/
+services/wa-worker/*.log

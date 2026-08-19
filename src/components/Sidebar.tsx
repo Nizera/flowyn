@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   LogOut,
   Megaphone,
+  MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
   PlusCircle,
@@ -52,7 +53,7 @@ const sections: { label: string; items: NavItem[] }[] = [
       { href: '/dashboard/products', label: 'Meus Produtos', icon: Box, exclude: '/dashboard/products/new' },
       { href: '/dashboard/sales', label: 'Minhas Vendas', icon: ShoppingBag },
       { href: '/dashboard/ads', label: 'Meta Ads', icon: Megaphone },
-      // { href: '/dashboard/whatsapp', label: 'WhatsApp', icon: MessageSquare }, // TEMPORARIAMENTE DESABILITADO
+      { href: '/dashboard/whatsapp', label: 'WhatsApp', icon: MessageSquare },
       { href: '/dashboard/referrals', label: 'Indicar', icon: Users },
       { href: '/dashboard/goals', label: 'Conquistas', icon: Trophy },
     ],
