@@ -75,7 +75,7 @@ export async function createSession(userId: string): Promise<{ status: string; q
         id: crypto.randomUUID(),
         user_id: userId,
         name: `WhatsApp ${userId.substring(0, 8)}`,
-        status: 'connecting',
+        status: 'qr_pending',
         integration_token: crypto.randomUUID(),
       })
       .select('id')
