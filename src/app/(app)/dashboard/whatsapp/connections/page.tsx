@@ -104,6 +104,30 @@ export default function ConnectionsPage() {
     }
   }
 
+  // Poll session status while modal is open — detect when WhatsApp connects
+  useEffect(() => {
+    if (!showQRModal || !selectedSession) return
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/wa/sessions/${selectedSession.id}`)
+        const data = await res.json()
+        const status = data.session?.status
+        if (status === 'connected') {
+          setQrStatus('paired')
+          fetchSessions()
+          setTimeout(() => {
+            setShowQRModal(false)
+            setSelectedSession(null)
+            setQrStatus('idle')
+          }, 2000)
+        }
+      } catch {}
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [showQRModal, selectedSession, fetchSessions])
+
   const handleLogout = async (session: Session) => {
     if (!confirm(`Desconectar ${session.name}?`)) return
 
