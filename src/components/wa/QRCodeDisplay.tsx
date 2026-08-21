@@ -87,7 +87,11 @@ export function QRCodeDisplay({
         <>
           <div className="relative mb-4">
             <img
-              src={qrData}
+              src={
+                qrData.startsWith('data:') || qrData.startsWith('http')
+                  ? qrData
+                  : `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrData)}`
+              }
               alt="QR Code WhatsApp"
               className="w-64 h-64 rounded-lg bg-white p-2"
             />
