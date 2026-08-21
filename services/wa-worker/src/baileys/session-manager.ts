@@ -184,62 +184,81 @@ export async function createSession(sessionId: string): Promise<{ status: string
       if (!m.message) continue
 
       const from = m.key.remoteJid
-      if (!from || !from.endsWith('@s.whatsapp.net')) continue
+      if (!from) continue
+
+      const isGroup = from.endsWith('@g.us')
+      const isDirect = from.endsWith('@s.whatsapp.net')
+      if (!isDirect) continue
 
       const phone = from.replace(/@s.whatsapp.net$/, '')
       const content = extractMessageContent(m.message)
       const pushName = m.pushName || null
 
+      log.info({ sessionId, phone, pushName, content: content.substring(0, 50) }, 'Processing incoming message')
+
       // Save message to Supabase
       const msgId = m.key.id || crypto.randomUUID()
-      await supabase
-        .from('wa_messages')
-        .upsert({
-          id: msgId,
-          session_id: sessionId,
-          chat_jid: from,
-          from_jid: from,
-          to_jid: sessionId,
-          body: content,
-          kind: 'text',
-          sender_name: pushName,
-          is_from_me: false,
-          status: 'pending',
-          timestamp: typeof m.messageTimestamp === 'number' ? m.messageTimestamp * 1000 : Date.now(),
-        }, { onConflict: 'session_id,id' })
+      try {
+        await supabase
+          .from('wa_messages')
+          .upsert({
+            id: msgId,
+            session_id: sessionId,
+            chat_jid: from,
+            from_jid: from,
+            to_jid: sessionId,
+            body: content,
+            kind: 'text',
+            sender_name: pushName,
+            is_from_me: false,
+            status: 'pending',
+            timestamp: typeof m.messageTimestamp === 'number' ? m.messageTimestamp * 1000 : Date.now(),
+          }, { onConflict: 'session_id,id' })
+      } catch (err) {
+        log.error(err, 'Failed to save message to DB')
+        continue
+      }
 
       // Upsert chat
-      const { data: existingChat } = await supabase
-        .from('wa_chats')
-        .select('unread_count')
-        .eq('session_id', sessionId)
-        .eq('chat_jid', from)
-        .single()
+      try {
+        const { data: existingChat } = await supabase
+          .from('wa_chats')
+          .select('unread_count')
+          .eq('session_id', sessionId)
+          .eq('chat_jid', from)
+          .single()
 
-      const newUnread = (existingChat?.unread_count || 0) + 1
+        const newUnread = (existingChat?.unread_count || 0) + 1
 
-      await supabase
-        .from('wa_chats')
-        .upsert({
-          session_id: sessionId,
-          chat_jid: from,
-          name: pushName,
-          last_message: content.substring(0, 100),
-          last_message_at: Date.now(),
-          unread_count: newUnread,
-          status: 'waiting',
-        }, { onConflict: 'session_id,chat_jid' })
+        await supabase
+          .from('wa_chats')
+          .upsert({
+            session_id: sessionId,
+            chat_jid: from,
+            name: pushName,
+            last_message: content.substring(0, 100),
+            last_message_at: Date.now(),
+            unread_count: newUnread,
+            status: 'waiting',
+          }, { onConflict: 'session_id,chat_jid' })
+      } catch (err) {
+        log.error(err, 'Failed to upsert chat')
+      }
 
-      await callFlowynWebhook({
-        event: 'message.received',
-        sessionId,
-        userId,
-        phone,
-        pushName,
-        content,
-        messageId: msgId,
-        timestamp: m.messageTimestamp,
-      })
+      try {
+        await callFlowynWebhook({
+          event: 'message.received',
+          sessionId,
+          userId,
+          phone,
+          pushName,
+          content,
+          messageId: msgId,
+          timestamp: m.messageTimestamp,
+        })
+      } catch (err) {
+        log.error(err, 'Failed to call webhook')
+      }
     }
   })
 
