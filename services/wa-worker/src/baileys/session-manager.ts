@@ -45,9 +45,9 @@ export function getSessionCount(): number {
   return instances.size
 }
 
-export async function createSession(userId: string): Promise<{ status: string; qr?: string }> {
-  if (instances.has(userId)) {
-    log.warn({ userId }, 'Session already exists')
+export async function createSession(sessionId: string): Promise<{ status: string; qr?: string }> {
+  if (instances.has(sessionId)) {
+    log.warn({ sessionId }, 'Session already exists')
     return { status: 'already_connected' }
   }
 
@@ -55,37 +55,21 @@ export async function createSession(userId: string): Promise<{ status: string; q
     throw new Error('Worker at maximum capacity')
   }
 
-  // Find or create session record in Supabase
+  // O Next.js passa wa_sessions.id — buscar a sessão pelo ID e extrair o dono
   const supabase = getSupabase()
-  let sessionId: string
 
   const { data: existingSession } = await supabase
     .from('wa_sessions')
-    .select('id')
-    .eq('user_id', userId)
+    .select('id, user_id')
+    .eq('id', sessionId)
     .maybeSingle()
 
-  if (existingSession) {
-    sessionId = existingSession.id
-  } else {
-    // Create session via API (server-side)
-    const { data: newSession, error } = await supabase
-      .from('wa_sessions')
-      .insert({
-        id: crypto.randomUUID(),
-        user_id: userId,
-        name: `WhatsApp ${userId.substring(0, 8)}`,
-        status: 'qr_pending',
-        integration_token: crypto.randomUUID(),
-      })
-      .select('id')
-      .single()
-
-    if (error) throw error
-    sessionId = newSession.id
+  if (!existingSession) {
+    throw new Error(`Session ${sessionId} not found`)
   }
+  const userId: string = existingSession.user_id
 
-  const authDir = path.join(process.cwd(), 'auth', userId)
+  const authDir = path.join(process.cwd(), 'auth', sessionId)
   fs.mkdirSync(authDir, { recursive: true })
 
   const { state, saveCreds } = await useMultiFileAuthState(authDir)
@@ -154,14 +138,14 @@ export async function createSession(userId: string): Promise<{ status: string; q
       if (shouldReconnect) {
         const delay = Math.min(30000, Math.pow(2, instance.restartCount) * 1000)
         log.info({ userId, delay }, 'Reconnecting...')
-        setTimeout(() => reconnectSession(userId), delay)
+        setTimeout(() => reconnectSession(sessionId), delay)
       } else {
         await callFlowynWebhook({
           event: 'session.disconnected',
           sessionId,
           userId,
         })
-        cleanupSession(userId)
+        cleanupSession(sessionId)
       }
     }
 
@@ -291,7 +275,7 @@ export async function createSession(userId: string): Promise<{ status: string; q
     }
   })
 
-  instances.set(userId, instance)
+  instances.set(sessionId, instance)
 
   // Update session status to connecting
   await supabase
@@ -375,7 +359,7 @@ function startMessageProcessor(instance: SessionInstance) {
 }
 
 export function sendMessage(
-  userId: string,
+  sessionId: string,
   to: string,
   content: string,
   type: string = 'text',
@@ -383,7 +367,7 @@ export function sendMessage(
   metadata?: Record<string, any>
 ): Promise<any> {
   return new Promise((resolve, reject) => {
-    const instance = instances.get(userId)
+    const instance = instances.get(sessionId)
     if (!instance) {
       reject(new Error('Session not found'))
       return
@@ -397,8 +381,8 @@ export function sendMessage(
   })
 }
 
-export function getStatus(userId: string) {
-  const instance = instances.get(userId)
+export function getStatus(sessionId: string) {
+  const instance = instances.get(sessionId)
   if (!instance) return { status: 'disconnected' }
 
   return {
@@ -409,14 +393,14 @@ export function getStatus(userId: string) {
   }
 }
 
-export function getQRCode(userId: string): string | null {
-  const instance = instances.get(userId)
+export function getQRCode(sessionId: string): string | null {
+  const instance = instances.get(sessionId)
   if (!instance) return null
   return instance.qrCode
 }
 
-async function reconnectSession(userId: string) {
-  const instance = instances.get(userId)
+async function reconnectSession(sessionId: string) {
+  const instance = instances.get(sessionId)
   if (!instance) return
 
   instance.restartCount++
@@ -426,51 +410,55 @@ async function reconnectSession(userId: string) {
     instance.socket.end(undefined)
   } catch {}
 
-  instances.delete(userId)
+  instances.delete(sessionId)
 
-  await createSession(userId)
+  await createSession(sessionId)
 }
 
-function cleanupSession(userId: string) {
-  const instance = instances.get(userId)
+function cleanupSession(sessionId: string) {
+  const instance = instances.get(sessionId)
   if (!instance) return
 
   try {
     instance.socket.end(undefined)
   } catch {}
 
-  instances.delete(userId)
+  instances.delete(sessionId)
 
-  const authDir = path.join(process.cwd(), 'auth', userId)
+  const authDir = path.join(process.cwd(), 'auth', sessionId)
   if (fs.existsSync(authDir)) {
     fs.rmSync(authDir, { recursive: true, force: true })
   }
 }
 
-export async function disconnectSession(userId: string) {
-  const instance = instances.get(userId)
-  const sessionId = instance?.sessionId
+export async function disconnectSession(sessionId: string) {
+  const instance = instances.get(sessionId)
+  const dbSessionId = instance?.sessionId || sessionId
 
-  cleanupSession(userId)
+  cleanupSession(sessionId)
 
-  if (sessionId) {
-    const supabase = getSupabase()
-    await supabase
-      .from('wa_sessions')
-      .update({ status: 'disconnected' })
-      .eq('id', sessionId)
+  const supabase = getSupabase()
+  const { data: sessionRow } = await supabase
+    .from('wa_sessions')
+    .select('user_id')
+    .eq('id', dbSessionId)
+    .maybeSingle()
 
-    await callFlowynWebhook({
-      event: 'session.disconnected',
-      sessionId,
-      userId,
-    })
-  }
+  await supabase
+    .from('wa_sessions')
+    .update({ status: 'disconnected' })
+    .eq('id', dbSessionId)
+
+  await callFlowynWebhook({
+    event: 'session.disconnected',
+    sessionId: dbSessionId,
+    userId: sessionRow?.user_id || '',
+  })
 }
 
-// Get session ID for a user
-export function getSessionId(userId: string): string | null {
-  const instance = instances.get(userId)
+// Get session ID for a user (compat: a chave do map agora é o próprio sessionId)
+export function getSessionId(sessionId: string): string | null {
+  const instance = instances.get(sessionId)
   return instance?.sessionId || null
 }
 

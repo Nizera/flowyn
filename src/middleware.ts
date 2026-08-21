@@ -24,7 +24,7 @@ export async function middleware(req: NextRequest) {
   if (pathname === '/api/tr/track') return NextResponse.next()
   if (pathname === '/api/producer-script') return NextResponse.next()
 
-  const supabaseResponse = NextResponse.next({ request: req })
+  let supabaseResponse = NextResponse.next({ request: req })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -34,7 +34,11 @@ export async function middleware(req: NextRequest) {
         getAll: () => req.cookies.getAll(),
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) =>
-            supabaseResponse.cookies.set(name, value)
+            req.cookies.set(name, value)
+          )
+          supabaseResponse = NextResponse.next({ request: req })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
           )
         },
       },

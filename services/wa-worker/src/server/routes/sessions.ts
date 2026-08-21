@@ -24,10 +24,11 @@ router.get('/health', async (req: Request, res: Response) => {
 })
 
 // Match what Next.js app calls: /api/sessions/:id/pair
+// :id = wa_sessions.id (UUID da sessão criada no app)
 router.post('/api/sessions/:id/pair', authMiddleware, async (req: Request, res: Response) => {
-  const userId = req.params.id as string
+  const sessionId = req.params.id as string
   try {
-    const result = await createSession(userId)
+    const result = await createSession(sessionId)
     res.json(result)
   } catch (err: any) {
     log.error(err, 'Failed to create session')
@@ -37,9 +38,9 @@ router.post('/api/sessions/:id/pair', authMiddleware, async (req: Request, res: 
 
 // Match what Next.js app calls: /api/sessions/:id/logout
 router.post('/api/sessions/:id/logout', authMiddleware, async (req: Request, res: Response) => {
-  const userId = req.params.id as string
+  const sessionId = req.params.id as string
   try {
-    await disconnectSession(userId)
+    await disconnectSession(sessionId)
     res.json({ status: 'disconnected' })
   } catch (err: any) {
     log.error(err, 'Failed to disconnect session')
@@ -49,15 +50,15 @@ router.post('/api/sessions/:id/logout', authMiddleware, async (req: Request, res
 
 // Match what Next.js app calls: /api/sessions/:id/status
 router.get('/api/sessions/:id/status', authMiddleware, async (req: Request, res: Response) => {
-  const userId = req.params.id as string
-  const status = getStatus(userId)
+  const sessionId = req.params.id as string
+  const status = getStatus(sessionId)
   res.json(status)
 })
 
 // Match what Next.js app calls: /api/sessions/:id/qr
 router.get('/api/sessions/:id/qr', authMiddleware, async (req: Request, res: Response) => {
-  const userId = req.params.id as string
-  const qr = getQRCode(userId)
+  const sessionId = req.params.id as string
+  const qr = getQRCode(sessionId)
   if (!qr) {
     return res.json({ qr: null, message: 'No QR code available. Session may already be connected.' })
   }
