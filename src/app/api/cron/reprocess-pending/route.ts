@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic'
 const PAID_STATUSES = new Set(['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'])
 const MAX_ORDERS = 50
 const STALE_MINUTES = 2
+const MAX_AGE_DAYS = 30
 
 export async function POST(request: NextRequest) {
   const secret = process.env.REPROCESS_SECRET || process.env.CRON_SECRET
@@ -20,6 +21,7 @@ export async function POST(request: NextRequest) {
 
   const supabase = createAdminClient()
   const cutoff = new Date(Date.now() - STALE_MINUTES * 60 * 1000).toISOString()
+  const maxAge = new Date(Date.now() - MAX_AGE_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
   const { data: pendingOrders, error: fetchError } = await supabase
     .from('orders')
@@ -27,6 +29,7 @@ export async function POST(request: NextRequest) {
     .eq('status', 'pending')
     .not('asaas_payment_id', 'is', null)
     .lt('created_at', cutoff)
+    .gt('created_at', maxAge)
     .order('created_at', { ascending: true })
     .limit(MAX_ORDERS)
 
@@ -42,6 +45,7 @@ export async function POST(request: NextRequest) {
   let processed = 0
   let skipped = 0
   let failed = 0
+  let cancelled = 0
 
   for (const order of pendingOrders) {
     try {
@@ -92,6 +96,15 @@ export async function POST(request: NextRequest) {
         metadata: { payment_id: order.asaas_payment_id, asaas_status: paymentStatus },
       })
     } catch (err) {
+      const statusCode = (err as Error & { statusCode?: number }).statusCode
+      if (statusCode === 404) {
+        await supabase
+          .from('orders')
+          .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+          .eq('id', order.id)
+        cancelled++
+        continue
+      }
       console.error(`[Cron Reprocess] Error for order ${order.id}:`, err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200))
       failed++
     }
@@ -103,5 +116,6 @@ export async function POST(request: NextRequest) {
     processed,
     skipped,
     failed,
+    cancelled,
   })
 }

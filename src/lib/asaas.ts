@@ -121,7 +121,9 @@ export async function asaasRequest<T>(path: string, options: RequestOptions = {}
       status: response.status,
       requestId: response.headers.get('request-id') || response.headers.get('x-request-id') || null,
     })
-    throw new Error(normalizeAsaasError(data))
+    const error = new Error(normalizeAsaasError(data))
+    ;(error as Error & { statusCode?: number }).statusCode = response.status
+    throw error
   }
 
   return data as T
