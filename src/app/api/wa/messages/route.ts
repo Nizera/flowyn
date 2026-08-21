@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 export const dynamic = 'force-dynamic'
 
 const WA_WORKER_URL = process.env.WA_WORKER_URL || 'http://localhost:3001'
-const WA_WORKER_SECRET = process.env.WA_WORKER_SECRET || ''
+const WA_WORKER_SECRET = process.env.WA_WORKER_SECRET || process.env.WORKER_SECRET || ''
 
 // POST /api/wa/messages - Enviar mensagem
 export async function POST(req: NextRequest) {

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 
 const WORKER_URL = process.env.WA_WORKER_URL || 'http://localhost:3001'
-const WORKER_SECRET = process.env.WA_WORKER_SECRET || ''
+const WORKER_SECRET = process.env.WA_WORKER_SECRET || process.env.WORKER_SECRET || ''
 
 async function workerFetch(path: string, options?: RequestInit) {
   return fetch(`${WORKER_URL}${path}`, {

@@ -3,7 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
-const WA_WORKER_SECRET = process.env.WA_WORKER_SECRET || ''
+const WA_WORKER_SECRET = process.env.WA_WORKER_SECRET || process.env.WORKER_SECRET || ''
 
 // POST /api/wa/webhook - Receber eventos do WA Worker
 export async function POST(req: NextRequest) {

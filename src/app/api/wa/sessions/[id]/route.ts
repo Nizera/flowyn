@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 export const dynamic = 'force-dynamic'
 
 const WA_WORKER_URL = process.env.WA_WORKER_URL || 'http://localhost:3001'
-const WA_WORKER_SECRET = process.env.WA_WORKER_SECRET || ''
+const WA_WORKER_SECRET = process.env.WA_WORKER_SECRET || process.env.WORKER_SECRET || ''
 
 // GET /api/wa/sessions/[id] - Buscar sessão
 export async function GET(

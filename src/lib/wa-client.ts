@@ -38,7 +38,7 @@ import type {
 // Configuração
 // ============================================
 const WA_WORKER_URL = process.env.WA_WORKER_URL || 'http://localhost:3001'
-const WA_WORKER_SECRET = process.env.WA_WORKER_SECRET || ''
+const WA_WORKER_SECRET = process.env.WA_WORKER_SECRET || process.env.WORKER_SECRET || ''
 
 // ============================================
 // Helpers
