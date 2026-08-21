@@ -57,15 +57,30 @@ export async function POST(
       )
     }
 
-    const data = await response.json()
+    await response.json()
 
-    // Atualizar status no banco
+    // O Baileys gera o QR de forma assíncrona — poll até ficar pronto
+    let qr: string | null = null
+    for (let i = 0; i < 20; i++) {
+      await new Promise((r) => setTimeout(r, 500))
+      const qrRes = await fetch(`${WA_WORKER_URL}/api/sessions/${id}/qr`, {
+        headers: { Authorization: `Bearer ${WA_WORKER_SECRET}` },
+      })
+      if (qrRes.ok) {
+        const qrData = await qrRes.json()
+        if (qrData.qr) {
+          qr = qrData.qr
+          break
+        }
+      }
+    }
+
     await supabase
       .from('wa_sessions')
       .update({ status: 'qr_pending' })
       .eq('id', id)
 
-    return NextResponse.json(data)
+    return NextResponse.json({ status: 'qr_pending', qr })
   } catch (error) {
     console.error('[WA Sessions] PAIR error:', error)
     return NextResponse.json(
